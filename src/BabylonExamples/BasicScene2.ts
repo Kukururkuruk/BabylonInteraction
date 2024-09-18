@@ -26,10 +26,12 @@ export class BasicScene2 {
   tree: AbstractMesh;
   tree2: AbstractMesh;
   bucket: AbstractMesh;
+  private openModal: () => void;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(private canvas: HTMLCanvasElement, openModal: () => void) {
     this.engine = new Engine(this.canvas, true);
     this.scene = this.CreateScene();
+    this.openModal = openModal;
 
     this.CreateEnvironment();
     this.CreateController();
@@ -62,7 +64,7 @@ export class BasicScene2 {
     this.ramp = meshes[24];
     this.tree = meshes[25];
     this.tree2 = meshes[30];
-    this.bucket = meshes[3];
+    this.bucket = meshes[2];
     console.log(meshes);
     
 
@@ -204,45 +206,29 @@ export class BasicScene2 {
   }
 
   setupModalInteraction(): void {
-    if (!this.ramp) return;
-
-    // Добавляем ActionManager для изменения курсора при наведении
-    this.ramp.actionManager = new ActionManager(this.scene);
-
-    this.ramp.actionManager.registerAction(
+    if (!this.bucket) return;
+  
+    this.bucket.actionManager = new ActionManager(this.scene);
+  
+    this.bucket.actionManager.registerAction(
       new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-        this.canvas.style.cursor = "pointer";
+        this.canvas.style.cursor = 'pointer';
       })
     );
-
-    this.ramp.actionManager.registerAction(
+  
+    this.bucket.actionManager.registerAction(
       new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-        this.canvas.style.cursor = "default";
+        this.canvas.style.cursor = 'default';
       })
     );
-
-    // Добавляем обработчик для открытия модального окна при нажатии
-    this.ramp.actionManager.registerAction(
+  
+    this.bucket.actionManager.registerAction(
       new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-        // Открываем модальное окно
-        const modal = document.getElementById("modal");
-        if (modal) {
-          modal.style.display = "block";
-        }
+        console.log('Bucket clicked!'); // Добавьте это для отладки
+        this.openModal(); // Открываем модальное окно
       })
     );
-
-    // Добавляем обработчик для закрытия модального окна
-    const closeModalBtn = document.getElementById("closeModal");
-    if (closeModalBtn) {
-      closeModalBtn.addEventListener("click", () => {
-        const modal = document.getElementById("modal");
-        if (modal) {
-          modal.style.display = "none";
-        }
-      });
-    }
-}
+  }
 
 
 }
