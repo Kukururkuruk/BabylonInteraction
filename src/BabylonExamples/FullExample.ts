@@ -20,6 +20,7 @@ export class FullExample {
     guiManager: GUIManager; // Добавляем GUIManager
     triggerManager: TriggersManager
     textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D"];
+    targetMeshes: AbstractMesh[] = [];
 
     constructor(private canvas: HTMLCanvasElement) {
         this.engine = new Engine(this.canvas, true);
@@ -34,6 +35,10 @@ export class FullExample {
 
         this.engine.runRenderLoop(() => {
             this.scene.render();
+            this.targetMeshes.forEach(mesh => {
+                this.triggerManager.enableClickInteraction(mesh);
+                // пока подумать, возможно чет не то
+            });
         });
     }
 
@@ -59,24 +64,23 @@ export class FullExample {
             this.scene
         );
 
-        const targetMeshes = meshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
+        this.targetMeshes = meshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
 
-        console.log("Нужный меш:", targetMeshes);
+        console.log("Нужный меш:", this.targetMeshes);
 
-        targetMeshes.forEach(mesh => {
+        this.targetMeshes.forEach(mesh => {
             mesh.checkCollisions = true;
             this.createRayAboveMesh(mesh);
-            this.guiManager.createButtonAboveMesh(mesh)
+            this.guiManager.createButtonAboveMesh(mesh);
             this.triggerManager.setupProximityTrigger(mesh, () => {
                 console.log("Camera intersected with the ramp!");
                 alert("Camera reached the ramp!");
-            })
-            this.triggerManager.enableClickInteraction(mesh)
+            });
+            this.triggerManager.enableClickInteraction(mesh);
         });
 
         console.log(meshes);
 
-        // Вызываем метод для создания GUI
         this.guiManager.createGui();
     }
 

@@ -63,21 +63,23 @@ export class TriggersManager {
     
     // Проверяем расстояние между камерой и объектом
     if (distance <= this.distanceThreshold) {
-        targetMesh.actionManager = new ActionManager(this.scene);
-        console.log("You are near!")
+        if (!targetMesh.actionManager) {
+            targetMesh.actionManager = new ActionManager(this.scene);
+            console.log("You are near!");
 
-        // Добавляем действие на клик
-        targetMesh.actionManager.registerAction(
-            new ExecuteCodeAction(
-                ActionManager.OnPickTrigger, // Триггер на клик
-                () => {
-                    console.log("Object clicked!");
-                    alert("You clicked on the object!");
-                }
-            )
-        );
+            // Добавляем действие на клик
+            targetMesh.actionManager.registerAction(
+                new ExecuteCodeAction(
+                    ActionManager.OnPickTrigger,
+                    () => {
+                        console.log("Object clicked!");
+                        alert("You clicked on the object!");
+                    }
+                )
+            );
+        }
     } else {
-        console.log("Too far from the object to interact.");
+        targetMesh.actionManager = null; // Удаляем actionManager, если слишком далеко
     }
 }
 
