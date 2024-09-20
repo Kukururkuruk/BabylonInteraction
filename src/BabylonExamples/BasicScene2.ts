@@ -30,6 +30,9 @@ export class BasicScene2 {
 
   constructor(private canvas: HTMLCanvasElement, openModal: () => void) {
     this.engine = new Engine(this.canvas, true);
+    
+    this.engine.displayLoadingUI();
+
     this.scene = this.CreateScene();
     this.openModal = openModal;
 
@@ -76,7 +79,13 @@ export class BasicScene2 {
     this.setupCubInteraction();
     this.createButtonAboveMesh();
     this.setupModalInteraction();
+    this.setupRampTrigger();
+    
+
+    this.engine.hideLoadingUI();
   }
+
+  
 
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 5, 0), this.scene);
@@ -200,9 +209,6 @@ export class BasicScene2 {
       plane.parent = this.tree2;
       plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
       plane.position = new Vector3(this.tree2.position.x - 1,this.tree2.position.y - 5,this.tree2.position.z);
-
-
-
   }
 
   setupModalInteraction(): void {
@@ -230,5 +236,37 @@ export class BasicScene2 {
     );
   }
 
+  setupRampTrigger(): void {
+    if (!this.ramp) return;
 
+    const interactionZone = MeshBuilder.CreateBox("interactionZone", { size: 2 }, this.scene); 
+    interactionZone.isVisible = false; // Зона невидима
+    interactionZone.parent = this.ramp // Размещаем зону рядом с рампой
+    interactionZone.position = new Vector3 (this.ramp.position.x, this.ramp.position.y + 3, this.ramp.position.z)
+    interactionZone.checkCollisions = false; // Не нужно для коллизий
+
+    // Создаем невидимый бокс для камеры
+    const cameraCollider = MeshBuilder.CreateBox("cameraCollider", { size: 1 }, this.scene);
+    cameraCollider.isVisible = false; // Невидимый бокс
+    cameraCollider.parent = this.scene.activeCamera; // Связываем с камерой
+
+    // Устанавливаем ActionManager на этот бокс
+    cameraCollider.actionManager = new ActionManager(this.scene);
+
+    // Добавляем действие на пересечение с рампой
+    cameraCollider.actionManager.registerAction(
+      new ExecuteCodeAction(
+        {
+          trigger: ActionManager.OnIntersectionEnterTrigger,
+          parameter: { mesh: interactionZone }, // Рампа, с которой пересекается камера
+        },
+        () => {
+          console.log("Camera intersected with the ramp!");
+          alert("Camera reached the ramp!"); // Можно заменить на нужное действие
+        }
+      )
+    );
+  }
+  
 }
+
