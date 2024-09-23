@@ -16,7 +16,7 @@ import {
   Mesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Button } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Button, StackPanel, Rectangle } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
 
 export class BasicScene2 {
@@ -26,6 +26,7 @@ export class BasicScene2 {
   tree: AbstractMesh;
   tree2: AbstractMesh;
   bucket: AbstractMesh;
+  inventoryPanel: StackPanel;
   private openModal: () => void;
 
   constructor(private canvas: HTMLCanvasElement, openModal: () => void) {
@@ -38,6 +39,7 @@ export class BasicScene2 {
 
     this.CreateEnvironment();
     this.CreateController();
+    
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -68,7 +70,7 @@ export class BasicScene2 {
     this.tree = meshes[25];
     this.tree2 = meshes[30];
     this.bucket = meshes[2];
-    console.log(meshes);
+    // console.log(meshes);
     
 
     meshes.forEach((mesh) => {
@@ -80,6 +82,10 @@ export class BasicScene2 {
     this.createButtonAboveMesh();
     this.setupModalInteraction();
     this.setupRampTrigger();
+     // Создаем панель инвентаря
+     this.createInventoryPanel();
+     // Создаем коллекционный меш
+     this.createCollectibleMesh();
     
 
     this.engine.hideLoadingUI();
@@ -101,6 +107,56 @@ export class BasicScene2 {
     camera.keysLeft.push(65); // A
     camera.keysDown.push(83); // S
     camera.keysRight.push(68); // D
+  }
+
+  // Создаем панель инвентаря
+  createInventoryPanel(): void {
+    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    // Создаем панель
+    this.inventoryPanel = new StackPanel();
+    this.inventoryPanel.isVertical = false;
+    this.inventoryPanel.height = "100px";
+    this.inventoryPanel.width = "400px";
+    this.inventoryPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.inventoryPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    advancedTexture.addControl(this.inventoryPanel);
+
+    // Добавляем слоты для инвентаря
+    for (let i = 0; i < 4; i++) {
+      const slot = new Rectangle();
+      slot.width = "80px";
+      slot.height = "80px";
+      slot.thickness = 2;
+      slot.color = "white";
+      slot.background = "grey";
+      slot.name = "empty";
+      this.inventoryPanel.addControl(slot);
+    }
+  }
+
+  // Создаем коллекционный меш
+  createCollectibleMesh(): void {
+    const mesh = this.tree2; // Используем ваше дерево (tree2) как коллекционный объект
+
+    if (mesh) {
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          mesh.isVisible = false;
+
+          // Обновляем инвентарь
+          const emptySlot = this.inventoryPanel.children.find(
+            (slot) => slot.name === "empty"
+          ) as Rectangle;
+
+          if (emptySlot) {
+            emptySlot.background = "red"; // Обозначение заполненной ячейки
+            emptySlot.name = "occupied";
+          }
+        })
+      );
+    }
   }
 
   setupRampInteraction(): void {
