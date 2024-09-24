@@ -34,13 +34,17 @@ export class GUIManager {
 
     // Добавляем обработчик событий для клавиатуры
     window.addEventListener("keydown", (event) => {
-      if (event.key === "w" || event.key === "W") {
+      const key = event.key.toLowerCase(); // Приводим к нижнему регистру для упрощения сравнения
+      if (/w|ц/.test(key)) {
         this.updateText(0);
-      } else if (event.key === "s" || event.key === "S") {
+      } 
+      else if (/s|ы/.test(key)) {
         this.updateText(1);
-      } else if (event.key === "a" || event.key === "A") {
+      }
+      else if (/a|ф/.test(key)) {
         this.updateText(2);
-      } else if (event.key === "d" || event.key === "D") {
+      } 
+      else if (/d|в/.test(key)) {
         this.updateText(3);
       }
     });
@@ -49,10 +53,13 @@ export class GUIManager {
   updateText(index: number): void {
     if (index === this.currentTextIndex) {
       this.currentTextIndex++;
-      if (this.currentTextIndex < this.textMessages.length) {
+      if (this.currentTextIndex <= 3) {
         this.textBlock.text = this.textMessages[this.currentTextIndex];
       } else {
-        this.textBlock.isVisible = false; // Скрыть текст, когда все сообщения показаны
+        this.textBlock.text = this.textMessages[4];
+        setTimeout(() => {
+          this.textBlock.isVisible = false;
+        }, 3000);
       }
     }
   }
@@ -98,6 +105,22 @@ export class GUIManager {
   
   // Устанавливаем позицию плоскости относительно целевого меша
   plane.position = new Vector3(0, -5, 0); // Если нужно разместить под мешом
+  }
+
+  async loadGUISnippet(): Promise<void> {
+    const snippetId = "#4T7WYR";
+
+    try {
+      // Загружаем GUI из Snippet Server
+      let advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, this.scene);
+      let loadedGUI = await advancedTexture.parseFromSnippetAsync(snippetId);
+      
+      // Если необходимо, можно настроить элементы в загруженной текстуре
+      console.log("GUI элемент загружен и добавлен на сцену");
+
+    } catch (error) {
+      console.error("Ошибка при загрузке GUI из Snippet Server:", error);
+    }
   }
 
   

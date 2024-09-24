@@ -19,7 +19,7 @@ export class FullExample {
     engine: Engine;
     guiManager: GUIManager; // Добавляем GUIManager
     triggerManager: TriggersManager
-    textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D"];
+    textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D", "А теперь осмотритесь по комнате"];
     targetMeshes: AbstractMesh[] = [];
 
     constructor(private canvas: HTMLCanvasElement) {
@@ -74,7 +74,8 @@ export class FullExample {
             this.guiManager.createButtonAboveMesh(mesh);
             this.triggerManager.setupProximityTrigger(mesh, () => {
                 console.log("Camera intersected with the ramp!");
-                alert("Camera reached the ramp!");
+                // alert("Camera reached the ramp!");
+                this.guiManager.loadGUISnippet();
             });
             this.triggerManager.enableClickInteraction(mesh);
         });
