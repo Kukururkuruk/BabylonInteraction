@@ -42,7 +42,7 @@ const Base: React.FC = () => {
         <h2>Дефект</h2>
         <img src='\models\DSCN4299_Б7 от Б6.JPG' alt='Повреждение' width="400" height="341"/>
         <form id="dropdownForm">
-        <label for="dropdown1">Выберите конструкцию:</label>
+        <label htmlFor="dropdown1">Выберите конструкцию:</label>
         <select id="dropdown1">
             <option value="" disabled selected>Выберите...</option>
             <option value="option1">Вариант 1</option>
@@ -51,7 +51,7 @@ const Base: React.FC = () => {
         </select>
 
 
-        <label for="dropdown2">Выберите дефект:</label>
+        <label htmlFor="dropdown2">Выберите дефект:</label>
         <select id="dropdown2">
             <option value="" disabled selected>Выберите...</option>
             <option value="optionA">Вариант A</option>
@@ -59,7 +59,7 @@ const Base: React.FC = () => {
             <option value="optionC">Вариант C</option>
         </select>
 
-        <label for="dropdown3">Выберите метод:</label>
+        <label htmlFor="dropdown3">Выберите метод:</label>
         <select id="dropdown3">
             <option value="" disabled selected>Выберите...</option>
             <option value="choiceX">Выбор X</option>
