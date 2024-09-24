@@ -29,9 +29,9 @@ export class TestScene {
     this.stats.showPanel(0); // 0 = CPU, 1 = FPS
     document.body.appendChild(this.stats.dom);
 
-    this.scene.debugLayer.show({
-      embedMode: true, // Позволяет отображать инспектор прямо в странице
-    });
+    // this.scene.debugLayer.show({
+    //   embedMode: true, // Позволяет отображать инспектор прямо в странице
+    // });
 
     this.CreateEnvironment();
     this.CreateController();

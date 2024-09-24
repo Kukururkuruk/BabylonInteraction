@@ -75,7 +75,7 @@ export class FullExample {
             this.triggerManager.setupProximityTrigger(mesh, () => {
                 console.log("Camera intersected with the ramp!");
                 // alert("Camera reached the ramp!");
-                this.guiManager.loadGUISnippet();
+                // this.guiManager.loadGUISnippet();
             });
             this.triggerManager.enableClickInteraction(mesh);
         });
