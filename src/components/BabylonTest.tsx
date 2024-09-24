@@ -12,7 +12,6 @@ const BabylonTest: React.FC = () => {
 
   return (
     <div id="app">
-      <h3>Babylon Test</h3>
       <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
     </div>
   );
