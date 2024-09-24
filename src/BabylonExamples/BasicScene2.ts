@@ -16,7 +16,7 @@ import {
   Mesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Button } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Button, StackPanel, Rectangle } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
 
 export class BasicScene2 {
@@ -26,13 +26,20 @@ export class BasicScene2 {
   tree: AbstractMesh;
   tree2: AbstractMesh;
   bucket: AbstractMesh;
+  inventoryPanel: StackPanel;
+  private openModal: () => void;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(private canvas: HTMLCanvasElement, openModal: () => void) {
     this.engine = new Engine(this.canvas, true);
+    
+    this.engine.displayLoadingUI();
+
     this.scene = this.CreateScene();
+    this.openModal = openModal;
 
     this.CreateEnvironment();
     this.CreateController();
+    
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -62,8 +69,8 @@ export class BasicScene2 {
     this.ramp = meshes[24];
     this.tree = meshes[25];
     this.tree2 = meshes[30];
-    this.bucket = meshes[3];
-    console.log(meshes);
+    this.bucket = meshes[2];
+    // console.log(meshes);
     
 
     meshes.forEach((mesh) => {
@@ -74,7 +81,17 @@ export class BasicScene2 {
     this.setupCubInteraction();
     this.createButtonAboveMesh();
     this.setupModalInteraction();
+    this.setupRampTrigger();
+     // Создаем панель инвентаря
+     this.createInventoryPanel();
+     // Создаем коллекционный меш
+     this.createCollectibleMesh();
+    
+
+    this.engine.hideLoadingUI();
   }
+
+  
 
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 5, 0), this.scene);
@@ -90,6 +107,56 @@ export class BasicScene2 {
     camera.keysLeft.push(65); // A
     camera.keysDown.push(83); // S
     camera.keysRight.push(68); // D
+  }
+
+  // Создаем панель инвентаря
+  createInventoryPanel(): void {
+    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    // Создаем панель
+    this.inventoryPanel = new StackPanel();
+    this.inventoryPanel.isVertical = false;
+    this.inventoryPanel.height = "100px";
+    this.inventoryPanel.width = "400px";
+    this.inventoryPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.inventoryPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+    advancedTexture.addControl(this.inventoryPanel);
+
+    // Добавляем слоты для инвентаря
+    for (let i = 0; i < 4; i++) {
+      const slot = new Rectangle();
+      slot.width = "80px";
+      slot.height = "80px";
+      slot.thickness = 2;
+      slot.color = "white";
+      slot.background = "grey";
+      slot.name = "empty";
+      this.inventoryPanel.addControl(slot);
+    }
+  }
+
+  // Создаем коллекционный меш
+  createCollectibleMesh(): void {
+    const mesh = this.tree2; // Используем ваше дерево (tree2) как коллекционный объект
+
+    if (mesh) {
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          mesh.isVisible = false;
+
+          // Обновляем инвентарь
+          const emptySlot = this.inventoryPanel.children.find(
+            (slot) => slot.name === "empty"
+          ) as Rectangle;
+
+          if (emptySlot) {
+            emptySlot.background = "red"; // Обозначение заполненной ячейки
+            emptySlot.name = "occupied";
+          }
+        })
+      );
+    }
   }
 
   setupRampInteraction(): void {
@@ -198,51 +265,64 @@ export class BasicScene2 {
       plane.parent = this.tree2;
       plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
       plane.position = new Vector3(this.tree2.position.x - 1,this.tree2.position.y - 5,this.tree2.position.z);
-
-
-
   }
 
   setupModalInteraction(): void {
+    if (!this.bucket) return;
+  
+    this.bucket.actionManager = new ActionManager(this.scene);
+  
+    this.bucket.actionManager.registerAction(
+      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
+        this.canvas.style.cursor = 'pointer';
+      })
+    );
+  
+    this.bucket.actionManager.registerAction(
+      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
+        this.canvas.style.cursor = 'default';
+      })
+    );
+  
+    this.bucket.actionManager.registerAction(
+      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+        console.log('Bucket clicked!'); // Добавьте это для отладки
+        this.openModal(); // Открываем модальное окно
+      })
+    );
+  }
+
+  setupRampTrigger(): void {
     if (!this.ramp) return;
 
-    // Добавляем ActionManager для изменения курсора при наведении
-    this.ramp.actionManager = new ActionManager(this.scene);
+    const interactionZone = MeshBuilder.CreateBox("interactionZone", { size: 2 }, this.scene); 
+    interactionZone.isVisible = false; // Зона невидима
+    interactionZone.parent = this.ramp // Размещаем зону рядом с рампой
+    interactionZone.position = new Vector3 (this.ramp.position.x, this.ramp.position.y + 3, this.ramp.position.z)
+    interactionZone.checkCollisions = false; // Не нужно для коллизий
 
-    this.ramp.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-        this.canvas.style.cursor = "pointer";
-      })
-    );
+    // Создаем невидимый бокс для камеры
+    const cameraCollider = MeshBuilder.CreateBox("cameraCollider", { size: 1 }, this.scene);
+    cameraCollider.isVisible = false; // Невидимый бокс
+    cameraCollider.parent = this.scene.activeCamera; // Связываем с камерой
 
-    this.ramp.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-        this.canvas.style.cursor = "default";
-      })
-    );
+    // Устанавливаем ActionManager на этот бокс
+    cameraCollider.actionManager = new ActionManager(this.scene);
 
-    // Добавляем обработчик для открытия модального окна при нажатии
-    this.ramp.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-        // Открываем модальное окно
-        const modal = document.getElementById("modal");
-        if (modal) {
-          modal.style.display = "block";
+    // Добавляем действие на пересечение с рампой
+    cameraCollider.actionManager.registerAction(
+      new ExecuteCodeAction(
+        {
+          trigger: ActionManager.OnIntersectionEnterTrigger,
+          parameter: { mesh: interactionZone }, // Рампа, с которой пересекается камера
+        },
+        () => {
+          console.log("Camera intersected with the ramp!");
+          alert("Camera reached the ramp!"); // Можно заменить на нужное действие
         }
-      })
+      )
     );
-
-    // Добавляем обработчик для закрытия модального окна
-    const closeModalBtn = document.getElementById("closeModal");
-    if (closeModalBtn) {
-      closeModalBtn.addEventListener("click", () => {
-        const modal = document.getElementById("modal");
-        if (modal) {
-          modal.style.display = "none";
-        }
-      });
-    }
+  }
+  
 }
 
-
-}

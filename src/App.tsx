@@ -1,19 +1,20 @@
 import React from 'react';
-import BabylonExamples from './components/BabylonExamples';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Main from './components/MainPage';
+import Base from './components/Base';
+import Tutor from './components/Tutor';
+import BabylonTest from './components/BabylonTest';
 
 const App: React.FC = () => {
   return (
-    <div id="app">
-      {/* Здесь ваш основной компонент Babylon */}
-      <BabylonExamples />
-
-      {/* Добавленный div */}
-      <div id="modal" style={{ display: 'none', position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
-        <h2>Привет! Это дополнительный div</h2>
-        <p>Сюда можно вставить любой контент, который вам нужен.</p>
-        <button id="closeModal">Закрыть</button>
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Main />} />
+        <Route path="/base" element={<Base />} />
+        <Route path="/tutor" element={<Tutor />} />
+        <Route path="/test" element={<BabylonTest />} />
+      </Routes>
+    </Router>
   );
 };
 
