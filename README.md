@@ -366,6 +366,3 @@ createButtonAboveMesh(): void {
   }
   
 }
-
-
-```
