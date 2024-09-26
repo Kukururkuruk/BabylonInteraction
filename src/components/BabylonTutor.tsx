@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { FullExample } from '../BabylonExamples/FullExample'; 
+import { FullExample } from './FullExample'; 
 
 const BabylonExamples: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
