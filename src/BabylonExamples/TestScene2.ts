@@ -10,7 +10,7 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/loaders"; // Поддержка загрузки моделей
 
-export class TestScene {
+export class TestScene2 {
   scene: Scene;
   engine: Engine;
 
@@ -57,7 +57,7 @@ export class TestScene {
     const camera = new FreeCamera("camera", new Vector3(0, 3, 0), this.scene);
     camera.attachControl(this.canvas, false);
 
-    camera.applyGravity = false;
+    camera.applyGravity = true;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(1, 1, 1);
     camera.minZ = 0.45;
