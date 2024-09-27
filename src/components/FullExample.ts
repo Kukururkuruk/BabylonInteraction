@@ -23,6 +23,7 @@ export class FullExample {
     triggerManager: TriggersManager
     textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D", "А теперь осмотритесь по комнате"];
     targetMeshes: AbstractMesh[] = [];
+    handModel: AbstractMesh | null = null; // Добавляем переменную для модели руки
 
     constructor(private canvas: HTMLCanvasElement) {
         this.engine = new Engine(this.canvas, true);
@@ -89,7 +90,30 @@ export class FullExample {
         console.log(meshes);
 
         this.guiManager.createGui();
+        await this.CreateHandModel(); // Загружаем модель руки
     }
+
+    async CreateHandModel(): Promise<void> {
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "P90.obj", this.scene);
+        this.handModel = meshes[0]; // Предполагаем, что первая модель - это модель руки
+        this.handModel.position = new Vector3(0, 0, 0); // Позиция может быть изменена
+        this.attachHandToCamera(); // Привязываем модель к камере
+        // Устанавливаем физический импостор для модели оружия
+        this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
+        mass: 0, // Установите низкую массу для легкости
+        friction: 0, // Настройте трение
+        restitution: 0 // Настройте упругость
+    });
+}
+        attachHandToCamera(): void {
+        if (this.handModel) {
+        const camera = this.scene.getCameraByName("camera") as FreeCamera; // Получаем камеру
+        this.handModel.parent = camera; // Привязываем модель к камере
+        this.handModel.position = new Vector3(0.5, -1, 2); // Задаем позицию относительно камеры
+        this.handModel.rotation = new Vector3(0, Math.PI, 0); // Задаем вращение (при необходимости)
+        this.handModel.scaling = new Vector3(0.5, 0.5, 0.5); // Измените коэффициенты на желаемые
+    }
+}
 
     CreateController(): void {
         const camera = new FreeCamera("camera", new Vector3(20, 100, 0), this.scene);
