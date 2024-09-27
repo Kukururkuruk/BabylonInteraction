@@ -4,7 +4,7 @@ import {
   SceneLoader,
   Vector3,
   HemisphericLight,
-  CubeTexture,
+  HDRCubeTexture, // Для работы с HDR текстурами
   Tools,
   FreeCamera,
   Mesh,
@@ -53,13 +53,15 @@ export class TestScene {
     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
     scene.collisionsEnabled = true;
 
-    const envTex = CubeTexture.CreateFromPrefilteredData(
-      "../models/sky.env",
-      scene
+    // Загружаем новую HDR текстуру
+    const hdrTexture = new HDRCubeTexture(
+      "/models/cape_hill_4k.hdr", 
+      scene, 
+      512
     );
 
-    scene.environmentTexture = envTex;
-    scene.createDefaultSkybox(envTex, true);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 0.5;
 
     return scene;
@@ -196,4 +198,3 @@ export class TestScene {
     });
   }
 }
-

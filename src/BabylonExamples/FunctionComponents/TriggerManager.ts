@@ -67,20 +67,69 @@ export class TriggersManager {
     );
   }
 
+
   // Создание кнопки "Начать"
+  // createStartButton(): void {
+  //   const startButton = this.guiManager.createButton({
+  //     name: "startBtn",
+  //     text: "Начать",
+  //     background: "green",
+  //     onClick: () => {
+  //       this.guiManager.advancedTexture.removeControl(startButton);
+  //       this.disableCameraMovement();
+  //       this.setCameraRotation(0); // Устанавливаем камеру параллельно полу
+  //       this.createCameraControlButtons();
+  //     },
+  //   });
+  // }
+
+
   createStartButton(): void {
     const startButton = this.guiManager.createButton({
       name: "startBtn",
       text: "Начать",
       background: "green",
       onClick: () => {
-        this.guiManager.advancedTexture.removeControl(startButton);
+        this.guiManager.advancedTexture.removeControl(startButton); // Убираем кнопку
+        
         this.disableCameraMovement();
-        this.setCameraRotation(0); // Устанавливаем камеру параллельно полу
+        
+        // Устанавливаем положение камеры без анимации
+        const camera = this.scene.activeCamera as FreeCamera;
+        const angle = 0; // Угол (камера будет прямо перед зоной)
+        const distance = -10; // Расстояние от зоны
+        
+        // Установка камеры без анимации
+        this.setCameraPositionAndTarget(camera, this.interactionZone, angle, distance);
+        
+        // Оставляем ссылку на уже существующую функцию создания кнопок
         this.createCameraControlButtons();
       },
     });
-  }
+}
+
+// Функция мгновенного перемещения камеры и установки цели
+setCameraPositionAndTarget(
+  camera: FreeCamera,
+  targetZone: AbstractMesh,
+  angle: number,
+  distance: number
+): void {
+  const targetPosition = targetZone.getAbsolutePosition();
+
+  // Вычисляем новую позицию камеры на основе угла и расстояния
+  const x = targetPosition.x + distance * Math.sin(angle);
+  const z = targetPosition.z + distance * Math.cos(angle);
+  const y = targetPosition.y + 1.5; // Высота камеры
+
+  // Мгновенно устанавливаем новую позицию камеры
+  camera.position = new Vector3(x, y, z);
+
+  // Устанавливаем направление камеры на зону
+  camera.setTarget(targetPosition);
+}
+
+
 
   // Отключение движения камеры
   disableCameraMovement(): void {
