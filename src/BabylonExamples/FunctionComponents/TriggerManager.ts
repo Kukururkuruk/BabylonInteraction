@@ -109,27 +109,25 @@ export class TriggersManager {
 }
 
 // Функция мгновенного перемещения камеры и установки цели
-setCameraPositionAndTarget(
-  camera: FreeCamera,
-  targetZone: AbstractMesh,
-  angle: number,
-  distance: number
-): void {
-  const targetPosition = targetZone.getAbsolutePosition();
+  setCameraPositionAndTarget(
+    camera: FreeCamera,
+    targetZone: AbstractMesh,
+    angle: number,
+    distance: number
+  ): void {
+    const targetPosition = targetZone.getAbsolutePosition();
 
-  // Вычисляем новую позицию камеры на основе угла и расстояния
-  const x = targetPosition.x + distance * Math.sin(angle);
-  const z = targetPosition.z + distance * Math.cos(angle);
-  const y = targetPosition.y + 1.5; // Высота камеры
+    // Вычисляем новую позицию камеры на основе угла и расстояния
+    const x = targetPosition.x + distance * Math.sin(angle);
+    const z = targetPosition.z + distance * Math.cos(angle);
+    const y = targetPosition.y + 1.5; // Высота камеры
 
-  // Мгновенно устанавливаем новую позицию камеры
-  camera.position = new Vector3(x, y, z);
+    // Мгновенно устанавливаем новую позицию камеры
+    camera.position = new Vector3(x, y, z);
 
-  // Устанавливаем направление камеры на зону
-  camera.setTarget(targetPosition);
-}
-
-
+    // Устанавливаем направление камеры на зону
+    camera.setTarget(targetPosition);
+  }
 
   // Отключение движения камеры
   disableCameraMovement(): void {

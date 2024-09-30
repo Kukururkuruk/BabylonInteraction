@@ -115,13 +115,13 @@ import {
   SceneLoader,
   Vector3,
   HemisphericLight,
-  HDRCubeTexture, // Для работы с HDR текстурами
+  HDRCubeTexture,
   Tools,
   FreeCamera,
   Mesh,
   MeshBuilder,
 } from "@babylonjs/core";
-import "@babylonjs/loaders"; // Поддержка загрузки моделей
+import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 
 export class TestScene {
@@ -142,13 +142,12 @@ export class TestScene {
     });
     this.CreateController();
 
-    this.CreateCubes(); // Создаем кубы
+    this.CreateCubes();
 
-    // Создаем GUI-текстуру
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
-    this.AddToggleShapeButton(); // Добавляем кнопку переключения
-    this.AddScreenshotButton(); // Добавляем кнопку скриншота
+    this.AddToggleShapeButton();
+    this.AddScreenshotButton();
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
