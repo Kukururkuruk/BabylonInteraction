@@ -1,10 +1,5 @@
 import { AbstractMesh, Mesh, MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
-import {
-  AdvancedDynamicTexture,
-  TextBlock,
-  Control,
-  Button,
-} from "@babylonjs/gui";
+import { AdvancedDynamicTexture, TextBlock, Control, Button } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
 
 export class GUIManager {
@@ -88,23 +83,23 @@ export class GUIManager {
     const plane = MeshBuilder.CreatePlane('plane', {
       width: 5,
       height: 1,
-  });
-  const advancedTexture2 = AdvancedDynamicTexture.CreateForMesh(plane, 512, 64);
-  const button2 = Button.CreateSimpleButton('myBtn', 'Click Me!');
-  button2.width = '200px';
-  button2.height = '40px';
-  button2.color = 'white';
-  button2.background = 'deepskyblue';
-  advancedTexture2.addControl(button2);
-  
-  // Привязываем плоскость к целевому мешу
-  plane.parent = targetMesh;
-  
-  // Включаем режим билборда
-  plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
-  
-  // Устанавливаем позицию плоскости относительно целевого меша
-  plane.position = new Vector3(0, -5, 0); // Если нужно разместить под мешом
+    });
+    const advancedTexture2 = AdvancedDynamicTexture.CreateForMesh(plane, 512, 64);
+    const button2 = Button.CreateSimpleButton('myBtn', 'Click Me!');
+    button2.width = '200px';
+    button2.height = '40px';
+    button2.color = 'white';
+    button2.background = 'deepskyblue';
+    advancedTexture2.addControl(button2);
+
+    // Привязываем плоскость к целевому мешу
+    plane.parent = targetMesh;
+
+    // Включаем режим билборда
+    plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
+
+    // Устанавливаем позицию плоскости относительно целевого меша
+    plane.position = new Vector3(0, -5, 0); // Если нужно разместить под мешом
   }
 
   async loadGUISnippet(): Promise<void> {
@@ -114,7 +109,7 @@ export class GUIManager {
       // Загружаем GUI из Snippet Server
       let advancedTexture = GUI.AdvancedDynamicTexture.CreateFullscreenUI("GUI", true, this.scene);
       let loadedGUI = await advancedTexture.parseFromSnippetAsync(snippetId);
-      
+
       // Если необходимо, можно настроить элементы в загруженной текстуре
       console.log("GUI элемент загружен и добавлен на сцену");
 
@@ -122,6 +117,4 @@ export class GUIManager {
       console.error("Ошибка при загрузке GUI из Snippet Server:", error);
     }
   }
-
-  
 }
