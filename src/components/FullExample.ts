@@ -22,6 +22,7 @@ import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor';
 import { GUIManager } from '../components/GUIManager'; 
 import { TriggersManager } from '../components/TriggerManager'; 
 import { AdvancedDynamicTexture, Button, TextBlock } from "@babylonjs/gui";
+import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
 
 
 export class FullExample {
@@ -104,8 +105,15 @@ export class FullExample {
             mesh.checkCollisions = true;
             mesh.isPickable = true; // Убедитесь, что меш можно выбрать
             mesh.position = new Vector3(0, 0, 0);
-            
-        });
+            mesh.isVisible = true; // Убедитесь, что меш видим
+            mesh.setEnabled(true); // Убедитесь, что меш активен
+            mesh.actionManager = new ActionManager(this.scene);
+            mesh.actionManager.registerAction(
+            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Лестница кликнута:", mesh.name);
+        })
+    );
+});
 
         this.guiManager.createGui();
         await this.CreateHandModel(); // Загружаем модель руки

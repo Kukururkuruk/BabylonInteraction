@@ -28,9 +28,8 @@ export class TriggersManager {
 
       // Изменение курсора на pointer при наведении на меш
       mesh.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-              this.canvas.style.cursor = "pointer";
-              mesh.material = highlightMaterial; // Подсветка при наведении
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Меш кликнут:", mesh.name);
           })
       );
 
@@ -92,6 +91,7 @@ export class TriggersManager {
   // Включение взаимодействия при клике
   enableClickInteraction(targetMesh: AbstractMesh): void {
       const distance = this.getDistanceToCamera(targetMesh);
+      
 
       // Проверяем расстояние между камерой и объектом
       if (distance <= this.distanceThreshold) {
