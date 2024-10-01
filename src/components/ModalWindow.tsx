@@ -10,9 +10,14 @@ interface ModalWindowProps {
 const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
 
+  // Функция для предотвращения контекстного меню
+  const preventContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-window">
+    <div className="modal-overlay" onContextMenu={preventContextMenu}>
+      <div className="modal-window" onContextMenu={preventContextMenu}>
         <button className="close-button" onClick={onClose}>×</button>
         {children}
       </div>
