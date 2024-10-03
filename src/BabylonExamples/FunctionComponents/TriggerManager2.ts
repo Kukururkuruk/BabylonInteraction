@@ -225,6 +225,8 @@ import {
     StackPanel,
     RadioButton,
     TextBlock,
+    Grid,
+    Rectangle,
   } from "@babylonjs/gui";
   import { TriggerZone } from "./TriggerZone";
   
@@ -244,11 +246,39 @@ import {
       this.guiTexture = guiTexture;
     }
   
+    // setupZoneTrigger(
+    //   zonePosition: Vector3,
+    //   onEnterZone: () => void,
+    //   onExitZone?: () => void,
+    //   camSize: number = 2
+    // ): TriggerZone {
+    //   const triggerZone = new TriggerZone(
+    //     this.scene,
+    //     this.canvas,
+    //     zonePosition,
+    //     onEnterZone,
+    //     onExitZone,
+    //     camSize
+    //   );
+  
+    //   this.triggerZones.push(triggerZone);
+  
+    //   return triggerZone;
+    // }
+
+// В классе TriggerManager2
+
+// В вашем классе TriggerManager2
+
+// В вашем классе TriggerManager2
+
     setupZoneTrigger(
       zonePosition: Vector3,
       onEnterZone: () => void,
       onExitZone?: () => void,
-      camSize: number = 2
+      camSize: number = 2,
+      markMeshTemplate?: AbstractMesh,
+      markMeshHeight?: number // Новый параметр для высоты знака
     ): TriggerZone {
       const triggerZone = new TriggerZone(
         this.scene,
@@ -258,11 +288,35 @@ import {
         onExitZone,
         camSize
       );
-  
+
       this.triggerZones.push(triggerZone);
-  
+
+      // Если передан шаблон markMesh, создаем его экземпляр на позиции зоны
+      if (markMeshTemplate) {
+        const markMeshInstance = markMeshTemplate.clone("markMeshInstance");
+
+        // Устанавливаем позицию знака
+        markMeshInstance.position = zonePosition.clone();
+
+        // Если задана высота знака, устанавливаем ее
+        if (typeof markMeshHeight === "number") {
+          markMeshInstance.position.y = markMeshHeight;
+        } else {
+          // Иначе корректируем позицию по оси Y, чтобы знак был над землей
+          const boundingInfo = markMeshInstance.getBoundingInfo();
+          const meshHeight =
+            boundingInfo.boundingBox.maximum.y - boundingInfo.boundingBox.minimum.y;
+          markMeshInstance.position.y += meshHeight / 2; // Поднимаем на половину высоты
+        }
+
+        // Убираем анимацию
+      }
+
       return triggerZone;
     }
+
+
+
   
     // Остальные методы без изменений
   
@@ -308,64 +362,116 @@ import {
       const camera = this.scene.activeCamera as FreeCamera;
       camera.attachControl(this.canvas, true);
     }
-  
+
+
+
     createRadioButtons(onHide: () => void): void {
-      const radioButtonPanel = new StackPanel();
-      radioButtonPanel.isVertical = true;
-      radioButtonPanel.width = "100px";
-      radioButtonPanel.height = "100%";
-      radioButtonPanel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-      radioButtonPanel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-  
-      this.guiTexture.addControl(radioButtonPanel);
-  
       const radioButtons: RadioButton[] = [];
-      const paddings = [0, 70, 85, 30, 10];
-  
+      const paddings = ["0%", "5%", "35%", "10%", "20%"]; // Отступы в процентах для каждой кнопки
+    
+      // Создаем контейнер для радио-кнопок
+      const container = new Rectangle();
+      container.width = "30%"; // Адаптивная ширина
+      container.height = "70%"; // Адаптивная высота
+      container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      container.thickness = 0; // Без границ
+      container.background = "transparent";
+    
+      // Создаем Grid внутри контейнера
+      const grid = new Grid();
+      grid.width = "100%";
+      grid.height = "100%";
+    
+      // Добавляем строки в Grid для отступов и кнопок
       for (let i = 0; i < 5; i++) {
+        // Добавляем строку для отступа
+        grid.addRowDefinition(parseFloat(paddings[i]) / 100); // Отступ в процентах
+    
+        // Добавляем строку для кнопки
+        grid.addRowDefinition(0.1); // Фиксированная высота для кнопки (10% от контейнера)
+      }
+    
+      // Добавляем колонки: одна для радио-кнопок, одна для лейблов
+      grid.addColumnDefinition(0.2); // 20% для радио-кнопок
+      grid.addColumnDefinition(0.8); // 80% для лейблов
+    
+      // Индекс текущей строки в Grid
+      let currentRow = 0;
+    
+      for (let i = 0; i < 5; i++) {
+        // Пропускаем строку с отступом
+        currentRow++;
+    
+        // Радио-кнопка
         const radioButton = new RadioButton();
-        radioButton.width = "30px";
-        radioButton.height = "30px";
+        radioButton.width = "30%"; // Занимает всю ширину ячейки
+        radioButton.height = "65%"; // Занимает всю высоту ячейки
         radioButton.color = "white";
         radioButton.background = "grey";
-  
+    
+        // Лейбл
         const label = new TextBlock();
         label.text = `Вариант ${i + 1}`;
-        label.height = "30px";
+        label.fontSize = "50%"; // Адаптивный размер шрифта
         label.color = "white";
-        label.paddingTop = "5px";
-        label.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-  
-        const radioGroup = new StackPanel();
-        radioGroup.isVertical = true;
-        radioGroup.width = "120px";
-  
-        if (i > 0) {
-          radioGroup.paddingTop = `${paddings[i]}px`;
-        }
-  
-        radioGroup.addControl(radioButton);
-        radioGroup.addControl(label);
-  
-        radioButtonPanel.addControl(radioGroup);
+        label.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        label.paddingLeft = "2%";
+    
+        // Контейнер для радио-кнопки
+        const radioContainer = new Rectangle();
+        radioContainer.width = "100%";
+        radioContainer.height = "100%";
+        radioContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        radioContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        radioContainer.thickness = 0;
+    
+        // Добавляем радио-кнопку в контейнер
+        radioContainer.addControl(radioButton);
+    
+        // Добавляем радио-кнопку и лейбл в Grid
+        grid.addControl(radioContainer, currentRow, 0);
+        grid.addControl(label, currentRow, 1);
+    
+        // Выравнивание внутри ячеек
+        radioContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        radioContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        label.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+        // Добавляем радио-кнопку в массив
         radioButtons.push(radioButton);
+    
+        // Переходим к следующей строке (для отступа)
+        currentRow++;
       }
-  
+    
+      // Добавляем Grid в контейнер
+      container.addControl(grid);
+    
+      // Добавляем контейнер на экран
+      this.guiTexture.addControl(container);
+    
+      // Кнопка "Скрыть"
       const hideButton = Button.CreateSimpleButton("hideBtn", "Скрыть");
-      hideButton.width = "100px";
-      hideButton.height = "40px";
+      hideButton.width = "20%";
+      hideButton.height = "5%";
       hideButton.color = "white";
       hideButton.background = "red";
       hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-  
+      hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      hideButton.top = "-5%"; // Сдвиг вверх от нижнего края
+    
       this.guiTexture.addControl(hideButton);
-  
+    
       hideButton.onPointerUpObservable.add(() => {
-        this.guiTexture.removeControl(radioButtonPanel);
+        this.guiTexture.removeControl(container);
         this.guiTexture.removeControl(hideButton);
         onHide();
       });
     }
+
+
+    
   
     setupModalInteraction(mesh: AbstractMesh, onRightClick: () => void): void {
       mesh.actionManager = new ActionManager(this.scene);
