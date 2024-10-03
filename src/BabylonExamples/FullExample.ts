@@ -11,8 +11,8 @@ import {
     Color3, // Импортируем Ray для создания луча
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем новый файл для GUI
-import { TriggersManager } from "./FunctionComponents/TriggerManager";
+import { GUIManager } from "../components/GUIManager"; // Импортируем новый файл для GUI
+import { TriggersManager } from '../components/TriggerManager';
 
 export class FullExample {
     scene: Scene;
@@ -32,6 +32,8 @@ export class FullExample {
 
         this.CreateEnvironment();
         this.CreateController();
+
+        
 
         this.engine.runRenderLoop(() => {
             this.scene.render();
@@ -104,9 +106,10 @@ export class FullExample {
     // Функция для создания луча над мешом
     createRayAboveMesh(mesh: AbstractMesh): void {
         // Используем мировую позицию меша, учитывая его родителя
-        const rayOrigin = mesh.getAbsolutePosition().clone(); 
-        const rayDirection = new Vector3(0, 1, 0); // Направление луча (вверх)
+        const rayOrigin = new Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z); 
+        const rayDirection = new Vector3(0, 5, 11); // Направление луча (вверх)
         const rayLength = 100; // Длина луча
+        
     
         // Создаем луч
         const ray = new Ray(rayOrigin, rayDirection, rayLength);

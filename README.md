@@ -1,368 +1,426 @@
-App - это роутер
-MainPage - навигация по кнопкам
-BabylonTutor и BabylonExample просто площадка для канваса, тут еще можно будет дивов понапизать
-BabylonTest тоже самое но для тест канваса где я запускал для просмотра модельки Олега
-Собственно дальше у нас сцены, они BabylonExamples находятся
-Посмотри какая куда подключается, одна помоему безхозная, это BasicScene
-В FullExample проверял функции на точное расположение и все понемногу
-В BasicScene2 почти теже функции только есть модалочка еще на ведре, там потыкай дееревья еще, есть инвентарь, тыкни на дерево с двумя кнопками
-Основной функционал в функциональных компонентах папке и теже функции но в куче только в BasicScene2
-
-В ветке GUI находится функция загрузки GUI из ЭДИТОРА
-
-Объяснение функций BabylonScene2
-
-
-```typescripte
 import {
-  Scene,
-  Engine,
-  SceneLoader,
-  Vector3,
-  HemisphericLight,
-  FreeCamera,
-  ActionManager,
-  ExecuteCodeAction,
-  AbstractMesh,
-  PointerDragBehavior,
-  PointerEventTypes,
-  Axis,
-  Space,
-  MeshBuilder,
-  Mesh,
+    Scene,
+    Engine,
+    SceneLoader,
+    Vector3,
+    HemisphericLight,
+    FreeCamera,
+    ActionManager,
+    ExecuteCodeAction,
+    AbstractMesh,
+    Ray,
+    MeshBuilder,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Button, StackPanel, Rectangle } from "@babylonjs/gui";
-import * as GUI from '@babylonjs/gui/2D';
-///Импорт из движка, можно все как 2d GUI а можно частями как два выше
+import * as CANNON from 'cannon-es'; 
+import { CannonJSPlugin } from '@babylonjs/core/Physics/Plugins/cannonJSPlugin';
+import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor'; 
+import { GUIManager } from '../components/GUIManager'; 
+import { TriggersManager } from '../components/TriggerManager'; 
+import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
+import { AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
 
-export class BasicScene2 {
-  scene: Scene;
-  engine: Engine;
-  ramp: AbstractMesh;
-  tree: AbstractMesh;
-  tree2: AbstractMesh;
-  bucket: AbstractMesh;
-  inventoryPanel: StackPanel;
-  private openModal: () => void;
-//Типизация
+// Определение класса InteractionObject
+export class InteractionObject {
+    private mesh: AbstractMesh; // Сохраняем ссылку на меш
 
-  constructor(private canvas: HTMLCanvasElement, openModal: () => void) {
-    this.engine = new Engine(this.canvas, true); // Инициализируем движок с привязкой к канвасу
-    
-    this.engine.displayLoadingUI(); // Показываем загрузочный экран
-
-    this.scene = this.CreateScene(); // Создаем сцену
-    this.openModal = openModal; // Сохраняем функцию открытия модального окна
-
-    this.CreateEnvironment(); // Создаем окружение
-    this.CreateController(); // Создаем контроллер камеры
-    
-
-    this.engine.runRenderLoop(() => {
-      this.scene.render();
-    });
-    // Запускаем цикл рендеринга
-  }
-
-  CreateScene(): Scene {
-    const scene = new Scene(this.engine); // Создаем новую сцену
-    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene); //Создаем свет
-
-    const framesPerSecond = 60; //Устанавливаем FPS для цены
-    const gravity = -9.81;
-    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0); //Инициализируем гравитацию
-    scene.collisionsEnabled = true; //Включаем столкновения
-
-    return scene;
-  }
-
-  async CreateEnvironment(): Promise<void> { //Асинхронно загружаем модель
-    const { meshes } = await SceneLoader.ImportMeshAsync(
-      "",
-      "./models/",
-      "campfire.glb",
-      this.scene
-    ); //Собственно этой функцией
-
-    this.ramp = meshes[24];
-    this.tree = meshes[25];
-    this.tree2 = meshes[30];
-    this.bucket = meshes[2];
-    // console.log(meshes);
-    //Инициализируем отдельно меши
-    
-
-    meshes.forEach((mesh) => {
-      mesh.checkCollisions = true;
-    });
-    //Выдаем коллизии всем
-
-    this.setupRampInteraction();
-    this.setupCubInteraction();
-    this.createButtonAboveMesh();
-    this.setupModalInteraction();
-    this.setupRampTrigger();
-     this.createInventoryPanel();
-     this.createCollectibleMesh();
-    //запускаем все функциональные компоненты
-    
-
-    this.engine.hideLoadingUI(); //Загрываем загрузчик
-  }
-
-  
-
-  CreateController(): void {
-    const camera = new FreeCamera("camera", new Vector3(0, 5, 0), this.scene); //Создаем камеру и задаем ее положение в пространстве с помощью вектора
-    camera.attachControl(this.canvas, false); // Привязываем управление к канвасу
-
-    camera.applyGravity = true; //Применяем гравитацию
-    camera.checkCollisions = true; //Проверяем коллизию
-    camera.ellipsoid = new Vector3(1, 2, 1); //Создаем элипсоид для коллизии, чтобы у камеры появилось физическое тело
-    camera.minZ = 0.45; // Минимальное расстояние от камеры до объектов
-    camera.speed = 0.75; // Устанавливаем скорость движения
-    camera.angularSensibility = 4000; // Чувствительность поворота
-    camera.keysUp.push(87); // W
-    camera.keysLeft.push(65); // A
-    camera.keysDown.push(83); // S
-    camera.keysRight.push(68); // D
-
-
-  }
-
-  // Создаем панель инвентаря
-  createInventoryPanel(): void {
-    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    //Создаем GUI компонент
-
-    // Создаем панель
-    this.inventoryPanel = new StackPanel();
-    this.inventoryPanel.isVertical = false;
-    this.inventoryPanel.height = "100px";
-    this.inventoryPanel.width = "400px";
-    this.inventoryPanel.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
-    this.inventoryPanel.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
-    advancedTexture.addControl(this.inventoryPanel); /Привязываем панель к GUI компоненту
-
-    // Добавляем слоты для инвентаря
-    for (let i = 0; i < 4; i++) {
-      const slot = new Rectangle();
-      slot.width = "80px";
-      slot.height = "80px";
-      slot.thickness = 2;
-      slot.color = "white";
-      slot.background = "grey";
-      slot.name = "empty";
-      this.inventoryPanel.addControl(slot);
+    constructor(mesh: AbstractMesh) {
+        this.mesh = mesh; // Инициализируем меш
     }
-  }
 
-  // Создаем коллекционный меш
-  createCollectibleMesh(): void {
-    const mesh = this.tree2; // Используем ваше дерево (tree2) как коллекционный объект
-
-    if (mesh) {
-      mesh.actionManager = new ActionManager(this.scene);
-      mesh.actionManager.registerAction(
-        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-          mesh.isVisible = false;
-
-          // Обновляем инвентарь
-          const emptySlot = this.inventoryPanel.children.find(
-            (slot) => slot.name === "empty"
-          ) as Rectangle;
-
-          if (emptySlot) {
-            emptySlot.background = "red"; // Обозначение заполненной ячейки
-            emptySlot.name = "occupied";
-          }
-        })
-      );
+    getMesh(): AbstractMesh {
+        return this.mesh; // Возвращаем меш
     }
-  }
-
-  //Создаем экшн для меша, перемещение по нажатии
-  setupRampInteraction(): void {
-    if (!this.ramp) return;
-
-    this.ramp.actionManager = new ActionManager(this.scene);
-
-    this.ramp.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-        this.canvas.style.cursor = "pointer"; //Меняет курсор при наведении
-      })
-    );
-
-    this.ramp.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-        this.canvas.style.cursor = "default"; //Возвращает дефолтный когда убираешь курсор
-      })
-    );
-
-    const dragBehavior = new PointerDragBehavior({ dragPlaneNormal: new Vector3(0, 1, 0) }); // Создаем поведение для перетаскивания
-    dragBehavior.useObjectOrientationForDragging = false; // Не использовать ориентацию объекта для перетаскивания
-    this.ramp.addBehavior(dragBehavior); // Добавляем поведение к рампе
-  }
-
-  // Создание экшена для вращаения вокруг своей оси
-  setupCubInteraction(): void {
-    if (!this.tree) return;
-
-    this.tree.actionManager = new ActionManager(this.scene);
-
-    // Изменение курсора на pointer при наведении на рампу
-    this.tree.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-        this.canvas.style.cursor = "pointer"; //Опять изменение курсора
-      })
-    );
-
-    // Возврат к стандартному курсору при уходе с рампы
-    this.tree.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-        this.canvas.style.cursor = "default";
-      })
-    );
-
-    let isRotating = false; // Флаг вращения
-    let lastX = 0; // Последняя позиция по оси X
-
-    // Добавляем события для нажатия мыши на рампу
-    this.scene.onPointerObservable.add((pointerInfo) => {
-        switch (pointerInfo.type) { //Проходим по логикам при нажатии, при отжатии и при перемещении
-            case PointerEventTypes.POINTERDOWN:
-                // Проверяем, нажата ли рампа
-                if (pointerInfo.pickInfo?.hit && pointerInfo.pickInfo.pickedMesh === this.tree) {
-                    isRotating = true;
-                    lastX = pointerInfo.event.clientX; // Сохраняем текущую позицию X
-                    this.canvas.style.cursor = "grabbing";
-                }
-                break;
-            case PointerEventTypes.POINTERUP:
-                isRotating = false;
-                this.canvas.style.cursor = "pointer";
-                break;
-            case PointerEventTypes.POINTERMOVE:
-                if (isRotating) {
-                    const deltaX = pointerInfo.event.clientX - lastX; // Изменение позиции по X
-                    const rotationSpeed = 0.01; // Скорость вращения
-                    this.tree.rotate(Axis.Y, deltaX * rotationSpeed, Space.LOCAL); // Вращаем рампу вокруг оси Y
-                    lastX = pointerInfo.event.clientX; // Обновляем последнюю позицию X
-                }
-                break;
-        }
-    });
 }
 
-  //Создаем кнопки и привязываем к мэшу
-createButtonAboveMesh(): void {
-    // Создание текстуры для полноэкранного интерфейса GUI
-    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI('UI');
+export class FullExample {
+    scene: Scene;
+    engine: Engine;
+    guiManager: GUIManager;
+    triggerManager: TriggersManager;
+    secondaryCamera: FreeCamera | null = null; // Инициализируем с null
+    textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D", "А теперь осмотритесь по комнате"];
+    targetMeshes: AbstractMesh[] = [];
+    handModel: AbstractMesh | null = null; 
+    rulerModel: AbstractMesh | null = null;  
+    selectedSize: number | null = null;
+    interactionObject: AbstractMesh | null = null; // Объявите interactionObject с типом
+    firstPoint: Vector3 | null = null;
+    secondPoint: Vector3 | null = null;
+    measuringDistance: boolean = false; // Флаг, указывающий, что мы находимся в процессе измерения
 
-    // Создание кнопки
-    const button = Button.CreateSimpleButton('myBtn', 'Click Me!');
-    button.width = '200px';
-    button.height = '40px';
-    button.color = 'white';
-    button.background = 'deepskyblue';
-    advancedTexture.addControl(button);  // Добавление кнопки в интерфейс
+    constructor(private canvas: HTMLCanvasElement) {
+        this.engine = new Engine(this.canvas, true);
+        this.scene = this.CreateScene();
 
-    // Создание панели
-    const panel = new GUI.StackPanel();
-    panel.addControl(button);  // Добавление кнопки в панель
-    panel.isVertical = false;  // Панель будет горизонтальной
-    advancedTexture.addControl(panel);  // Добавление панели в интерфейс
-    panel.linkWithMesh(this.tree2);  // Привязка панели к мэшу
-//Дальше идет создание кнопки уже в пространстве
-    // Создание 3D плоскости
-    const plane = MeshBuilder.CreatePlane('plane', {
-      width: 5,  // Ширина плоскости
-      height: 1,  // Высота плоскости
+        // Инициализация GUIManager и TriggersManager
+        this.guiManager = new GUIManager(this.scene, this.textMessages);
+        this.triggerManager = new TriggersManager(this.scene, this.canvas);
+
+        this.CreateEnvironment();
+        this.CreateController();
+
+        this.engine.runRenderLoop(() => {
+            this.scene.render();
+        });
+    }
+
+    CreateScene(): Scene {
+        const scene = new Scene(this.engine);
+        new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+        const framesPerSecond = 60;
+        const gravity = -9.81;
+        scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+        scene.collisionsEnabled = true;
+
+        return scene;
+    }
+
+    async CreateEnvironment(): Promise<void> {
+        // Загрузка основной карты
+        const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+        // Фильтрация мешей по названию "stairs"
+        this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
+    
+        mapMeshes.forEach((mesh) => {
+            mesh.checkCollisions = true;
+        
+        });
+    
+        this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
+    
+        this.targetMeshes.forEach(mesh => {
+            mesh.checkCollisions = true;
+            this.createRayAboveMesh(mesh);
+            this.guiManager.createButtonAboveMesh(mesh);
+
+            // Создание объекта взаимодействия
+            const interactionObject = new InteractionObject(mesh); // Создаем объект взаимодействия
+            this.triggerManager.setupProximityTrigger(mesh, () => {
+                console.log("Камера вошла в зону триггера лестницы:", mesh.name);
+                this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+            });
+    
+            // Включение клика на объекте
+            this.triggerManager.enableClickInteraction(interactionObject.getMesh());
+    
+            // Настройка подсветки
+            this.triggerManager.setupClickTrigger(mesh, () => {
+                console.log("Лестница была кликнута:", mesh.name);
+                this.interactionObject = mesh; // Сохраняем ссылку на объект
+            this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+            });
+        });
+
+        // Загрузка модели лестницы и размещение по центру
+        const { meshes: stairMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_Stairs_base512X512.gltf", this.scene);
+        
+        stairMeshes.forEach((mesh) => {
+            mesh.checkCollisions = true;
+            mesh.isPickable = true; 
+            mesh.position = new Vector3(0, 0, 0);
+            mesh.isVisible = true; 
+            mesh.setEnabled(true); 
+            mesh.actionManager = new ActionManager(this.scene);
+            mesh.actionManager.registerAction(
+                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    console.log("Лестница кликнута:", mesh.name);
+                    this.interactionObject = mesh; // Сохраните ссылку на объект
+                    this.switchToSecondaryCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
+                })
+            );
+        });
+
+        
+        // Дополнительная фильтрация по именам "broken" и "whole"
+        this.targetMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+        this.targetMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+
+        // Сделать все меши с "broken" видимыми
+    this.targetMeshes.forEach((mesh) => {
+        mesh.visibility = 1; // Полностью видимый
+        // Создание объекта взаимодействия
+        const interactionObject = new InteractionObject(mesh); // Создаем объект взаимодействия
+        this.triggerManager.setupProximityTrigger(mesh, () => {
+            console.log("Камера вошла в зону триггера лестницы:", mesh.name);
+            this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+        });
+
+        // Включение клика на объекте
+        this.triggerManager.enableClickInteraction(interactionObject.getMesh());
+
+        // Настройка подсветки
+        this.triggerManager.setupClickTrigger(mesh, () => {
+            console.log("Лестница была кликнута:", mesh.name);
+            this.interactionObject = mesh; // Сохраняем ссылку на объект
+        this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+        });
+        
     });
 
-    // Создание текстуры для GUI, привязанной к плоскости
-    const advancedTexture2 = AdvancedDynamicTexture.CreateForMesh(plane, 512, 64);
+    // Сделать все меши с "whole" невидимыми
+    this.targetMeshes.forEach((mesh) => {
+        mesh.visibility = 0; // Полностью невидимый
+    });
 
-    // Создание второй кнопки с аналогичными параметрами
-    const button2 = Button.CreateSimpleButton('myBtn', 'Click Me!');
-    button2.width = '200px';
-    button2.height = '40px';
-    button2.color = 'white';
-    button2.background = 'deepskyblue'; 
-    advancedTexture2.addControl(button2);  // Добавление кнопки на текстуру плоскости
 
-    // Привязка плоскости к мэшу в качестве родителя
-    plane.parent = this.tree2;
 
-    // Включение billboard-режима, чтобы плоскость всегда была обращена к камере
-    plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
 
-    // Позиционирование плоскости относительно мэша
-    plane.position = new Vector3(
-      this.tree2.position.x - 1, 
-      this.tree2.position.y - 5, 
-      this.tree2.position.z
-    );
+
+        this.guiManager.createGui();
+        await this.CreateHandModel(); 
+        await this.CreateRulerModel(); 
+    }
+
+    async CreateHandModel(): Promise<void> {
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Caja_-_Superior_1_pieza.stl", this.scene);
+        this.handModel = meshes[0];
+        this.handModel.position = new Vector3(0, 0, 0);
+        this.handModel.scaling = new Vector3(0.03, 0.03, 0.03); 
+        this.attachHandToCamera(); 
+
+        this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
+            mass: 0,
+            friction: 0,
+            restitution: 0
+        });
+    }
+
+    async CreateRulerModel(): Promise<void> {
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Caja_-_Superior_1_pieza.stl", this.scene);
+        this.rulerModel = meshes[0];
+        this.rulerModel.position = new Vector3(0, 0, 0);
+        this.rulerModel.scaling = new Vector3(0.3, 0.3, 0.3); 
+        this.rulerModel.isVisible = false; 
+    }
+
+    attachHandToCamera(): void {
+        if (this.handModel) {
+            const camera = this.scene.getCameraByName("camera") as FreeCamera;
+            this.handModel.parent = camera;
+            this.handModel.position = new Vector3(0.5, -1, 4);
+            this.handModel.rotation.x += Math.PI / 2; 
+            this.handModel.scaling = new Vector3(0.02, 0.02, 0.02);
+        }
+    }
+
+    CreateController(): void {
+        const camera = new FreeCamera("camera", new Vector3(20, 100, 0), this.scene);
+        camera.attachControl(this.canvas, true);
+        this.scene.activeCamera = camera;
+
+        camera.applyGravity = true;
+        camera.checkCollisions = true;
+        camera.ellipsoid = new Vector3(1, 2, 1);
+        camera.minZ = 0.45;
+        camera.speed = 0.75;
+        camera.angularSensibility = 4000;
+        camera.keysUp.push(87); // W
+        camera.keysLeft.push(65); // A
+        camera.keysDown.push(83); // S
+        camera.keysRight.push(68); // D
+
+        this.scene.gravity = new Vector3(0, -0.98, 0);
+        camera.needMoveForGravity = true;
+        // Инициализация второй камеры
+        this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), this.scene);
+        this.secondaryCamera.setTarget(Vector3.Zero());
+    
+
+        const ground = this.scene.getMeshByName("ground");
+        if (ground) {
+            ground.checkCollisions = true;
+        }
+
+        this.scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin(true, 10, CANNON));
+
+        // Обработчик нажатия клавиши для возврата к основной камере
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") { // Измените на нужную вам клавишу
+                this.switchToMainCamera(camera);
+            }
+        });
+    }
+
+    // Метод для переключения на основную камеру
+    switchToMainCamera(camera: FreeCamera): void {
+        this.scene.activeCamera = camera;
+
+
+        // Отключаем управление вторичной камерой
+        // Отключаем управление вторичной камерой, если она не равна null
+        if (this.secondaryCamera) {
+        this.secondaryCamera.detachControl(); // Вызываем без аргументов
+    }
+
+
+        // Включаем видимость модели Caja_-_Superior_1_pieza.stl
+        if (this.handModel) {
+        this.handModel.isVisible = true;
+    }
+         // Отключаем измерение расстояния
+        this.disableDistanceMeasurement();
+        console.log("Камера переключена обратно на основную камеру");
+    }
+        disableDistanceMeasurement(): void {
+        this.measuringDistance = false;
+        this.scene.onPointerDown = undefined; // Отключаем обработку кликов
+    }
+
+    switchToSecondaryCamera(interactionObject: InteractionObject): void {
+        const position = interactionObject.getMesh().position; // Получаем позицию меша
+        if (this.secondaryCamera) {
+    this.secondaryCamera.position = new Vector3(position.x + 4, position.y + 2, position.z + 0); // Позиция рядом с лестницей
+} else {
+    console.error("Вторичная камера не инициализирована.");
+    
+}       // Позиция рядом с лестницей
+        if (this.secondaryCamera) {
+    this.secondaryCamera.setTarget(new Vector3(position.x, position.y + 1, position.z)); // Камера нацелена чуть выше объекта
+} else {
+    console.error("Вторичная камера не инициализирована.");
+}       
+        // Камера нацелена чуть выше объекта
+        this.scene.activeCamera = this.secondaryCamera;
+
+        // Включаем управление камерой через мышь
+        if (this.secondaryCamera) {
+        this.secondaryCamera.attachControl(this.canvas, true); // Второй параметр — это опция "noPreventDefault"
+        } else {
+        console.error("Вторичная камера не инициализирована.");
+        } // Второй параметр — это опция "noPreventDefault"
+    
+        // Настраиваем параметры вращения камеры
+        if (this.secondaryCamera) {
+    this.secondaryCamera.angularSensibility = 800; // Регулируем чувствительность вращения
+} else {
+    console.error("Вторичная камера не инициализирована.");
 }
 
-  //Логика модального окна
-  setupModalInteraction(): void {
-    if (!this.bucket) return;
-  
-    this.bucket.actionManager = new ActionManager(this.scene);
-  
-    this.bucket.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
-        this.canvas.style.cursor = 'pointer'; //Опять же курсор
-      })
-    );
-  
-    this.bucket.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
-        this.canvas.style.cursor = 'default';
-      })
-    );
-  
-    this.bucket.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => { //И при клике открывается модалка
-        console.log('Bucket clicked!'); // Добавьте это для отладки
-        this.openModal(); // Открываем модальное окно
-      })
-    );
-  }
 
-  // Создание триггер зоны
-  setupRampTrigger(): void {
-    if (!this.ramp) return;
+        // Скрываем модель Caja_-_Superior_1_pieza.stl
+        if (this.handModel) {
+        this.handModel.isVisible = false;
+    }
 
-    const interactionZone = MeshBuilder.CreateBox("interactionZone", { size: 2 }, this.scene); //Создаем триггер зону
-    interactionZone.isVisible = false; // Зона невидима
-    interactionZone.parent = this.ramp // Размещаем зону рядом с рампой
-    interactionZone.position = new Vector3 (this.ramp.position.x, this.ramp.position.y + 3, this.ramp.position.z) //Указываем позицию триггер зоны
-    interactionZone.checkCollisions = false; // Отключаем ей колизию
+        // Включаем измерение расстояния
+        this.enableDistanceMeasurement();
+        console.log("Камера переключена на вторую камеру");
 
-    // Создаем невидимый бокс для камеры для взаимодействия с триггер зоной
-    const cameraCollider = MeshBuilder.CreateBox("cameraCollider", { size: 1 }, this.scene);
-    cameraCollider.isVisible = false; // Невидимый бокс
-    cameraCollider.parent = this.scene.activeCamera; // Связываем с камерой
 
-    // Устанавливаем ActionManager на этот бокс
-    cameraCollider.actionManager = new ActionManager(this.scene);
 
-    // Добавляем действие на пересечение с рампой
-    cameraCollider.actionManager.registerAction(
-      new ExecuteCodeAction(
-        {
-          trigger: ActionManager.OnIntersectionEnterTrigger,
-          parameter: { mesh: interactionZone }, // Рампа, с которой пересекается камера
-        },
-        () => { //Добавляем логику при взаимодействии с триггер зоной, в данном случае появляется алерт
-          console.log("Camera intersected with the ramp!");
-          alert("Camera reached the ramp!"); // Можно заменить на нужное действие
-        }
-      )
-    );
-  }
-  
+
+ // Создаем GUI
+ const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    
+ const questionText = new TextBlock();
+ questionText.text = "Выберите правильный ответ:";
+ questionText.color = "white";
+ questionText.fontSize = 24;
+ questionText.height = "50px";
+ questionText.top = "-200px";
+ advancedTexture.addControl(questionText);
+
+ const correctAnswer = "Ответ 2"; // Правильный ответ
+
+ // Функция для создания кнопки ответа
+ const createAnswerButton = (answerText: string, topPosition: string) => {
+     const button = Button.CreateSimpleButton("answer", answerText);
+     button.width = "200px";
+     button.height = "60px";
+     button.color = "white";
+     button.background = "blue";
+     button.top = topPosition;
+     button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+     button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+     advancedTexture.addControl(button);
+
+     button.onPointerClickObservable.add(() => {
+         if (answerText === correctAnswer) {
+             console.log("Правильный ответ!");
+             questionText.text = "Правильный ответ!";
+         } else {
+             console.log("Неправильный ответ.");
+             questionText.text = "Неправильный ответ.";
+         }
+         // Удалить все элементы GUI после выбора
+         setTimeout(() => {
+             advancedTexture.dispose();
+         }, 2000); // Убираем через 2 секунды
+     });
+ };
+
+         // Создаем 4 кнопки с разными вариантами ответов
+            createAnswerButton("Ответ 1", "-100px");
+            createAnswerButton("Ответ 2", "-20px");
+            createAnswerButton("Ответ 3", "60px");
+            createAnswerButton("Ответ 4", "140px");
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+    createRayAboveMesh(mesh: AbstractMesh): void {
+        // Создаем луч с начальной позицией выше меша и направлением
+        const origin = new Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z);
+        const direction = new Vector3(0, 1, 0); // Направление луча (например, вверх)
+        
+        // Создаем луч
+        const ray = new Ray(origin, direction, 5); // Третий аргумент - длина луча
+        
+        // Используем RayHelper для визуализации луча
+        const rayHelper = new RayHelper(ray);
+        rayHelper.show(this.scene, new Color3(1, 0, 0)); // Показать луч в сцене
+    }
+
+    enableDistanceMeasurement(): void {
+        this.measuringDistance = true;
+        this.firstPoint = null;
+        this.secondPoint = null;
+    
+        // Обработчик кликов
+        this.scene.onPointerDown = (evt, pickResult) => {
+            if (pickResult.hit && pickResult.pickedPoint) {
+                if (!this.firstPoint) {
+                    // Запоминаем первую точку
+                    this.firstPoint = pickResult.pickedPoint.clone();
+                    console.log("Первая точка:", this.firstPoint);
+                } else if (!this.secondPoint) {
+                    // Запоминаем вторую точку
+                    this.secondPoint = pickResult.pickedPoint.clone();
+                    console.log("Вторая точка:", this.secondPoint);
+    
+                    // Вычисляем расстояние
+                    const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+                    console.log("Расстояние между точками:", distance);
+
+                    if (this.firstPoint && this.secondPoint) {
+                        const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+                        console.log("Расстояние между точками:", distance);
+    
+                    // Показываем расстояние через GUI
+                    this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
+    
+                    // Сброс для нового измерения
+                    this.firstPoint = null;
+                    this.secondPoint = null;
+                }
+            }
+        };
+    }
+
+
+
+}
 }
