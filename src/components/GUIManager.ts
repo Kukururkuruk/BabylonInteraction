@@ -1,4 +1,4 @@
-import { AbstractMesh, Mesh, MeshBuilder, Matrix, Scene, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, Mesh, MeshBuilder, Matrix, Scene, FreeCamera, Vector3 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, TextBlock, Control, Button } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
 
@@ -22,8 +22,9 @@ export class GUIManager {
   // Метод для инициализации обработчика клика
 initClickListener(scene: Scene): void {
   scene.onPointerDown = (evt, pickResult) => {
-    if (this.isSecondaryCameraActive && pickResult.hit && pickResult.pickedPoint) { // Проверяем, что pickedPoint не null
-      this.showRedDot(pickResult.pickedPoint, this.advancedTexture);
+    if (this.isSecondaryCameraActive && pickResult.hit && pickResult.pickedPoint) {
+        console.log('Клик по координатам:', pickResult.pickedPoint);
+        this.showRedDot(pickResult.pickedPoint, this.advancedTexture);
     }
   };
 }
@@ -41,24 +42,31 @@ initClickListener(scene: Scene): void {
     const width = this.scene.getEngine().getRenderWidth();
     const height = this.scene.getEngine().getRenderHeight();
 
+    
+    // Получаем матрицы проекции и вида
+    const viewMatrix = this.scene.activeCamera!.getViewMatrix();
+    const projectionMatrix = this.scene.activeCamera!.getProjectionMatrix();
+
     // Преобразование 3D координат в 2D (экранные координаты)
     const projectedPosition = Vector3.Project(
         position, // Вектор для проекции
-        Matrix.IdentityReadOnly, // Матрица преобразования (можно использовать Identity)
-        this.scene.activeCamera!.getViewMatrix(), // Матрица видовой трансформации
-        this.scene.activeCamera!.getProjectionMatrix() // Матрица проекционной трансформации
+        Matrix.Identity(), // Используем идентичную матрицу для world
+        viewMatrix, // Матрица вида
+        projectionMatrix // Матрица проекции
     );
 
-    redDot.left = (projectedPosition.x * width - width / 2) + "px";
-    redDot.top = (-projectedPosition.y * height + height / 2) + "px";
-    
+    // Устанавливаем позицию для redDot
+    redDot.left = (projectedPosition.x * width) + width / 2 + "px"; // Изменено, чтобы правильно отображать
+    redDot.top = (-projectedPosition.y * height) + height / 2 + "px"; // Изменено, чтобы правильно отображать
+
     advancedTexture.addControl(redDot);
 
     // Удаляем точку через 5 секунд
     setTimeout(() => {
-      advancedTexture.removeControl(redDot);
+        advancedTexture.removeControl(redDot);
     }, 5000);
 }
+
 
   // Метод для показа сообщения с расстоянием
   showDistanceMessage(message: string): void {

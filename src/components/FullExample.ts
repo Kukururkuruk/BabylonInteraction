@@ -18,7 +18,9 @@ import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor';
 import { GUIManager } from '../components/GUIManager'; 
 import { TriggersManager } from '../components/TriggerManager'; 
 import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
-import { AdvancedDynamicTexture, TextBlock, Button, StackPanel, Control } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
+import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
+
 
 // Определение класса InteractionObject
 export class InteractionObject {
@@ -67,12 +69,21 @@ export class FullExample {
 
     CreateScene(): Scene {
         const scene = new Scene(this.engine);
-        new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+        new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
 
+        
+
+        // Настройка физической среды
         const framesPerSecond = 60;
         const gravity = -9.81;
         scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
         scene.collisionsEnabled = true;
+        const hdrTexture = new HDRCubeTexture("./models/cape_hill_4k.hdr", scene, 512);
+        scene.environmentTexture = hdrTexture;
+        scene.createDefaultSkybox(hdrTexture, true, 1000);  // Последний параметр - размер skybox
+        scene.environmentIntensity = 0.5;
+
+        
 
         return scene;
     }
@@ -167,13 +178,6 @@ export class FullExample {
             })
         );
     });
-
-
-
-
-
-
-
 
 
 
@@ -356,16 +360,17 @@ export class FullExample {
  const correctAnswer = "Ответ 48 сантиметров"; // Правильный ответ
 
  // Функция для создания кнопки ответа
-const createAnswerButton = (answerText: string, leftPosition: string) => {
+ const createAnswerButton = (answerText: string, leftPosition: string) => {
     const button = Button.CreateSimpleButton("answer", answerText);
     button.width = "200px";
     button.height = "60px";
     button.color = "white";
     button.background = "blue";
-    button.top = "auto"; // Автоматическое расположение по вертикали
     button.left = leftPosition; // Устанавливаем положение кнопки по горизонтали
+    button.top = "-10px"; // Отступ от нижнего края экрана (с отрицательным значением, чтобы кнопки не были слишком высоко)
     button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Выравнивание по левому краю
-    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю
+    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю экрана
+
     advancedTexture.addControl(button);
 
     button.onPointerClickObservable.add(() => {
@@ -394,6 +399,7 @@ createAnswerButton("Ответ 52 сантиметров", `${startXPosition}px`
 createAnswerButton("Ответ 50 сантиметров", `${startXPosition + buttonWidth + buttonSpacing}px`); // 2-я кнопка
 createAnswerButton("Ответ 48 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 2}px`); // 3-я кнопка
 createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 3}px`); // 4-я кнопка
+
 
 
 

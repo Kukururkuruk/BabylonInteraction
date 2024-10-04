@@ -424,3 +424,61 @@ export class FullExample {
 
 }
 }
+
+
+
+
+
+Точки должны быть одного цвета, клик по 2 точкам.
+высота проёма должна тоже фиксироваться.
+
+
+
+
+// Работа с мешами типа "whole"
+    const wholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+    wholeMeshes.forEach((mesh) => {
+        mesh.checkCollisions = true;
+        mesh.isPickable = true;
+        mesh.visibility = 0; // Делаем невидимым
+        mesh.setEnabled(true);
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(
+            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
+                this.interactionObject = mesh;
+                this.switchToSecondaryCamera(new InteractionObject(mesh));
+                
+            })
+        );
+    });
+
+
+
+
+    const createClickablePoint = (position) => {
+            const point = BABYLON.MeshBuilder.CreateSphere("clickablePoint", { diameter: 0.1 }, this.scene);
+            point.position = position;
+            point.checkCollisions = true;
+            point.isPickable = true;
+            point.actionManager = new ActionManager(this.scene);
+            point.actionManager.registerAction(
+                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    console.log("Точка кликнута:", point.position);
+                    this.switchToSecondaryCamera(new InteractionObject(point));
+                })
+            );
+        
+            // Задаем цвет точки
+            const material = new BABYLON.StandardMaterial("pointMaterial", this.scene);
+            material.diffuseColor = new BABYLON.Color3(1, 0, 0); // Красный цвет
+            point.material = material;
+        
+            return point;
+        };
+
+
+
+            // Создаем кликабельные точки с фиксированными смещениями
+    createClickablePoint(mesh.position.add(new BABYLON.Vector3(0, 0.5, 0))); // Точка над мешом
+    createClickablePoint(mesh.position.add(new BABYLON.Vector3(0, -0.5, 0))); // Точка под мешом
