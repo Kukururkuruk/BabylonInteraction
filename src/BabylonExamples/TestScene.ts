@@ -117,6 +117,17 @@
 
 //       this.beam = this.targetMeshes[0]
 //       console.log(this.beam);
+
+//       this.targetMeshes = meshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+//       this.targetMeshes2 = meshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+
+//       this.targetMeshes.forEach((mesh) => {
+//         mesh.visibility = 1; // Полностью видимый
+//       });
+  
+//       this.targetMeshes2.forEach((mesh) => {
+//         mesh.visibility = 0; // Полностью невидимый
+//       });
       
       
 
@@ -353,200 +364,6 @@
 
 // }
 
-// import {
-//   Scene,
-//   Engine,
-//   SceneLoader,
-//   Vector3,
-//   HemisphericLight,
-//   HDRCubeTexture,
-//   Tools,
-//   FreeCamera,
-//   AbstractMesh,
-// } from "@babylonjs/core";
-// import "@babylonjs/loaders";
-// import {
-//   AdvancedDynamicTexture,
-//   Button,
-//   Control,
-// } from "@babylonjs/gui";
-// import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
-
-// export class TestScene {
-//   scene: Scene;
-//   engine: Engine;
-//   openModal?: () => void;
-//   zone: number[] = [-11.622146207334794, 9.429402500045683, -3.529072189835968];
-//   zone2: number[] = [13.057004227460391, 2.0282419080806964, 13.477405516648421]
-//   private guiTexture: AdvancedDynamicTexture;
-//   private triggerManager: TriggerManager2;
-//   private zoneTriggered: boolean = false;
-//   private beam: AbstractMesh;
-//   private beam2: AbstractMesh;
-//   private targetMeshes: AbstractMesh[];
-//   private targetMeshes2: AbstractMesh[];
-
-//   constructor(private canvas: HTMLCanvasElement) {
-//     this.engine = new Engine(this.canvas, true);
-//     this.engine.displayLoadingUI();
-
-//     this.scene = this.CreateScene();
-
-//     this.CreateEnvironment().then(() => {
-//       this.engine.hideLoadingUI();
-//     });
-//     this.CreateController();
-
-//     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-//     this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture);
-
-//     // this.AddScreenshotButton();
-//     this.AddCameraPositionButton();
-
-//     this.setupTriggers();
-
-//     this.engine.runRenderLoop(() => {
-//       this.scene.render();
-//     });
-//   }
-
-//   CreateScene(): Scene {
-//     const scene = new Scene(this.engine);
-//     new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-
-//     const framesPerSecond = 60;
-//     const gravity = -9.81;
-//     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
-//     scene.collisionsEnabled = true;
-
-//     const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
-
-//     scene.environmentTexture = hdrTexture;
-//     scene.createDefaultSkybox(hdrTexture, true);
-//     scene.environmentIntensity = 0.5;
-
-//     return scene;
-//   }
-
-//   CreateController(): void {
-//     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
-//     camera.attachControl(this.canvas, true);
-
-//     camera.applyGravity = true;
-//     camera.checkCollisions = true;
-//     camera.ellipsoid = new Vector3(0.5, 1, 0.5);
-//     camera.minZ = 0.45;
-//     camera.speed = 0.55;
-//     camera.angularSensibility = 4000;
-//     camera.keysUp.push(87); // W
-//     camera.keysLeft.push(65); // A
-//     camera.keysDown.push(83); // S
-//     camera.keysRight.push(68); // D
-//   }
-
-//   async CreateEnvironment(): Promise<void> {
-//     try {
-//       this.engine.displayLoadingUI();
-
-//       const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-
-//       meshes.forEach((mesh) => {
-//         mesh.checkCollisions = true;
-//       });
-
-
-
-//       this.targetMeshes = meshes.filter((mesh) => mesh.name.toLowerCase().includes("beam"));
-//       this.beam = this.targetMeshes[0]
-//       this.targetMeshes2 = meshes.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
-//       this.beam2 = this.targetMeshes2[1]
-//       console.log("Arr", this.targetMeshes2);
-//       console.log("Beam", this.beam2);
-      
-
-//       if (this.beam) {
-//         this.triggerManager.setupModalInteraction(this.beam, () => {
-//           console.log("Beam right-clicked!");
-//           if (this.openModal) {
-//             this.openModal();
-//           }
-//         });
-
-//         this.triggerManager.createRayAboveMesh(this.beam2);
-//       }
-
-//       console.log("Модели успешно загружены.");
-//     } catch (error) {
-//       console.error("Ошибка при загрузке моделей:", error);
-//     } finally {
-//       this.engine.hideLoadingUI();
-//     }
-//   }
-
-//   AddScreenshotButton(): void {
-//     const screenshotButton = Button.CreateSimpleButton("screenshotButton", "Сделать скриншот");
-//     screenshotButton.width = "150px";
-//     screenshotButton.height = "40px";
-//     screenshotButton.color = "white";
-//     screenshotButton.cornerRadius = 20;
-//     screenshotButton.background = "blue";
-//     screenshotButton.top = "20px";
-//     screenshotButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-
-//     this.guiTexture.addControl(screenshotButton);
-
-//     screenshotButton.onPointerUpObservable.add(() => {
-//       Tools.CreateScreenshotUsingRenderTarget(this.engine, this.scene.activeCamera!, { width: 1920, height: 1080 });
-//     });
-//   }
-
-//   AddCameraPositionButton(): void {
-//     const cameraPositionButton = Button.CreateSimpleButton("cameraPositionButton", "Показать координаты камеры");
-//     cameraPositionButton.width = "200px";
-//     cameraPositionButton.height = "40px";
-//     cameraPositionButton.color = "white";
-//     cameraPositionButton.cornerRadius = 20;
-//     cameraPositionButton.background = "green";
-//     cameraPositionButton.top = "70px";
-//     cameraPositionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-
-//     this.guiTexture.addControl(cameraPositionButton);
-
-//     cameraPositionButton.onPointerUpObservable.add(() => {
-//       const cameraPosition = this.scene.activeCamera?.position;
-//       if (cameraPosition) {
-//         console.log(`Координаты камеры: x=${cameraPosition.x}, y=${cameraPosition.y}, z=${cameraPosition.z}`);
-//       } else {
-//         console.log("Камера не инициализирована.");
-//       }
-//     });
-//   }
-
-//   setupTriggers(): void {
-//     this.triggerManager.setupZoneTrigger(2, new Vector3(...this.zone), () => {
-//       if (!this.zoneTriggered) {
-//         this.zoneTriggered = true;
-//         console.log("Камера пересекла зону взаимодействия!");
-//         this.triggerManager.createStartButton(() => {
-//           this.triggerManager.disableCameraMovement();
-//           const targetPosition = this.triggerManager.getInteractionZone().getAbsolutePosition();
-//           this.triggerManager.setCameraPositionAndTarget(Math.PI / 2, -1, 0, targetPosition);
-//           this.triggerManager.createRadioButtons(() => {
-//             this.triggerManager.enableCameraMovement();
-//           });
-//         });
-//       }
-//     });
-//   }
-
-//   setupThirdMission(): void {
-//     this.triggerManager.setupZoneTrigger(4, new Vector3(...this.zone2), () => {
-
-//     })
-//   }
-
-
-// }
 
 import {
   Scene,
@@ -558,6 +375,8 @@ import {
   Tools,
   FreeCamera,
   AbstractMesh,
+  HighlightLayer,
+  Color3,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, TextBlock, TextWrapping } from "@babylonjs/gui";
@@ -566,49 +385,23 @@ import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 export class TestScene {
   scene: Scene;
   engine: Engine;
-  openModal?: () => void;
+  openModal?: (keyword: string) => void;
   zone: number[] = [-11.622146207334794, 9.429402500045683, -3.529072189835968];
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private zoneTriggered: boolean = false;
+  private highlightLayer: HighlightLayer;
   private beam: AbstractMesh;
   private beam2: AbstractMesh;
   private targetMeshes: AbstractMesh[];
   private targetMeshes2: AbstractMesh[];
-
-  // constructor(private canvas: HTMLCanvasElement) {
-  //   this.engine = new Engine(this.canvas, true);
-  //   this.engine.displayLoadingUI();
-
-  //   this.scene = this.CreateScene();
-
-  //   this.CreateEnvironment().then(() => {
-  //     this.engine.hideLoadingUI();
-  //   });
-  //   this.CreateController();
-    
-
-  //   this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-  //   this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture);
-  //   // this.CreateDialogBox();
-
-  //   this.AddScreenshotButton();
-  //   // this.AddCameraPositionButton();
-
-  //   this.setupTriggers();
-
-  //   this.engine.runRenderLoop(() => {
-  //     this.scene.render();
-  //   });
-  // }
-
-
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
     this.engine.displayLoadingUI();
   
     this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
   
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -631,9 +424,6 @@ export class TestScene {
     });
   }
   
-
-
-
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
     new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
@@ -668,39 +458,109 @@ export class TestScene {
     camera.keysRight.push(68); // D
   }
 
+  // async CreateEnvironment(): Promise<void> {
+  //   try {
+  //     this.engine.displayLoadingUI();
+  
+  //     const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+  
+  //       map.forEach((mesh) => {
+  //       mesh.checkCollisions = true;
+  //         });
+
+  //     // Находим сломаные меши
+  //     this.BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+  //     this.WholeMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+
+  //     this.BrokenMeshes.forEach((mesh) => {
+  //       mesh.visibility = 1; // Полностью видимый
+  //     });
+  
+  //     this.WholeMeshes.forEach((mesh) => {
+  //       mesh.visibility = 0; // Полностью невидимый
+  //     });
+    
+  //     this.beam = map.find((mesh) => mesh.name.toLowerCase().includes("beam"));
+  //     if (this.beam) {
+  //       this.highlightLayer.addMesh(this.beam, Color3.Green());
+  //       this.triggerManager.setupModalInteraction(this.beam, () => {
+  //         console.log("Beam right-clicked!");
+  //         if (this.openModal) {
+  //           this.openModal();
+  //         }
+  //       });
+  //     }
+
+  //     this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
+  //     this.beam2 = this.targetMeshes2[1];
+
+  
+  //     // Загрузка markMeshes
+  //     const assetContainer = await SceneLoader.LoadAssetContainerAsync(
+  //       "./models/",           // rootUrl
+  //       "exclamation_point.glb", // sceneFilename
+  //       this.scene              // scene
+  //     );
+
+  //     this.markMeshes = assetContainer.meshes; // Сохраняем meshes из AssetContainer
+  
+  //     // Масштабируем шаблонный меш
+  //     this.markMeshes.forEach((mesh) => {
+  //       mesh.scaling = new Vector3(0.5, 0.7, 0.5);
+  //     });
+  
+  //     console.log("mark", this.markMeshes);
+  //     console.log("Модели успешно загружены.");
+  //   } catch (error) {
+  //     console.error("Ошибка при загрузке моделей:", error);
+  //   } finally {
+  //     // Удаляем вызов this.engine.hideLoadingUI(); отсюда
+  //   }
+  // }
+  
+
   async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
   
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      console.log(map);
+      
   
         map.forEach((mesh) => {
         mesh.checkCollisions = true;
           });
 
       // Находим сломаные меши
-      // this.targetMeshes = meshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-      // this.targetMeshes2 = meshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+      this.BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+      this.WholeMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
 
-      // this.targetMeshes.forEach((mesh) => {
-      //   mesh.visibility = 1; // Полностью видимый
-      // });
+      this.BrokenMeshes.forEach((mesh) => {
+        mesh.visibility = 1; // Полностью видимый
+      });
   
-      // this.targetMeshes2.forEach((mesh) => {
-      //   mesh.visibility = 0; // Полностью невидимый
-      // });
+      this.WholeMeshes.forEach((mesh) => {
+        mesh.visibility = 0; // Полностью невидимый
+      });
     
-      this.beam = map.find((mesh) => mesh.name.toLowerCase().includes("beam"));
-      if (this.beam) {
-        this.triggerManager.setupModalInteraction(this.beam, () => {
-          console.log("Beam right-clicked!");
+      const keywords = ["beam", "rack", "stairs", "wall", "stand"];
+    keywords.forEach((keyword) => {
+      const targetMeshes = map.find((mesh) => mesh.name.toLowerCase().includes(keyword));
+
+        // Добавляем подсветку
+        this.highlightLayer.addMesh(targetMeshes, Color3.Green());
+
+        // Настраиваем взаимодействие
+        this.triggerManager.setupModalInteraction(targetMeshes, () => {
+          console.log(`${keyword} right-clicked!`);
+          
           if (this.openModal) {
-            this.openModal();
+            // Передаем ключевое слово в модальное окно
+            this.openModal(keyword);
           }
         });
 
-        this.triggerManager.createRayAboveMesh(this.beam);
-      }
+    });
 
       this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
       this.beam2 = this.targetMeshes2[1];
@@ -728,7 +588,6 @@ export class TestScene {
       // Удаляем вызов this.engine.hideLoadingUI(); отсюда
     }
   }
-  
 
 
 
@@ -1101,5 +960,3 @@ setupTriggers(): void {
 
 
 }
-
-
