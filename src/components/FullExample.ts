@@ -9,6 +9,8 @@ import {
     ExecuteCodeAction,
     AbstractMesh,
     Ray,
+    StandardMaterial,
+    Color3,
     MeshBuilder,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
@@ -121,6 +123,7 @@ export class FullExample {
 
             });
         });
+        
 
         // Загрузка модели лестницы и размещение по центру
         const { meshes: stairMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_Stairs_base512X512.gltf", this.scene);
@@ -142,6 +145,51 @@ export class FullExample {
                     this.switchToSecondaryCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
                 })
             );
+
+
+    
+    // Создаем примитивы в виде точек
+    const pointsPositions = [
+        new Vector3(-0.5, 0.5, -0.5), // Позиции точек на лестнице
+        new Vector3(0.5, 0.5, -0.5),
+        new Vector3(-0.5, 0.5, 0.5),
+        new Vector3(0.5, 0.5, 0.5),
+        new Vector3(0, 0.5, 0), // Центр лестницы
+    ];
+
+    const pointSize = 0.5; // Размер точек
+
+    pointsPositions.forEach((position, index) => {
+        // Создаем точку
+        const point = MeshBuilder.CreateSphere("point" + index, { diameter: pointSize }, this.scene);
+        
+        // Устанавливаем фиксированное положение точки
+        point.position = mesh.position.add(position); // Используем фиксированные позиции
+
+        // Отладочные сообщения
+        console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
+
+        // Настраиваем материал для точки
+        const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
+        pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
+        point.material = pointMaterial;
+
+        // Делаем точку кликабельной
+        point.isPickable = true;
+        point.isVisible = true; // Убедитесь, что точки видимы
+        pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
+        point.actionManager = new ActionManager(this.scene);
+        point.actionManager.registerAction(
+            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                console.log("Точка кликнута:", point.name);
+                // Здесь можно добавить дополнительную логику для точки
+            })
+        );
+    });
+
+
+
+
         });
 
         // Работа с мешами типа "broken"
@@ -159,6 +207,68 @@ export class FullExample {
                 this.switchToSecondaryCamera(new InteractionObject(mesh));
             })
         );
+
+ 
+ // Координаты точек
+const firstPointX = -11.9;
+const firstPointY = 6.3;
+const firstPointZ = 5.33;
+
+const secondPointX = -11.9;
+const secondPointY = 6.3;
+const secondPointZ = 5.77;
+
+const thirdPointX = -12.0;
+const thirdPointY = 0.55;
+const thirdPointZ = 5.3;
+
+// Создаем примитивы в виде точек с заданными координатами
+const pointsPositions = [
+    new Vector3(firstPointX, firstPointY, firstPointZ),   // Первая точка
+    new Vector3(secondPointX, secondPointY, secondPointZ), // Вторая точка
+    new Vector3(thirdPointX, thirdPointY, thirdPointZ)     // Третья точка
+];
+
+const pointSize = 0.01; // Размер точек
+
+pointsPositions.forEach((position, index) => {
+    // Создаем точку
+    const point = MeshBuilder.CreateSphere("point" + index, { diameter: pointSize }, this.scene);
+    
+    // Устанавливаем фиксированное положение точки
+    // Используем mesh.position и добавляем координаты для создания точек выше меша
+    point.position = mesh.position.add(position); 
+
+    // Увеличиваем y для размещения точек выше меша
+    //point.position.y += 1; // Поднимаем точки над мешом на 1 единицу
+
+    // Отладочные сообщения
+    console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
+
+    // Настраиваем материал для точки
+    const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
+    pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
+    point.material = pointMaterial;
+
+    // Делаем точку кликабельной
+    point.isPickable = true;
+    point.isVisible = true; // Убедитесь, что точки видимы
+    pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
+    point.actionManager = new ActionManager(this.scene);
+    point.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Точка кликнута:", point.name);
+            // Здесь можно добавить дополнительную логику для точки
+        })
+    );
+});
+
+
+
+
+
+
+
     });
 
     // Работа с мешами типа "whole"
@@ -177,6 +287,7 @@ export class FullExample {
                 
             })
         );
+        
     });
 
 
@@ -187,10 +298,10 @@ export class FullExample {
     }
 
     async CreateHandModel(): Promise<void> {
-        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Caja_-_Superior_1_pieza.stl", this.scene);
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
         this.handModel = meshes[0];
-        this.handModel.position = new Vector3(0, 0, 0);
-        this.handModel.scaling = new Vector3(0.03, 0.03, 0.03); 
+        this.handModel.position = new Vector3(2, -4.5, 2);
+        this.handModel.scaling = new Vector3(5, 5, 5); 
         this.attachHandToCamera(); 
 
         this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
@@ -201,10 +312,10 @@ export class FullExample {
     }
 
     async CreateRulerModel(): Promise<void> {
-        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Caja_-_Superior_1_pieza.stl", this.scene);
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
         this.rulerModel = meshes[0];
-        this.rulerModel.position = new Vector3(0, 0, 0);
-        this.rulerModel.scaling = new Vector3(0.3, 0.3, 0.3); 
+        this.rulerModel.position = new Vector3(2, -4.5, 2);
+        this.rulerModel.scaling = new Vector3(5, 5, 5); 
         this.rulerModel.isVisible = false; 
     }
 
@@ -212,9 +323,10 @@ export class FullExample {
         if (this.handModel) {
             const camera = this.scene.getCameraByName("camera") as FreeCamera;
             this.handModel.parent = camera;
-            this.handModel.position = new Vector3(0.5, -1, 4);
+            this.handModel.position = new Vector3(2, -4.5, 2);
             this.handModel.rotation.x += Math.PI / 2; 
-            this.handModel.scaling = new Vector3(0.02, 0.02, 0.02);
+            this.handModel.rotation.y = Math.PI / 4;  // Вращение на 45 градусов по Y
+            this.handModel.scaling = new Vector3(5, 5, 5);
         }
     }
 
@@ -289,7 +401,6 @@ export class FullExample {
         // Установим значения смещений и углы камеры в зависимости от типа объекта
         let offsetX = 4, offsetY = 2, offsetZ = 5; // Смещения по умолчанию
         let targetYOffset = 1; // Смещение по оси Y для цели по умолчанию (камера нацелена чуть выше объекта)
-    
         // Определение типа объекта по его имени
         if (mesh.name.toLowerCase().includes("whole")) {
             offsetX = -10; // Увеличиваем смещение по оси X
@@ -330,8 +441,11 @@ export class FullExample {
 
         
         // Скрываем модель руки, если она есть
-        if (this.handModel) {
-            this.handModel.isVisible = false;
+         // Скрываем модель руки только если меш не является "whole"
+        if (this.handModel && !mesh.name.toLowerCase().includes("whole")) {
+        this.handModel.isVisible = false;
+        } else if (this.handModel && mesh.name.toLowerCase().includes("whole")) {
+        this.handModel.isVisible = true; // Оставляем модель рук видимой
         }
         
         
@@ -434,36 +548,49 @@ createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (
     
         // Обработчик кликов
         this.scene.onPointerDown = (evt, pickResult) => {
-            if (pickResult.hit && pickResult.pickedPoint) {
-                if (!this.firstPoint) {
-                    // Запоминаем первую точку
-                    this.firstPoint = pickResult.pickedPoint.clone();
-                    console.log("Первая точка:", this.firstPoint);
-                } else if (!this.secondPoint) {
-                    // Запоминаем вторую точку
-                    this.secondPoint = pickResult.pickedPoint.clone();
-                    console.log("Вторая точка:", this.secondPoint);
-    
-                    // Вычисляем расстояние
-                    const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
-                    console.log("Расстояние между точками:", distance);
-
-                    if (this.firstPoint && this.secondPoint) {
+            // Получаем позицию указателя
+            const pointerX = evt.clientX;
+            const pointerY = evt.clientY;
+        
+            console.log(`Клик по координатам: (${pointerX}, ${pointerY})`);
+        
+            // Проверяем, был ли клик правой кнопкой мыши
+            if (evt.button === 2) {
+                console.log("Правый клик.");
+        
+                if (pickResult.hit && pickResult.pickedPoint) {
+                    if (!this.firstPoint) {
+                        // Запоминаем первую точку
+                        this.firstPoint = pickResult.pickedPoint.clone();
+                        console.log("Первая точка:", this.firstPoint);
+                    } else if (!this.secondPoint) {
+                        // Запоминаем вторую точку
+                        this.secondPoint = pickResult.pickedPoint.clone();
+                        console.log("Вторая точка:", this.secondPoint);
+        
+                        // Вычисляем расстояние
                         const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
                         console.log("Расстояние между точками:", distance);
-    
-                    // Показываем расстояние через GUI
-                    this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
-    
-                    // Сброс для нового измерения
-                    this.firstPoint = null;
-                    this.secondPoint = null;
+        
+                        if (this.firstPoint && this.secondPoint) {
+                            // Показываем расстояние через GUI
+                            this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
+        
+                            // Сброс для нового измерения
+                            this.firstPoint = null;
+                            this.secondPoint = null;
                 }
             }
+        }
+    } else if (evt.button === 0) {
+        console.log("Левый клик. Замеры не проводятся.");
+    }
+
         };
+
     }
 
 
 
 }
-}
+
