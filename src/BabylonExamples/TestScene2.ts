@@ -1,204 +1,3 @@
-// import {
-//   Scene,
-//   Engine,
-//   SceneLoader,
-//   Vector3,
-//   HemisphericLight,
-//   HDRCubeTexture,
-//   Tools,
-//   FreeCamera,
-//   Mesh,
-//   MeshBuilder,
-// } from "@babylonjs/core";
-// import "@babylonjs/loaders";
-// import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
-
-// export class TestScene {
-//   scene: Scene;
-//   engine: Engine;
-//   private cubes: Mesh[] = [];
-//   private currentIndex: number = -1;
-//   private guiTexture: AdvancedDynamicTexture;
-
-//   constructor(private canvas: HTMLCanvasElement) {
-//     this.engine = new Engine(this.canvas, true);
-//     this.engine.displayLoadingUI();
-
-//     this.scene = this.CreateScene();
-
-//     this.CreateEnvironment().then(() => {
-//       this.engine.hideLoadingUI();
-//     });
-//     this.CreateController();
-
-//     this.CreateCubes();
-
-//     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-
-//     this.AddToggleShapeButton();
-//     this.AddScreenshotButton();
-
-//     this.engine.runRenderLoop(() => {
-//       this.scene.render();
-//     });
-//   }
-
-//   CreateScene(): Scene {
-//     const scene = new Scene(this.engine);
-//     new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-
-//     const framesPerSecond = 60;
-//     const gravity = -9.81;
-//     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
-//     scene.collisionsEnabled = true;
-
-//     // Загружаем новую HDR текстуру
-//     const hdrTexture = new HDRCubeTexture(
-//       "/models/cape_hill_4k.hdr", 
-//       scene, 
-//       512
-//     );
-
-//     scene.environmentTexture = hdrTexture;
-//     scene.createDefaultSkybox(hdrTexture, true);
-//     scene.environmentIntensity = 0.5;
-
-//     return scene;
-//   }
-
-//   CreateController(): void {
-//     const camera = new FreeCamera("camera", new Vector3(0, 5, -15), this.scene);
-//     camera.attachControl(this.canvas, true);
-
-//     camera.applyGravity = true;
-//     camera.checkCollisions = true;
-//     camera.ellipsoid = new Vector3(1, 1, 1);
-//     camera.minZ = 0.45;
-//     camera.speed = 0.75;
-//     camera.angularSensibility = 4000;
-//     camera.keysUp.push(87); // W
-//     camera.keysLeft.push(65); // A
-//     camera.keysDown.push(83); // S
-//     camera.keysRight.push(68); // D
-//   }
-
-//   async CreateEnvironment(): Promise<void> {
-//     try {
-//       this.engine.displayLoadingUI();
-
-//       const { meshes } = await SceneLoader.ImportMeshAsync(
-//         "",
-//         "./models/",
-//         "Map_1.gltf",
-//         this.scene
-//       );
-
-//       console.log(meshes);
-
-//       meshes.forEach((mesh) => {
-//         mesh.checkCollisions = true;
-//       });
-
-//       console.log("Модели успешно загружены.");
-//     } catch (error) {
-//       console.error("Ошибка при загрузке моделей:", error);
-//     } finally {
-//       this.engine.hideLoadingUI();
-//     }
-//   }
-
-//   CreateCubes(): void {
-//     const spacing = 3; // Расстояние между кубами
-//     const height = 5; // Высота, на которой появляются кубы
-//     for (let i = 0; i < 3; i++) {
-//       const cube = MeshBuilder.CreateBox(`cube${i}`, { size: 1 }, this.scene);
-//       cube.position.x = i * spacing;
-//       cube.position.y = height;
-//       this.cubes.push(cube);
-//     }
-//   }
-
-//   AddToggleShapeButton(): void {
-//     // Создаем кнопку
-//     const guiButton = Button.CreateSimpleButton("toggleShapeButton", "Переключить форму");
-//     guiButton.width = "150px";
-//     guiButton.height = "40px";
-//     guiButton.color = "white";
-//     guiButton.cornerRadius = 20;
-//     guiButton.background = "green";
-//     guiButton.top = "-20px";
-//     guiButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-
-//     // Добавляем кнопку на GUI
-//     this.guiTexture.addControl(guiButton);
-
-//     // Добавляем обработчик события
-//     guiButton.onPointerUpObservable.add(() => {
-//       this.toggleShape();
-//     });
-//   }
-
-//   toggleShape(): void {
-//     // Возвращаем предыдущую сферу обратно в куб
-//     if (this.currentIndex >= 0) {
-//       const previousIndex = this.currentIndex % this.cubes.length;
-//       // Удаляем существующую мешь
-//       this.cubes[previousIndex].dispose();
-//       // Создаем куб
-//       const cube = MeshBuilder.CreateBox(
-//         `cube${previousIndex}`,
-//         { size: 1 },
-//         this.scene
-//       );
-//       cube.position.x = previousIndex * 3;
-//       cube.position.y = 5; // Устанавливаем высоту
-//       this.cubes[previousIndex] = cube;
-//     }
-
-//     // Увеличиваем текущий индекс
-//     this.currentIndex = (this.currentIndex + 1) % this.cubes.length;
-
-//     // Заменяем текущий куб на сферу
-//     const currentIndex = this.currentIndex % this.cubes.length;
-//     // Удаляем существующую мешь
-//     this.cubes[currentIndex].dispose();
-//     // Создаем сферу
-//     const sphere = MeshBuilder.CreateSphere(
-//       `sphere${currentIndex}`,
-//       { diameter: 1 },
-//       this.scene
-//     );
-//     sphere.position.x = currentIndex * 3;
-//     sphere.position.y = 5; // Устанавливаем высоту
-//     this.cubes[currentIndex] = sphere;
-//   }
-
-//   AddScreenshotButton(): void {
-//     // Создаем кнопку
-//     const screenshotButton = Button.CreateSimpleButton("screenshotButton", "Сделать скриншот");
-//     screenshotButton.width = "150px";
-//     screenshotButton.height = "40px";
-//     screenshotButton.color = "white";
-//     screenshotButton.cornerRadius = 20;
-//     screenshotButton.background = "blue";
-//     screenshotButton.top = "20px";
-//     screenshotButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-
-//     // Добавляем кнопку на GUI
-//     this.guiTexture.addControl(screenshotButton);
-
-//     // Добавляем обработчик события
-//     screenshotButton.onPointerUpObservable.add(() => {
-//       Tools.CreateScreenshotUsingRenderTarget(
-//         this.engine,
-//         this.scene.activeCamera!,
-//         { width: 1920, height: 1080 }
-//       );
-//     });
-//   }
-// }
-
-
 import {
   Scene,
   Engine,
@@ -206,20 +5,27 @@ import {
   Vector3,
   HemisphericLight,
   HDRCubeTexture,
-  Tools,
   FreeCamera,
-  AbstractMesh,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  Mesh,
+  Ray,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture } from "@babylonjs/gui";
 
-export class TestScene {
+export class TestScene2 {
   scene: Scene;
   engine: Engine;
   canvas: HTMLCanvasElement;
-  camera: FreeCamera; // Добавлено свойство камеры
+  camera: FreeCamera;
   mediaRecorder: MediaRecorder | null = null;
   recordedChunks: Blob[] = [];
+
+  // Свойства для куба, лазера и точки пересечения
+  centralCube: Mesh | null = null;
+  redRay: Mesh | null = null;
+  intersectionPoint: Mesh | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -230,6 +36,7 @@ export class TestScene {
 
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
+      this.AddCentralCubeAndRay(); // Добавляем куб и луч после загрузки окружения
     });
     this.CreateController();
 
@@ -238,6 +45,7 @@ export class TestScene {
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
+      this.updateRayIntersection(); // Обновляем пересечение лазера с объектами
     });
   }
 
@@ -260,11 +68,11 @@ export class TestScene {
   }
 
   CreateController(): void {
-    // Изменено: сохраняем камеру в свойство класса
-    this.camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
+    // Установка начальной позиции камеры для лучшей видимости
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
     this.camera.attachControl(this.canvas, true);
 
-    this.camera.applyGravity = true;
+    this.camera.applyGravity = false;
     this.camera.checkCollisions = true;
     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     this.camera.minZ = 0.45;
@@ -291,6 +99,83 @@ export class TestScene {
       console.error("Ошибка при загрузке моделей:", error);
     } finally {
       this.engine.hideLoadingUI();
+    }
+  }
+
+  AddCentralCubeAndRay(): void {
+    // 1. Создание куба
+    const cubeSize = 0.5; // Уменьшенный размер куба
+    this.centralCube = MeshBuilder.CreateBox("centralCube", { size: cubeSize }, this.scene);
+
+    // 2. Привязка куба к камере
+    this.centralCube.parent = this.camera;
+
+    // 3. Установка относительной позиции куба (чуть правее и вперёд)
+    this.centralCube.position = new Vector3(1, 0, 2); // Измените значения по своему усмотрению
+
+    // 4. Создание материала для куба
+    const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
+    cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зелёный цвет для куба
+    this.centralCube.material = cubeMaterial;
+
+    // 5. Сделать куб видимым для отладки
+    this.centralCube.isVisible = true;
+
+    // 6. Создание красного луча (линии) исходящего из передней грани куба
+    const rayLength = 10; // Длина лазера
+    const rayPoints = [
+      new Vector3(0, 0, cubeSize / 2 + 0.01), // Начало чуть перед грани куба
+      new Vector3(0, 0, cubeSize / 2 + 0.01 + rayLength), // Конец луча
+    ];
+    this.redRay = MeshBuilder.CreateLines("redRay", { points: rayPoints }, this.scene);
+
+    // 7. Привязка луча к кубу, чтобы он двигался вместе с ним
+    this.redRay.parent = this.centralCube;
+
+    // 8. Создание материала для луча
+    const rayMaterial = new StandardMaterial("rayMaterial", this.scene);
+    rayMaterial.emissiveColor = new Color3(1, 0, 0); // Красный цвет
+    this.redRay.color = rayMaterial.emissiveColor;
+
+    // 9. Создание точки пересечения (маленькая сфера), изначально скрытая
+    const pointSize = 0.3;
+    this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
+    const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
+    pointMaterial.emissiveColor = new Color3(1, 0, 0); // Красный цвет
+    this.intersectionPoint.material = pointMaterial;
+    this.intersectionPoint.isVisible = false; // Скрыта по умолчанию
+  }
+
+  updateRayIntersection(): void {
+    // Проверяем, инициализированы ли куб и луч
+    if (!this.centralCube || !this.redRay || !this.intersectionPoint) {
+      return;
+    }
+
+    // Получаем глобальную позицию начала луча
+    const origin = this.redRay.getAbsolutePosition();
+
+    // Получаем направление луча в глобальных координатах
+    const direction = this.redRay.getDirection(new Vector3(0, 0, 1)).normalize();
+
+    // Длина луча
+    const rayLength = 100;
+
+    // Создаём Ray с заданной длиной
+    const ray = new Ray(origin, direction, rayLength);
+
+    // Используем scene.pickWithRay для обнаружения пересечений
+    const pickInfo = this.scene.pickWithRay(ray, (mesh) =>
+      mesh !== this.redRay && mesh !== this.centralCube && mesh !== this.intersectionPoint
+    );
+
+    if (pickInfo?.hit && pickInfo.pickedPoint) {
+      // Устанавливаем позицию точки пересечения
+      this.intersectionPoint.position = pickInfo.pickedPoint;
+      this.intersectionPoint.isVisible = true;
+    } else {
+      // Скрываем точку, если пересечения нет
+      this.intersectionPoint.isVisible = false;
     }
   }
 
@@ -361,5 +246,3 @@ export class TestScene {
     }
   }
 }
-
-
