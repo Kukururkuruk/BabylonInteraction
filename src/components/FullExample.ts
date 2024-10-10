@@ -43,7 +43,8 @@ export class FullExample {
     guiManager: GUIManager;
     triggerManager: TriggersManager;
     secondaryCamera: FreeCamera | null = null; // Инициализируем с null
-    textMessages: string[] = ["Нажмите на W", "Нажмите на S", "Нажмите на A", "Нажмите на D", "А теперь осмотритесь по комнате"];
+    thirdCamera: FreeCamera | null = null;
+    textMessages: string[] = [];
     targetMeshes: AbstractMesh[] = [];
     handModel: AbstractMesh | null = null; 
     rulerModel: AbstractMesh | null = null;  
@@ -52,13 +53,15 @@ export class FullExample {
     firstPoint: Vector3 | null = null;
     secondPoint: Vector3 | null = null;
     measuringDistance: boolean = false; // Флаг, указывающий, что мы находимся в процессе измерения
+    points: AbstractMesh[] = []; // Массив для хранения точек
+    advancedTexture: AdvancedDynamicTexture | null = null;
 
     constructor(private canvas: HTMLCanvasElement) {
         this.engine = new Engine(this.canvas, true);
         this.scene = this.CreateScene();
 
         // Инициализация GUIManager и TriggersManager
-        this.guiManager = new GUIManager(this.scene, this.textMessages);
+        this.guiManager = new GUIManager(this.scene, []);
         this.triggerManager = new TriggersManager(this.scene, this.canvas);
 
         this.CreateEnvironment();
@@ -85,7 +88,12 @@ export class FullExample {
         scene.createDefaultSkybox(hdrTexture, true, 1000);  // Последний параметр - размер skybox
         scene.environmentIntensity = 0.5;
 
+        // Инициализируем камеры
+        this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), scene);
+        this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(10, 5, 0), scene);
         
+        // Устанавливаем активную камеру по умолчанию
+        scene.activeCamera = this.secondaryCamera;
 
         return scene;
     }
@@ -125,72 +133,6 @@ export class FullExample {
         });
         
 
-        // Загрузка модели лестницы и размещение по центру
-        const { meshes: stairMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_Stairs_base512X512.gltf", this.scene);
-        
-        stairMeshes.forEach((mesh) => {
-            mesh.checkCollisions = true;
-            mesh.isPickable = true; 
-            mesh.position = new Vector3(0, 0, 0);
-            mesh.isVisible = true; 
-            mesh.setEnabled(true); 
-            mesh.actionManager = new ActionManager(this.scene);
-            // Создаем объект InteractionObject для данного меша
-            const interactionObject = new InteractionObject(mesh);
-            mesh.actionManager.registerAction(
-                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-                    console.log("Лестница кликнута:", mesh.name);
-                    // Привязываем к interactionObject выбранный mesh
-                    this.interactionObject = interactionObject.getMesh(); // Сохраняем ссылку на объект
-                    this.switchToSecondaryCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
-                })
-            );
-
-
-    
-    // Создаем примитивы в виде точек
-    const pointsPositions = [
-        new Vector3(-0.5, 0.5, -0.5), // Позиции точек на лестнице
-        new Vector3(0.5, 0.5, -0.5),
-        new Vector3(-0.5, 0.5, 0.5),
-        new Vector3(0.5, 0.5, 0.5),
-        new Vector3(0, 0.5, 0), // Центр лестницы
-    ];
-
-    const pointSize = 0.5; // Размер точек
-
-    pointsPositions.forEach((position, index) => {
-        // Создаем точку
-        const point = MeshBuilder.CreateSphere("point" + index, { diameter: pointSize }, this.scene);
-        
-        // Устанавливаем фиксированное положение точки
-        point.position = mesh.position.add(position); // Используем фиксированные позиции
-
-        // Отладочные сообщения
-        console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
-
-        // Настраиваем материал для точки
-        const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
-        pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
-        point.material = pointMaterial;
-
-        // Делаем точку кликабельной
-        point.isPickable = true;
-        point.isVisible = true; // Убедитесь, что точки видимы
-        pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
-        point.actionManager = new ActionManager(this.scene);
-        point.actionManager.registerAction(
-            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-                console.log("Точка кликнута:", point.name);
-                // Здесь можно добавить дополнительную логику для точки
-            })
-        );
-    });
-
-
-
-
-        });
 
         // Работа с мешами типа "broken"
     const brokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
@@ -208,36 +150,28 @@ export class FullExample {
             })
         );
 
- 
- // Координаты точек
-const firstPointX = -11.9;
-const firstPointY = 6.3;
-const firstPointZ = 5.33;
 
-const secondPointX = -11.9;
-const secondPointY = 6.3;
-const secondPointZ = 5.77;
 
-const thirdPointX = -12.0;
-const thirdPointY = 0.55;
-const thirdPointZ = 5.3;
-
-// Создаем примитивы в виде точек с заданными координатами
+// Координаты точек
 const pointsPositions = [
-    new Vector3(firstPointX, firstPointY, firstPointZ),   // Первая точка
-    new Vector3(secondPointX, secondPointY, secondPointZ), // Вторая точка
-    new Vector3(thirdPointX, thirdPointY, thirdPointZ)     // Третья точка
+    new Vector3(12.46, 6.3, 4.79),   // Первая точка
+    new Vector3(12.46, 6.3, 5.21),   // Вторая точка
+    new Vector3(12.46, 6.11, 4.72),     // Третья точка
+    new Vector3(12.46, 0.7, 4.72)     // Четвертая точка
+    
 ];
 
-const pointSize = 0.01; // Размер точек
 
+// Создаем точки и применяем одинаковый материал
 pointsPositions.forEach((position, index) => {
-    // Создаем точку
-    const point = MeshBuilder.CreateSphere("point" + index, { diameter: pointSize }, this.scene);
+    // Задаем разные размеры для первой, второй и третьей точки
+    const diameter = index === 3 ? 0.05 : 0.01; // Увеличиваем диаметр третьей точки
+
+    const point = MeshBuilder.CreateSphere("point" + index, { diameter: diameter }, this.scene);
     
     // Устанавливаем фиксированное положение точки
     // Используем mesh.position и добавляем координаты для создания точек выше меша
-    point.position = mesh.position.add(position); 
+    point.position = mesh.position.add(new Vector3(position.x, position.y , position.z)); 
 
     // Увеличиваем y для размещения точек выше меша
     //point.position.y += 1; // Поднимаем точки над мешом на 1 единицу
@@ -250,9 +184,14 @@ pointsPositions.forEach((position, index) => {
     pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
     point.material = pointMaterial;
 
+
+    // Убедитесь, что точки изначально скрыты
+    this.points.forEach(point => {
+    point.isVisible = false; // Принудительно скрываем все точки
+    });
+
     // Делаем точку кликабельной
     point.isPickable = true;
-    point.isVisible = true; // Убедитесь, что точки видимы
     pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
     point.actionManager = new ActionManager(this.scene);
     point.actionManager.registerAction(
@@ -261,6 +200,10 @@ pointsPositions.forEach((position, index) => {
             // Здесь можно добавить дополнительную логику для точки
         })
     );
+    // Сохраняем точку в массив
+    this.points.push(point);
+
+    
 });
 
 
@@ -296,6 +239,88 @@ pointsPositions.forEach((position, index) => {
         await this.CreateHandModel(); 
         await this.CreateRulerModel(); 
     }
+
+    createQuestionInterface(): void {
+        // Проверяем, существует ли уже интерфейс, чтобы избежать повторного создания
+        if (this.advancedTexture) {
+            return; // Если интерфейс уже создан, выходим из функции
+        }
+    
+        this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    
+        // Вопрос
+        const questionText = new TextBlock();
+        questionText.text = "Что вы хотите сделать?";
+        questionText.color = "white";
+        questionText.fontSize = 30;
+        this.advancedTexture.addControl(questionText);
+    
+        // Кнопка 1
+        const button1 = Button.CreateSimpleButton("button1", "Измерить размер повреждений линейкой");
+        button1.width = "150px";
+        button1.height = "60px";
+        button1.top = "100px";
+        button1.left = "-100px";
+        button1.color = "white";
+        button1.background = "blue";
+        button1.onPointerUpObservable.add(() => {
+            this.handleButtonClick("Дерево", this.secondaryCamera);
+        });
+        this.advancedTexture.addControl(button1);
+    
+        // Кнопка 2
+        const button2 = Button.CreateSimpleButton("button2", "Измерить толщину штангенцирулем");
+        button2.width = "150px";
+        button2.height = "60px";
+        button2.top = "100px";
+        button2.left = "100px";
+        button2.color = "white";
+        button2.background = "blue";
+        button2.onPointerUpObservable.add(() => {
+            this.handleButtonClick("Металл", this.thirdCamera);
+        });
+        this.advancedTexture.addControl(button2);
+    }
+    
+    handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
+        this.checkAnswer(selectedAnswer);
+    
+        // Переключаем активную камеру
+        // Переключаем активную камеру, если она не null
+        if (targetCamera) {
+            this.scene.activeCamera = targetCamera;
+            console.log(`Переключено на ${targetCamera.name || "камера не инициализирована"} при нажатии на кнопку`); // Используем оператор "или"
+        } else {
+            console.log("Целевая камера не инициализирована");
+        }
+    
+        // Убираем UI после нажатия на кнопку
+        if (this.advancedTexture) {
+            this.advancedTexture.dispose();
+            this.advancedTexture = null; // Обнуляем переменную интерфейса
+        }
+    
+        
+    }
+    
+    checkAnswer(selectedAnswer: string): void {
+        const correctAnswer = "Металл"; // Укажите правильный ответ
+    
+        if (selectedAnswer === correctAnswer) {
+            console.log("Правильный ответ!");
+        } else {
+            console.log("Неправильный ответ. Попробуйте снова.");
+        }
+    
+        // Восстанавливаем активную камеру
+        if (this.secondaryCamera) {
+            this.scene.activeCamera = this.secondaryCamera;
+        } else {
+            this.scene.activeCamera = this.thirdCamera;
+        }
+    }
+
+
 
     async CreateHandModel(): Promise<void> {
         const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
@@ -351,7 +376,7 @@ pointsPositions.forEach((position, index) => {
         // Инициализация второй камеры
         this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), this.scene);
         this.secondaryCamera.setTarget(Vector3.Zero());
-    
+        
 
         const ground = this.scene.getMeshByName("ground");
         if (ground) {
@@ -368,23 +393,43 @@ pointsPositions.forEach((position, index) => {
         });
     }
 
+    switchToThirdCamera(): void {
+        if (!this.thirdCamera) {
+            this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 0, -10), this.scene);
+            this.thirdCamera.setTarget(Vector3.Zero());
+            this.thirdCamera.attachControl(this.canvas, true);
+            this.thirdCamera.fov = 1.2; // Увеличиваем поле зрения для эффекта приближения
+    
+            // Устанавливаем позицию камеры на меш "broken"
+            if (this.interactionObject) {
+                this.thirdCamera.position = this.interactionObject.position.add(new Vector3(0, 1, -5)); // Поднимаем на 1 для лучшего вида
+                console.log("Камера переключена на объект broken:", this.interactionObject.name);
+            }
+    
+            
+        }
+    }
+    
+
+
     // Метод для переключения на основную камеру
     switchToMainCamera(camera: FreeCamera): void {
         this.scene.activeCamera = camera;
-
-
+    
+        // Скрыть точки при переключении на основную камеру
+        this.points.forEach(point => point.isVisible = false);
+    
         // Отключаем управление вторичной камерой
-        // Отключаем управление вторичной камерой, если она не равна null
         if (this.secondaryCamera) {
-        this.secondaryCamera.detachControl(); // Вызываем без аргументов
-    }
-
-
-        // Включаем видимость модели Caja_-_Superior_1_pieza.stl
+            this.secondaryCamera.detachControl(); 
+        }
+    
+        // Включаем видимость модели руки
         if (this.handModel) {
-        this.handModel.isVisible = true;
-    }
-         // Отключаем измерение расстояния
+            this.handModel.isVisible = true;
+        }
+    
+        // Отключаем измерение расстояния
         this.disableDistanceMeasurement();
         console.log("Камера переключена обратно на основную камеру");
     }
@@ -395,21 +440,22 @@ pointsPositions.forEach((position, index) => {
 
     switchToSecondaryCamera(interactionObject: InteractionObject): void {
         const mesh = interactionObject.getMesh();
-        const position = mesh.position; // Получаем позицию меша
+        const position = mesh.position;
         
+ 
         
         // Установим значения смещений и углы камеры в зависимости от типа объекта
         let offsetX = 4, offsetY = 2, offsetZ = 5; // Смещения по умолчанию
         let targetYOffset = 1; // Смещение по оси Y для цели по умолчанию (камера нацелена чуть выше объекта)
         // Определение типа объекта по его имени
         if (mesh.name.toLowerCase().includes("whole")) {
-            offsetX = -10; // Увеличиваем смещение по оси X
-            offsetY = 6; // Камера выше
+            offsetX = 13.7; // Увеличиваем смещение по оси X
+            offsetY = 6.5; // Камера выше
             offsetZ = -5; // Камера дальше
-            targetYOffset = 1.5; // Камера нацелена чуть выше объекта "whole"
+            targetYOffset = 1; // Камера нацелена чуть выше объекта "whole"
         } else if (mesh.name.toLowerCase().includes("broken")) {
-            offsetX = -10; // Среднее смещение по оси X
-            offsetY = 6; // Камера чуть выше объекта
+            offsetX = 13.7; // Среднее смещение по оси X
+            offsetY = 6.5; // Камера чуть выше объекта
             offsetZ = -5; // Камера чуть ближе
             targetYOffset = 1; // Камера нацелена чуть выше объекта "broken"
         } else if (mesh.name.toLowerCase().includes("stairs")) {
@@ -429,12 +475,22 @@ pointsPositions.forEach((position, index) => {
     
             // Переключаем активную камеру на вторичную
             this.scene.activeCamera = this.secondaryCamera;
-    
+
+
+            // Вызов интерфейса вопросов
+            this.createQuestionInterface();
+
+            // Включаем видимость точек
+            this.points.forEach(point => point.isVisible = true);
+
             // Включаем управление камерой через мышь
             this.secondaryCamera.attachControl(this.canvas, true); // true для разрешения захвата мыши
     
             // Настраиваем параметры вращения камеры (можете изменить чувствительность, если требуется)
             this.secondaryCamera.angularSensibility = 800; // Чувствительность вращения камеры
+
+
+            console.log(`Камера переключена на вторичную камеру, цель: ${mesh.name}`);
         } else {
             console.error("Вторичная камера не инициализирована.");
         }
@@ -449,7 +505,7 @@ pointsPositions.forEach((position, index) => {
         }
         
         
-
+        
         // Включаем измерение расстояния, если нужно
         this.enableDistanceMeasurement();
     
@@ -457,108 +513,97 @@ pointsPositions.forEach((position, index) => {
     
     
 
-
-
-
- // Создаем GUI
- const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     
- const questionText = new TextBlock();
- questionText.text = "Выберите правильный ответ:";
- questionText.color = "white";
- questionText.fontSize = 24;
- questionText.height = "50px";
- questionText.top = "-200px";
- advancedTexture.addControl(questionText);
-
- const correctAnswer = "Ответ 48 сантиметров"; // Правильный ответ
-
- // Функция для создания кнопки ответа
- const createAnswerButton = (answerText: string, leftPosition: string) => {
-    const button = Button.CreateSimpleButton("answer", answerText);
-    button.width = "200px";
-    button.height = "60px";
-    button.color = "white";
-    button.background = "blue";
-    button.left = leftPosition; // Устанавливаем положение кнопки по горизонтали
-    button.top = "-10px"; // Отступ от нижнего края экрана (с отрицательным значением, чтобы кнопки не были слишком высоко)
-    button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Выравнивание по левому краю
-    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю экрана
-
-    advancedTexture.addControl(button);
-
-    button.onPointerClickObservable.add(() => {
-        console.log(`Нажата кнопка: ${answerText}, правильный ответ: ${correctAnswer}`);
-        if (answerText === correctAnswer) {
-            console.log("Правильный ответ!");
-            questionText.text = "Правильный ответ!";
-        } else {
-            console.log("Неправильный ответ.");
-            questionText.text = "Неправильный ответ.";
-        }
-        // Удалить все элементы GUI после выбора
-        setTimeout(() => {
-            advancedTexture.dispose();
-        }, 2000); // Убираем через 2 секунды
-    });
-};
-
-// Создаем 4 кнопки с разными вариантами ответов, расположенными в ряд снизу экрана
-const buttonSpacing = 20; // Пробел между кнопками
-const buttonWidth = 200; // Ширина кнопки
-const startXPosition = (window.innerWidth - (buttonWidth * 4 + buttonSpacing * 3)) / 2; // Центрируем кнопки
-
-// Создаем 4 кнопки с разными вариантами ответов
-createAnswerButton("Ответ 52 сантиметров", `${startXPosition}px`); // 1-я кнопка
-createAnswerButton("Ответ 50 сантиметров", `${startXPosition + buttonWidth + buttonSpacing}px`); // 2-я кнопка
-createAnswerButton("Ответ 48 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 2}px`); // 3-я кнопка
-createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 3}px`); // 4-я кнопка
 
 
+                    // Создаем GUI
+                    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+                        
+                    const questionText = new TextBlock();
+                    questionText.text = "Выберите правильный ответ:";
+                    questionText.color = "white";
+                    questionText.fontSize = 24;
+                    questionText.height = "50px";
+                    questionText.top = "-200px";
+                    advancedTexture.addControl(questionText);
+
+                    const correctAnswer = "Ответ 48 сантиметров"; // Правильный ответ
+
+                    // Функция для создания кнопки ответа
+                    const createAnswerButton = (answerText: string, leftPosition: string) => {
+                        const button = Button.CreateSimpleButton("answer", answerText);
+                        button.width = "200px";
+                        button.height = "60px";
+                        button.color = "white";
+                        button.background = "blue";
+                        button.left = leftPosition; // Устанавливаем положение кнопки по горизонтали
+                        button.top = "-10px"; // Отступ от нижнего края экрана (с отрицательным значением, чтобы кнопки не были слишком высоко)
+                        button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Выравнивание по левому краю
+                        button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю экрана
+
+                        advancedTexture.addControl(button);
+
+                        button.onPointerClickObservable.add(() => {
+                            console.log(`Нажата кнопка: ${answerText}, правильный ответ: ${correctAnswer}`);
+                            if (answerText === correctAnswer) {
+                                console.log("Правильный ответ!");
+                                questionText.text = "Правильный ответ!";
+                            } else {
+                                console.log("Неправильный ответ.");
+                                questionText.text = "Неправильный ответ.";
+                            }
+                            // Удалить все элементы GUI после выбора
+                            setTimeout(() => {
+                                advancedTexture.dispose();
+                            }, 2000); // Убираем через 2 секунды
+                        });
+                    };
+
+            // Создаем 4 кнопки с разными вариантами ответов, расположенными в ряд снизу экрана
+            const buttonSpacing = 20; // Пробел между кнопками
+            const buttonWidth = 200; // Ширина кнопки
+            const startXPosition = (window.innerWidth - (buttonWidth * 4 + buttonSpacing * 3)) / 2; // Центрируем кнопки
+
+            // Создаем 4 кнопки с разными вариантами ответов
+            createAnswerButton("Ответ 52 сантиметров", `${startXPosition}px`); // 1-я кнопка
+            createAnswerButton("Ответ 50 сантиметров", `${startXPosition + buttonWidth + buttonSpacing}px`); // 2-я кнопка
+            createAnswerButton("Ответ 48 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 2}px`); // 3-я кнопка
+            createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 3}px`); // 4-я кнопка
 
 
+                }
 
+                createRayAboveMesh(mesh: AbstractMesh): void {
+                    // Создаем луч с начальной позицией выше меша и направлением
+                    const origin = new Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z);
+                    const direction = new Vector3(0, 1, 0); // Направление луча (например, вверх)
+                    
+                    // Создаем луч
+                    const ray = new Ray(origin, direction, 5); // Третий аргумент - длина луча
+                    
+                    // Используем RayHelper для визуализации луча
+                    const rayHelper = new RayHelper(ray);
+                    rayHelper.show(this.scene, new Color3(1, 0, 0)); // Показать луч в сцене
+                }
 
-
-
-
-
-
-
-
-    }
-
-    createRayAboveMesh(mesh: AbstractMesh): void {
-        // Создаем луч с начальной позицией выше меша и направлением
-        const origin = new Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z);
-        const direction = new Vector3(0, 1, 0); // Направление луча (например, вверх)
+                enableDistanceMeasurement(): void {
+                    this.measuringDistance = true;
+                    this.firstPoint = null;
+                    this.secondPoint = null;
+                
+                    // Обработчик кликов
+                    this.scene.onPointerDown = (evt, pickResult) => {
+                        // Получаем позицию указателя
+                        const pointerX = evt.clientX;
+                        const pointerY = evt.clientY;
+                    
+                        console.log(`Клик по координатам: (${pointerX}, ${pointerY})`);
+                    
+                    // Проверяем, был ли клик правой кнопкой мыши
+                    if (evt.button === 2) {
+                        console.log("Правый клик.");
         
-        // Создаем луч
-        const ray = new Ray(origin, direction, 5); // Третий аргумент - длина луча
-        
-        // Используем RayHelper для визуализации луча
-        const rayHelper = new RayHelper(ray);
-        rayHelper.show(this.scene, new Color3(1, 0, 0)); // Показать луч в сцене
-    }
-
-    enableDistanceMeasurement(): void {
-        this.measuringDistance = true;
-        this.firstPoint = null;
-        this.secondPoint = null;
-    
-        // Обработчик кликов
-        this.scene.onPointerDown = (evt, pickResult) => {
-            // Получаем позицию указателя
-            const pointerX = evt.clientX;
-            const pointerY = evt.clientY;
-        
-            console.log(`Клик по координатам: (${pointerX}, ${pointerY})`);
-        
-            // Проверяем, был ли клик правой кнопкой мыши
-            if (evt.button === 2) {
-                console.log("Правый клик.");
-        
-                if (pickResult.hit && pickResult.pickedPoint) {
+                    if (pickResult.hit && pickResult.pickedPoint) {
                     if (!this.firstPoint) {
                         // Запоминаем первую точку
                         this.firstPoint = pickResult.pickedPoint.clone();
@@ -582,14 +627,15 @@ createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (
                 }
             }
         }
-    } else if (evt.button === 0) {
+    } 
+    
+    else if (evt.button === 0) {
         console.log("Левый клик. Замеры не проводятся.");
     }
 
         };
 
     }
-
 
 
 }

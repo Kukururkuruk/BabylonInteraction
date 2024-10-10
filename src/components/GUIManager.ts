@@ -1,6 +1,7 @@
-import { AbstractMesh, Mesh, MeshBuilder, Matrix, Scene, FreeCamera, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, Mesh, MeshBuilder, Matrix, Scene, FreeCamera, StandardMaterial, Color3, Vector3, PointerEventTypes } from "@babylonjs/core";
 import { AdvancedDynamicTexture, TextBlock, Control, Button } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
+
 
 export class GUIManager {
   private scene: Scene;
@@ -9,63 +10,26 @@ export class GUIManager {
   private textMessages: string[];
   private currentTextIndex: number = 0;
   private isSecondaryCameraActive: boolean = false; // Флаг для проверки активной камеры
+  private currentAngle: number = 90; // Начальный угол 90 градусов
+  private angleText: TextBlock;
+  private line: AbstractMesh | null = null;
+  private isDragging: boolean = false; // Флаг для отслеживания перемещения мыши
+  private initialMousePosition: Vector3 | null = null; // Начальная позиция мыши
+  private initialAngle: number = 90; // Начальный угол перед перемещением мыши
 
   constructor(scene: Scene, textMessages: string[]) {
     this.scene = scene;
     this.textMessages = textMessages;
     this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, this.scene); // Инициализация advancedTexture здесь
     this.textBlock = new TextBlock(); // Инициализация textBlock здесь
+    this.angleText = new TextBlock();
     this.createGui(); // Вызов метода для создания GUI
-    this.initClickListener(scene); // Переносим вызов сюда
+    this.addMouseInteraction(); // Добавляем обработчики для взаимодействия с мышью
   }
 
-  // Метод для инициализации обработчика клика
-initClickListener(scene: Scene): void {
-  scene.onPointerDown = (evt, pickResult) => {
-    if (this.isSecondaryCameraActive && pickResult.hit && pickResult.pickedPoint) {
-        console.log('Клик по координатам:', pickResult.pickedPoint);
-        this.showRedDot(pickResult.pickedPoint, this.advancedTexture);
-    }
-  };
-}
+  
 
-  // Метод для отображения красной точки
-  showRedDot(position: Vector3, advancedTexture: AdvancedDynamicTexture): void {
-    const redDot = new GUI.Ellipse();
-    redDot.width = "10px";
-    redDot.height = "10px";
-    redDot.color = "red";
-    redDot.thickness = 2;
-    redDot.background = "red";
 
-    // Получаем размеры канваса
-    const width = this.scene.getEngine().getRenderWidth();
-    const height = this.scene.getEngine().getRenderHeight();
-
-    
-    // Получаем матрицы проекции и вида
-    const viewMatrix = this.scene.activeCamera!.getViewMatrix();
-    const projectionMatrix = this.scene.activeCamera!.getProjectionMatrix();
-
-    // Преобразование 3D координат в 2D (экранные координаты)
-    const projectedPosition = Vector3.Project(
-        position, // Вектор для проекции
-        Matrix.Identity(), // Используем идентичную матрицу для world
-        viewMatrix, // Матрица вида
-        projectionMatrix // Матрица проекции
-    );
-
-    // Устанавливаем позицию для redDot
-    redDot.left = (projectedPosition.x * width) + width / 2 + "px"; // Изменено, чтобы правильно отображать
-    redDot.top = (-projectedPosition.y * height) + height / 2 + "px"; // Изменено, чтобы правильно отображать
-
-    advancedTexture.addControl(redDot);
-
-    // Удаляем точку через 5 секунд
-    setTimeout(() => {
-        advancedTexture.removeControl(redDot);
-    }, 5000);
-}
 
 
   // Метод для показа сообщения с расстоянием
@@ -79,7 +43,7 @@ initClickListener(scene: Scene): void {
     // Удаление сообщения через 5 секунд
     setTimeout(() => {
       this.advancedTexture.removeControl(textBlock); // Удаляем текстовый блок
-    }, 5000);
+    }, 3000);
   }
 
   createGui(): void {
@@ -88,13 +52,30 @@ initClickListener(scene: Scene): void {
     this.textBlock.isVisible = false; // Скрываем текст изначально
 
     // Создаем TextBlock
-    this.textBlock = new TextBlock(); // Создаем новый текстовый блок
-    this.textBlock.text = this.textMessages[this.currentTextIndex]; // Устанавливаем текст по умолчанию
+     // Устанавливаем текст только если массив не пустой
+     if (this.textMessages.length > 0) {
+      this.textBlock.text = this.textMessages[this.currentTextIndex] || ""; // Проверяем текст на пустоту
+    } else {
+      this.textBlock.text = "No messages available."; // Текст по умолчанию, если массив пустой
+    }
     this.textBlock.color = "white";
     this.textBlock.fontSize = 24;
     this.textBlock.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     this.textBlock.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     this.advancedTexture.addControl(this.textBlock);
+
+ 
+     // Текстовый блок для отображения угла
+     this.angleText = new TextBlock();
+     this.angleText.text = "";
+     this.angleText.color = "white";
+     this.angleText.fontSize = 24;
+     this.angleText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+     this.angleText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+     this.angleText.paddingTop = "80px";
+     this.advancedTexture.addControl(this.angleText);
+
+
 
 
 
@@ -116,22 +97,119 @@ initClickListener(scene: Scene): void {
     });
   }
 
-  updateText(index: number): void {
-    if (index === this.currentTextIndex) {
-      this.currentTextIndex++;
-      if (this.currentTextIndex < this.textMessages.length) { // Если есть следующее сообщение
-        this.textBlock.text = this.textMessages[this.currentTextIndex];
-      } else {
-        this.textBlock.text = this.textMessages[this.textMessages.length - 1]; // Используем последний элемент
-        setTimeout(() => {
-          this.textBlock.isVisible = false; // Скрываем текстовый блок
-        }, 3000);
-      }
-    } else {
-      // Если индекс не соответствует текущему, можно скрыть текст
-      this.textBlock.isVisible = false; // Скрываем текстовый блок, если он больше не актуален
+
+
+
+ // Добавление взаимодействия с мышью
+ private addMouseInteraction(): void {
+  // Отслеживание нажатия кнопки мыши
+  this.scene.onPointerObservable.add((pointerInfo) => {
+    const pointerEvent = pointerInfo.event as PointerEvent; // Приведение типа
+
+    switch (pointerInfo.type) {
+      case PointerEventTypes.POINTERDOWN:
+        if (pointerEvent.button === 2) { // Проверяем, что нажата правая кнопка мыши
+          this.startDragging(pointerEvent); // Начинаем отслеживать движение мыши
+        }
+        break;
+      case PointerEventTypes.POINTERUP:
+        this.stopDragging(); // Прекращаем отслеживание движения
+        break;
+      case PointerEventTypes.POINTERMOVE:
+        if (this.isDragging) {
+          this.updateAngle(pointerEvent); // Обновляем угол при движении мыши
+        }
+        break;
     }
+  });
+}
+
+// Начало отслеживания движения мыши
+private startDragging(event: PointerEvent): void {
+  this.isDragging = true;
+  this.initialMousePosition = this.getMousePositionOnScene(event); // Запоминаем начальную позицию мыши
+  this.initialAngle = this.currentAngle; // Запоминаем текущий угол
+}
+
+// Остановка отслеживания движения мыши
+private stopDragging(): void {
+  this.isDragging = false;
+  this.initialMousePosition = null;
+}
+
+// Обновление угла при движении мыши
+// Обновление угла при движении мыши
+private updateAngle(event: PointerEvent): void {
+  const currentMousePosition = this.getMousePositionOnScene(event);
+  if (this.initialMousePosition && currentMousePosition) {
+    // Рассчитываем разницу в положении мыши
+    const deltaX = currentMousePosition.x - this.initialMousePosition.x;
+    const deltaY = currentMousePosition.y - this.initialMousePosition.y;
+
+    // Вычисляем угол на основе перемещения мыши
+    const angleChange = Math.atan2(deltaY, deltaX) * (180 / Math.PI); // Угол в градусах
+    this.currentAngle = this.initialAngle + angleChange; // Обновляем угол
+
+    // Обновляем текст угла
+    this.angleText.text = `Angle: ${this.currentAngle.toFixed(2)}°`;
+
+    // Перемещаем линию
+    this.updateLine();
   }
+}
+
+// Получение позиции мыши в сцене
+private getMousePositionOnScene(event: PointerEvent): Vector3 {
+  const pickResult = this.scene.pick(event.clientX, event.clientY);
+  return pickResult.pickedPoint ? pickResult.pickedPoint : Vector3.Zero();
+}
+
+
+
+
+
+        // Обновление линии на основе текущего угла
+        private updateLine(): void {
+          if (this.line) {
+            const angleRad = (this.currentAngle * Math.PI) / 180; // Переводим угол в радианы
+            const lineEnd = new Vector3(Math.cos(angleRad) * 5, Math.sin(angleRad) * 5, 0); // Конечная точка линии
+            this.line = MeshBuilder.CreateLines(
+      "verticalLine",
+      {
+        points: [
+          new Vector3(0, 0, 0),
+          lineEnd,
+        ],
+      },
+      this.scene
+    );
+
+    const lineMaterial = new StandardMaterial("lineMaterial", this.scene);
+    lineMaterial.diffuseColor = Color3.Red();
+    this.line.material = lineMaterial;
+  }
+}
+
+
+  // Метод для обновления текста
+  updateText(index: number): void {
+    this.currentTextIndex = index;
+    this.textBlock.text = this.textMessages[this.currentTextIndex];
+  }
+
+  // Метод для изменения угла
+  changeAngle(delta: number): void {
+    this.currentAngle += delta; // Изменяем угол
+    this.angleText.text = `Angle: ${this.currentAngle.toFixed(2)}°`; // Обновляем текст угла
+    this.updateLine(); // Обновляем линию
+  }
+
+  // Переключение камер
+  toggleSecondaryCamera(): void {
+    this.isSecondaryCameraActive = !this.isSecondaryCameraActive;
+    this.textBlock.isVisible = this.isSecondaryCameraActive; // Показываем текст только при активной вторичной камере
+  }
+
 
   createButtonAboveMesh(targetMesh: AbstractMesh): void {
     // Создаем кнопку

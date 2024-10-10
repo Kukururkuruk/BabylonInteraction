@@ -482,3 +482,82 @@ export class FullExample {
             // Создаем кликабельные точки с фиксированными смещениями
     createClickablePoint(mesh.position.add(new BABYLON.Vector3(0, 0.5, 0))); // Точка над мешом
     createClickablePoint(mesh.position.add(new BABYLON.Vector3(0, -0.5, 0))); // Точка под мешом
+
+
+
+
+
+
+
+
+
+
+
+Сценарий для третей камеры
+    ShowScenarioSelection(): void {
+        console.log("Инициализация меню с кнопками для выбора сценария");
+
+        // Создаем меню с кнопками для выбора сценария
+        const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        console.log("Fullscreen UI создано");
+
+        // Кнопка для 1-го сценария (secondaryCamera)
+        const button1 = Button.CreateSimpleButton("btn1", "Сценарий 1");
+        button1.width = "150px";
+        button1.height = "40px";
+        button1.color = "white";
+        button1.background = "green";
+        button1.onPointerClickObservable.add(() => {
+            console.log("Кнопка Сценарий 1 нажата");
+            this.SwitchToCamera(this.secondaryCamera);
+            console.log("Переключено на secondaryCamera");
+            advancedTexture.dispose(); // Убираем меню после выбора
+            console.log("Меню удалено");
+        });
+
+        // Кнопка для 2-го сценария (thirdCamera)
+        const button2 = Button.CreateSimpleButton("btn2", "Сценарий 2");
+        button2.width = "150px";
+        button2.height = "40px";
+        button2.color = "white";
+        button2.background = "blue";
+        button2.onPointerClickObservable.add(() => {
+            console.log("Кнопка Сценарий 2 нажата");
+            this.CreateThirdCamera();
+            console.log("Создана thirdCamera");
+            advancedTexture.dispose(); // Убираем меню после выбора
+            console.log("Меню удалено");
+        });
+
+        // Расположение кнопок
+        button1.top = "-50px";
+        button2.top = "50px";
+
+        // Добавляем кнопки на экран
+        advancedTexture.addControl(button1);
+        advancedTexture.addControl(button2);
+        console.log("Кнопки добавлены на экран");
+    }
+
+    CreateThirdCamera(): void {
+        if (this.secondaryCamera) {
+            console.log("Создание thirdCamera на основе secondaryCamera");
+            this.thirdCamera = new FreeCamera("thirdCamera", this.secondaryCamera.position.clone(), this.scene);
+            this.thirdCamera.setTarget(this.secondaryCamera.getTarget());
+            this.SwitchToCamera(this.thirdCamera);
+            console.log("Переключено на thirdCamera");
+        } else {
+            console.error("Ошибка: secondaryCamera не определена");
+        }
+    }
+
+    SwitchToCamera(camera: FreeCamera | null): void {
+        if (camera) {
+            console.log(`Переключение на камеру: ${camera.name}`);
+            this.scene.activeCamera = camera;
+            camera.attachControl(this.canvas, true);
+        } else {
+            console.error("Ошибка: камера не передана для переключения");
+        }
+    }
+
