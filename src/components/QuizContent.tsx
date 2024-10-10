@@ -1,63 +1,150 @@
-import React, { useState } from 'react';
+
+// import React, { useState } from 'react';
+
+// interface QuizContentProps {
+//   keyword: string;
+//   meshData: any[];
+//   onCorrectAnswer: () => void;
+//   onCloseModal: () => void;
+// }
+
+// const QuizContent: React.FC<QuizContentProps> = ({ keyword, meshData, onCorrectAnswer, onCloseModal }) => {
+//   const meshInfo = meshData.find(item => item.keyword === keyword);
+
+//   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+//   const [feedback, setFeedback] = useState<string | null>(null);
+
+//   if (!meshInfo) {
+//     return (
+//       <div>
+//         <p>Информация недоступна для этого объекта.</p>
+//         <button onClick={onCloseModal}>Закрыть</button>
+//       </div>
+//     );
+//   }
+
+//   const { question, options, correctAnswers } = meshInfo;
+
+//   // Получаем ключ опции (например, 'what', 'function', 'purpose')
+//   const optionKey = Object.keys(options)[0];
+//   const optionValues = options[optionKey];
+
+//   const handleSubmit = () => {
+//     if (!selectedAnswer) {
+//       setFeedback('Пожалуйста, выберите вариант.');
+//       return;
+//     }
+
+//     const isCorrect = selectedAnswer === correctAnswers[optionKey];
+
+//     if (isCorrect) {
+//       setFeedback('Правильно!');
+//       onCorrectAnswer();
+//       onCloseModal();
+//     } else {
+//       setFeedback('Неправильно. Пожалуйста, попробуйте снова.');
+//       // Если хотите закрывать окно при неправильном ответе, раскомментируйте следующую строку:
+//       onCloseModal();
+//     }
+//   };
+
+//   return (
+//     <div>
+//       <h3>{question}</h3>
+//       <select
+//         value={selectedAnswer}
+//         onChange={e => setSelectedAnswer(e.target.value)}
+//       >
+//         <option value="" disabled>Выберите вариант</option>
+//         {optionValues.map((option: string) => (
+//           <option key={option} value={option}>{option}</option>
+//         ))}
+//       </select>
+//       <button onClick={handleSubmit}>Ответить</button>
+//       {feedback && <p>{feedback}</p>}
+//     </div>
+//   );
+// };
+
+// export default QuizContent;
+
+
+
+
+
+
+import React, { useState } from "react";
 
 interface QuizContentProps {
   keyword: string;
   meshData: any[];
+  onCorrectAnswer: () => void;
+  onIncorrectAnswer: () => void; // Новый проп
+  onCloseModal: () => void;
 }
 
-const QuizContent: React.FC<QuizContentProps> = ({ keyword, meshData }) => {
-  const meshInfo = meshData.find(item => item.keyword === keyword);
+const QuizContent: React.FC<QuizContentProps> = ({
+  keyword,
+  meshData,
+  onCorrectAnswer,
+  onIncorrectAnswer,
+  onCloseModal,
+}) => {
+  const meshInfo = meshData.find((item) => item.keyword === keyword);
 
-  const [selectedWhat, setSelectedWhat] = useState<string>('');
-  const [selectedWhy, setSelectedWhy] = useState<string>('');
+  const [selectedAnswer, setSelectedAnswer] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
 
   if (!meshInfo) {
-    return <p>Информация недоступна для этого объекта.</p>;
+    return (
+      <div>
+        <p>Информация недоступна для этого объекта.</p>
+        <button onClick={onCloseModal}>Закрыть</button>
+      </div>
+    );
   }
 
+  const { question, options, correctAnswers } = meshInfo;
+
+  // Получаем ключ опции (например, 'what', 'function', 'purpose')
+  const optionKey = Object.keys(options)[0];
+  const optionValues = options[optionKey];
+
   const handleSubmit = () => {
-    if (!selectedWhat || !selectedWhy) {
-      setFeedback('Пожалуйста, выберите варианты в обоих селекторах.');
+    if (!selectedAnswer) {
+      setFeedback("Пожалуйста, выберите вариант.");
       return;
     }
 
-    const isCorrectWhat = selectedWhat === meshInfo.correctAnswers.what;
-    const isCorrectWhy = selectedWhy === meshInfo.correctAnswers.why;
+    const isCorrect = selectedAnswer === correctAnswers[optionKey];
 
-    if (isCorrectWhat && isCorrectWhy) {
-      setFeedback('Правильно!');
+    if (isCorrect) {
+      setFeedback("Правильно!");
+      onCorrectAnswer();
+      onCloseModal();
     } else {
-      setFeedback('Неправильно. Пожалуйста, попробуйте снова.');
+      setFeedback("Неправильно. Пожалуйста, попробуйте снова.");
+      onIncorrectAnswer(); // Вызываем функцию при неправильном ответе
+      onCloseModal();
     }
   };
 
   return (
     <div>
-      <div>
-        <h3>Что</h3>
-        <select
-          value={selectedWhat}
-          onChange={e => setSelectedWhat(e.target.value)}
-        >
-          <option value="" disabled>Выберите вариант</option>
-          {meshInfo.options.what.map((option: string) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <h3>Зачем</h3>
-        <select
-          value={selectedWhy}
-          onChange={e => setSelectedWhy(e.target.value)}
-        >
-          <option value="" disabled>Выберите вариант</option>
-          {meshInfo.options.why.map((option: string) => (
-            <option key={option} value={option}>{option}</option>
-          ))}
-        </select>
-      </div>
+      <h3>{question}</h3>
+      <select
+        value={selectedAnswer}
+        onChange={(e) => setSelectedAnswer(e.target.value)}
+      >
+        <option value="" disabled>
+          Выберите вариант
+        </option>
+        {optionValues.map((option: string) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
       <button onClick={handleSubmit}>Ответить</button>
       {feedback && <p>{feedback}</p>}
     </div>
@@ -65,3 +152,6 @@ const QuizContent: React.FC<QuizContentProps> = ({ keyword, meshData }) => {
 };
 
 export default QuizContent;
+
+
+
