@@ -50,6 +50,7 @@ export class GUIManager {
     // Создаем полноэкранный интерфейс
     this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, this.scene);
     this.textBlock.isVisible = false; // Скрываем текст изначально
+    
 
     // Создаем TextBlock
      // Устанавливаем текст только если массив не пустой
@@ -74,7 +75,7 @@ export class GUIManager {
      this.angleText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
      this.angleText.paddingTop = "80px";
      this.advancedTexture.addControl(this.angleText);
-
+    
 
 
 
@@ -202,6 +203,7 @@ private getMousePositionOnScene(event: PointerEvent): Vector3 {
     this.currentAngle += delta; // Изменяем угол
     this.angleText.text = `Angle: ${this.currentAngle.toFixed(2)}°`; // Обновляем текст угла
     this.updateLine(); // Обновляем линию
+    
   }
 
   // Переключение камер

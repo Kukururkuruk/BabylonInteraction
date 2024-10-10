@@ -90,10 +90,9 @@ export class FullExample {
 
         // Инициализируем камеры
         this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), scene);
-        this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(10, 5, 0), scene);
+        this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 5, 10), scene);
         
-        // Устанавливаем активную камеру по умолчанию
-        scene.activeCamera = this.secondaryCamera;
+        
 
         return scene;
     }
@@ -120,6 +119,7 @@ export class FullExample {
             this.triggerManager.setupProximityTrigger(mesh, () => {
                 console.log("Камера вошла в зону триггера лестницы:", mesh.name);
                 this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+                this.switchToThirdCamera(interactionObject); // Передаем interactionObject для переключения камеры
             });
     
             // Включение клика на объекте
@@ -147,6 +147,7 @@ export class FullExample {
                 console.log("Broken меш кликнут:", mesh.name, "Координаты:", mesh.position);
                 this.interactionObject = mesh;
                 this.switchToSecondaryCamera(new InteractionObject(mesh));
+                this.switchToThirdCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
             })
         );
 
@@ -227,6 +228,7 @@ pointsPositions.forEach((position, index) => {
                 console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
                 this.interactionObject = mesh;
                 this.switchToSecondaryCamera(new InteractionObject(mesh));
+                this.switchToThirdCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
                 
             })
         );
@@ -278,6 +280,7 @@ pointsPositions.forEach((position, index) => {
         button2.background = "blue";
         button2.onPointerUpObservable.add(() => {
             this.handleButtonClick("Металл", this.thirdCamera);
+
         });
         this.advancedTexture.addControl(button2);
     }
@@ -376,6 +379,10 @@ pointsPositions.forEach((position, index) => {
         // Инициализация второй камеры
         this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), this.scene);
         this.secondaryCamera.setTarget(Vector3.Zero());
+
+        // Инициализация третей камеры
+        this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 5, -10), this.scene);
+        this.thirdCamera.setTarget(Vector3.Zero());
         
 
         const ground = this.scene.getMeshByName("ground");
@@ -393,20 +400,62 @@ pointsPositions.forEach((position, index) => {
         });
     }
 
-    switchToThirdCamera(): void {
-        if (!this.thirdCamera) {
-            this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 0, -10), this.scene);
-            this.thirdCamera.setTarget(Vector3.Zero());
-            this.thirdCamera.attachControl(this.canvas, true);
-            this.thirdCamera.fov = 1.2; // Увеличиваем поле зрения для эффекта приближения
+    switchToThirdCamera(interactionObject: InteractionObject): void {
+        const mesh = interactionObject.getMesh();
+        const position = mesh.position;
+        // Функция для преобразования градусов в радианы
+        function degreesToRadians(degrees: number): number {
+            return degrees * (Math.PI / 180);
+}
+        // Установим значения смещений и углы камеры в зависимости от типа объекта
+        let offsetX = 2, offsetY = 2, offsetZ = 5; // Смещения по умолчанию
+        let targetYOffset = 0; // Смещение по оси Y для цели по умолчанию (камера нацелена чуть выше объекта)
     
-            // Устанавливаем позицию камеры на меш "broken"
-            if (this.interactionObject) {
-                this.thirdCamera.position = this.interactionObject.position.add(new Vector3(0, 1, -5)); // Поднимаем на 1 для лучшего вида
-                console.log("Камера переключена на объект broken:", this.interactionObject.name);
+        // Определение типа объекта по его имени
+        if (mesh.name.toLowerCase().includes("whole")) {
+            offsetX = 13.49; // Увеличиваем смещение по оси X
+            offsetY = 6.4; // Камера выше
+            offsetZ = -4.9; // Камера дальше
+            targetYOffset = 0; // Камера нацелена чуть выше объекта "whole"
+        } else if (mesh.name.toLowerCase().includes("broken")) {
+            offsetX = 13.49; // Среднее смещение по оси X
+            offsetY = 6.4; // Камера чуть выше объекта
+            offsetZ = -4.9; // Камера чуть ближе
+            targetYOffset = 0; // Камера нацелена чуть выше объекта "broken"
+        }
+    
+        if (this.thirdCamera) {
+            // Устанавливаем позицию камеры относительно объекта
+            this.thirdCamera.position = new Vector3(position.x + offsetX, position.y + offsetY, position.z - offsetZ);
+    
+            // Камера нацелена на объект
+            this.thirdCamera.setTarget(new Vector3(position.x, position.y + targetYOffset, position.z));
+    
+            // Переключаем активную камеру на третью
+            this.scene.activeCamera = this.thirdCamera;
+    
+            // Включаем видимость точек
+            this.points.forEach(point => point.isVisible = true);
+    
+            // Поворачиваем камеру вправо на 10 градусов, используя собственную функцию
+            this.thirdCamera.rotation.x = degreesToRadians(20); // Поворот камеры вправо на 10 градусов
+
+            // Поворачиваем камеру вправо на 10 градусов, используя собственную функцию
+            this.thirdCamera.rotation.y = degreesToRadians(-90); // Поворот камеры вправо на 10 градусов
+    
+            // Настраиваем параметры вращения камеры (можете изменить чувствительность, если требуется)
+            this.thirdCamera.angularSensibility = 800; // Чувствительность вращения камеры
+
+                // Включаем видимость модели руки
+            if (this.handModel) {
+                this.handModel.isVisible = true;
             }
-    
+
             
+    
+            console.log(`Камера переключена на третью камеру, цель: ${mesh.name}`);
+        } else {
+            console.error("Третья камера не инициализирована.");
         }
     }
     
@@ -422,6 +471,11 @@ pointsPositions.forEach((position, index) => {
         // Отключаем управление вторичной камерой
         if (this.secondaryCamera) {
             this.secondaryCamera.detachControl(); 
+        }
+
+        // Отключаем управление вторичной камерой
+        if (this.thirdCamera) {
+            this.thirdCamera.detachControl(); 
         }
     
         // Включаем видимость модели руки
@@ -458,12 +512,7 @@ pointsPositions.forEach((position, index) => {
             offsetY = 6.5; // Камера чуть выше объекта
             offsetZ = -5; // Камера чуть ближе
             targetYOffset = 1; // Камера нацелена чуть выше объекта "broken"
-        } else if (mesh.name.toLowerCase().includes("stairs")) {
-            offsetX = 4; // Стандартное смещение по оси X
-            offsetY = 2; // Камера на обычной высоте
-            offsetZ = 0; // Стандартное расстояние
-            targetYOffset = 1; // Камера нацелена чуть выше объекта "stairs"
-        }
+        } 
         
     
         if (this.secondaryCamera) {
@@ -590,6 +639,8 @@ pointsPositions.forEach((position, index) => {
                     this.measuringDistance = true;
                     this.firstPoint = null;
                     this.secondPoint = null;
+                    // Переключаем активную камеру на вторичную
+                    this.scene.activeCamera = this.secondaryCamera;
                 
                     // Обработчик кликов
                     this.scene.onPointerDown = (evt, pickResult) => {
