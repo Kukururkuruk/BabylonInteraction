@@ -1,0 +1,292 @@
+1. Размещение JSON-файла внутри папки src
+Создайте файл meshData.json внутри папки src или её подкаталога, например, src/data/meshData.json.
+
+Структура проекта:
+
+kotlin
+Копировать код
+project-root/
+├── src/
+│   ├── components/
+│   │   ├── BabylonTest.tsx
+│   │   ├── QuizContent.tsx
+│   │   └── ModalWindow.tsx
+│   ├── data/
+│   │   └── meshData.json
+│   └── index.tsx
+├── package.json
+└── ...
+Содержимое meshData.json:
+
+json
+Копировать код
+[
+  {
+    "keyword": "beam",
+    "options": {
+      "what": ["Балка", "Стойка", "Колонна"],
+      "why": ["Поддержка крыши", "Декор", "Ограждение"]
+    },
+    "correctAnswers": {
+      "what": "Балка",
+      "why": "Поддержка крыши"
+    }
+  },
+  {
+    "keyword": "rack",
+    "options": {
+      "what": ["Стойка", "Полка", "Стена"],
+      "why": ["Хранение", "Разделение", "Украшение"]
+    },
+    "correctAnswers": {
+      "what": "Стойка",
+      "why": "Хранение"
+    }
+  }
+  // Добавьте другие объекты по необходимости
+]
+2. Импорт JSON-файла в компоненты
+Мы можем импортировать JSON-файл как модуль в наши компоненты.
+
+Важно для TypeScript: Если вы используете TypeScript, вам может потребоваться добавить декларацию модуля для файлов .json.
+
+Создайте файл src/types/global.d.ts (если его ещё нет) и добавьте в него:
+
+typescript
+Копировать код
+declare module "*.json" {
+  const value: any;
+  export default value;
+}
+3. Обновление компонента BabylonTest
+BabylonTest.tsx
+
+tsx
+Копировать код
+import React, { useEffect, useRef, useState } from 'react';
+import { TestScene } from '../BabylonExamples/TestScene';
+import ModalWindow from './ModalWindow';
+import QuizContent from './QuizContent';
+import meshData from '../data/meshData.json'; // Импортируем JSON-файл
+
+const BabylonTest: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentKeyword, setCurrentKeyword] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const example = new TestScene(canvasRef.current);
+      example.openModal = (keyword: string) => {
+        setCurrentKeyword(keyword);
+        setIsModalOpen(true);
+      };
+    }
+  }, []);
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentKeyword(null);
+  };
+
+  return (
+    <div id="app">
+      <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+      <ModalWindow isOpen={isModalOpen} onClose={handleCloseModal}>
+        {currentKeyword && (
+          <QuizContent keyword={currentKeyword} meshData={meshData} />
+        )}
+      </ModalWindow>
+    </div>
+  );
+};
+
+export default BabylonTest;
+Пояснения:
+
+Мы импортируем meshData из JSON-файла.
+Передаём meshData в компонент QuizContent как пропс.
+Нет необходимости использовать fetch, так как данные доступны напрямую.
+4. Обновление компонента QuizContent
+QuizContent.tsx
+
+tsx
+Копировать код
+import React, { useState } from 'react';
+
+interface QuizContentProps {
+  keyword: string;
+  meshData: any[];
+}
+
+const QuizContent: React.FC<QuizContentProps> = ({ keyword, meshData }) => {
+  const meshInfo = meshData.find(item => item.keyword === keyword);
+
+  const [selectedWhat, setSelectedWhat] = useState<string>('');
+  const [selectedWhy, setSelectedWhy] = useState<string>('');
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  if (!meshInfo) {
+    return <p>Информация недоступна для этого объекта.</p>;
+  }
+
+  const handleSubmit = () => {
+    if (!selectedWhat || !selectedWhy) {
+      setFeedback('Пожалуйста, выберите варианты в обоих селекторах.');
+      return;
+    }
+
+    const isCorrectWhat = selectedWhat === meshInfo.correctAnswers.what;
+    const isCorrectWhy = selectedWhy === meshInfo.correctAnswers.why;
+
+    if (isCorrectWhat && isCorrectWhy) {
+      setFeedback('Правильно!');
+    } else {
+      setFeedback('Неправильно. Пожалуйста, попробуйте снова.');
+    }
+  };
+
+  return (
+    <div>
+      <div>
+        <h3>Что</h3>
+        <select
+          value={selectedWhat}
+          onChange={e => setSelectedWhat(e.target.value)}
+        >
+          <option value="" disabled>Выберите вариант</option>
+          {meshInfo.options.what.map((option: string) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <h3>Зачем</h3>
+        <select
+          value={selectedWhy}
+          onChange={e => setSelectedWhy(e.target.value)}
+        >
+          <option value="" disabled>Выберите вариант</option>
+          {meshInfo.options.why.map((option: string) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+      </div>
+      <button onClick={handleSubmit}>Ответить</button>
+      {feedback && <p>{feedback}</p>}
+    </div>
+  );
+};
+
+export default QuizContent;
+Пояснения:
+
+Компонент остаётся практически таким же, как и в предыдущем варианте.
+Используем импортированные данные meshData, переданные из BabylonTest.
+Нет необходимости в дополнительных изменениях.
+5. Обновление класса TestScene
+В классе TestScene убедитесь, что вы передаёте ключевое слово при открытии модального окна.
+
+TestScene.ts
+
+typescript
+Копировать код
+// В классе TestScene
+
+// Объявляем openModal с параметром keyword
+openModal?: (keyword: string) => void;
+
+// В методе CreateEnvironment или где вы настраиваете взаимодействия:
+
+// Для меша "beam"
+this.beam = map.find((mesh) => mesh.name.toLowerCase().includes("beam"));
+if (this.beam) {
+  this.triggerManager.setupModalInteraction(this.beam, () => {
+    console.log("Beam clicked!");
+    if (this.openModal) {
+      this.openModal('beam'); // Передаём ключевое слово
+    }
+  });
+
+  this.triggerManager.createRayAboveMesh(this.beam);
+}
+
+// Аналогично для других мешей, например, "rack":
+this.rack = map.find((mesh) => mesh.name.toLowerCase().includes("rack"));
+if (this.rack) {
+  this.triggerManager.setupModalInteraction(this.rack, () => {
+    console.log("Rack clicked!");
+    if (this.openModal) {
+      this.openModal('rack'); // Передаём ключевое слово
+    }
+  });
+
+  this.triggerManager.createRayAboveMesh(this.rack);
+}
+Пояснения:
+
+При взаимодействии с мешем вызываем this.openModal с соответствующим ключевым словом.
+Это позволит компоненту QuizContent получить нужные данные из meshData.
+6. Обновление ModalWindow
+Убедитесь, что ваш компонент ModalWindow корректно отображает переданный контент.
+
+ModalWindow.tsx
+
+tsx
+Копировать код
+import React from 'react';
+
+interface ModalWindowProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+const ModalWindow: React.FC<ModalWindowProps> = ({ isOpen, onClose, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <button onClick={onClose}>Закрыть</button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
+export default ModalWindow;
+7. Стилизация и дополнительные настройки
+Вы можете добавить стили для улучшения внешнего вида компонентов и модального окна.
+
+Пример стилей для модального окна:
+
+css
+Копировать код
+/* styles.css */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+}
+8. Преимущества данного подхода
+Нет необходимости в асинхронных запросах или обработке промисов, так как данные доступны сразу после импорта.
+Упрощение кода: меньше кода для загрузки и обработки данных.
+Повышение производительности: данные загружаются вместе с бандлом приложения, что может ускорить доступ к ним.
+9. Важные замечания
+Размер данных: Если JSON-файл очень большой, импортирование его напрямую может увеличить размер бандла приложения. В таком случае лучше рассмотреть другие методы загрузки данных.
+Изменение данных: Если данные меняются динамически или загружаются с сервера, импортирование их напрямую не подойдёт.
+10. Заключение
+Мы обновили ваш код, чтобы использовать прямой импорт JSON-файла без использования fetch. Теперь ваши компоненты работают с данными напрямую, и вы можете легко управлять содержимым meshData.json.

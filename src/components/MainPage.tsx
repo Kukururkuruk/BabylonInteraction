@@ -14,6 +14,9 @@ const Main: React.FC = () => {
       <button>
         <Link to="/test">Go to Test Page</Link>
       </button>
+      <button>
+        <Link to="/question">Go to Question Page</Link>
+      </button>
     </div>
   );
 };
