@@ -15,6 +15,7 @@ import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, TextBlock, TextWrapping } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import * as GUI from '@babylonjs/gui/2D';
+import { FullExample } from './FullExample';
 
 export class TestScene {
   scene: Scene;
@@ -29,6 +30,8 @@ export class TestScene {
   private beam2: AbstractMesh;
   private targetMeshes: AbstractMesh[];
   private targetMeshes2: AbstractMesh[];
+  private markMeshes: AbstractMesh[] = [];
+  private zoneSigns: AbstractMesh[] = [];
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -46,13 +49,7 @@ export class TestScene {
     });
   
     this.CreateController();
-  
-
-    // this.CreateDialogBox();
-  
     this.AddScreenshotButton();
-    // this.AddCameraPositionButton();
-  
     this.engine.runRenderLoop(() => {
       this.scene.render();
       this.triggerManager.updateRayIntersection();
@@ -69,7 +66,6 @@ export class TestScene {
     scene.collisionsEnabled = true;
 
     const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
-
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 0.5;
@@ -80,7 +76,6 @@ export class TestScene {
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
     camera.attachControl(this.canvas, true);
-
     camera.applyGravity = false;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(0.5, 1, 0.5);
@@ -95,6 +90,7 @@ export class TestScene {
       this.engine.displayLoadingUI();
   
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+
         map.forEach((mesh) => {
         mesh.checkCollisions = true;
           });
@@ -594,12 +590,58 @@ export class TestScene {
               5 // camSize
               // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
           );
+
+          // --- Третий триггер (с отображением знака) ---
+        const thirdZonePosition = new Vector3(12.46,  2.0, 4.79);
+        const thirdZoneSign = markMeshTemplate.clone("thirdZoneSign");
+        thirdZoneSign.position = thirdZonePosition.clone();
+        thirdZoneSign.position.y = -1; // Высота знака для третьей зоны
+        thirdZoneSign.isVisible = true;
+
+        this.scene.addMesh(thirdZoneSign);
+        this.zoneSigns.push(thirdZoneSign);
+
+        const thirdTriggerZone = this.triggerManager.setupZoneTrigger(
+            thirdZonePosition,
+            () => {
+                console.log("Вошли в третью зону");
+              // Создание и отображение кнопки
+          this.showGoToFullExampleButton();
+                if (thirdZoneSign) {
+                    thirdZoneSign.dispose();
+                }
+            },
+            () => {
+                console.log("Вышли из третьей зоны");
+                // Логика при выходе из третьей зоны, если необходимо
+            },
+            3 // Размер камеры для третьей зоны
+        );
+
+        
+
       } else {
           console.error("markMeshes не загружены или пусты.");
       }
   }
-
-
+      // Метод для отображения кнопки перехода
+      showGoToFullExampleButton(): void {
+        const goButton = Button.CreateSimpleButton("goToFullExample", "Go to FullExample Page");
+        goButton.width = "150px";
+        goButton.height = "60px";
+        goButton.color = "white";
+        goButton.background = "green";
+        
+        // Настройка события клика
+        goButton.onPointerUpObservable.add(() => {
+            // Переход на страницу при клике
+            window.location.href = "/full";  // Либо используйте навигацию Link в реакте
+        });
+        
+        // Добавляем кнопку в интерфейс
+        this.guiTexture.addControl(goButton);
+      }
+    
 
 
 
