@@ -10,6 +10,7 @@ import {
   AbstractMesh,
   HighlightLayer,
   Color3,
+  EquiRectangularCubeTexture,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, TextBlock, TextWrapping } from "@babylonjs/gui";
@@ -21,6 +22,7 @@ export class TestScene {
   engine: Engine;
   openModal?: (keyword: string) => void;
   zone: number[] = [-10.622146207334794, 8.8, -3.62];
+  camera: FreeCamera;
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private zoneTriggered: boolean = false;
@@ -61,7 +63,8 @@ export class TestScene {
   
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    // const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    // hemiLight.intensity = 0.5; // Установите желаемую интенсивность
 
     const framesPerSecond = 60;
     const gravity = -9.81;
@@ -72,10 +75,40 @@ export class TestScene {
 
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
-    scene.environmentIntensity = 0.5;
+    scene.environmentIntensity = 1;
 
     return scene;
   }
+
+
+//   CreateScene(): Scene {
+//     const scene = new Scene(this.engine);
+//     const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+//         hemiLight.intensity = 0.3; // Установите желаемую интенсивность
+
+//     const framesPerSecond = 60;
+//     const gravity = -9.81;
+//     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+//     scene.collisionsEnabled = true;
+
+//     // Загрузка панорамной JPEG-текстуры для окружения
+//     const equirectangularTexture = new EquiRectangularCubeTexture(
+//         "/models/test_4.jpg",
+//         scene,
+//         512,
+//         false,
+//         true // gammaSpace
+//     );
+
+//     scene.environmentTexture = equirectangularTexture;
+//     scene.environmentIntensity = 1.0; // Настройте интенсивность по необходимости
+
+//     // Создание skybox с использованием панорамной текстуры
+//     scene.createDefaultSkybox(equirectangularTexture, true, 50000, undefined, false);
+
+//     return scene;
+// }
+
 
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
@@ -98,7 +131,7 @@ export class TestScene {
         map.forEach((mesh) => {
         mesh.checkCollisions = true;
           });
-          console.log(map);
+
           
 
       // Находим сломаные меши
@@ -137,7 +170,6 @@ export class TestScene {
       // Инициализация мешей и взаимодействий
       keywords.forEach((keyword) => {
         const targetMesh = map.find((mesh) => mesh.name.toLowerCase().includes(keyword));
-        console.log(targetMesh);
         
         
         if (targetMesh) {
@@ -251,180 +283,6 @@ export class TestScene {
   }
 
 
-
-
-
-  // setupTriggers(): void {
-  //   // Проверяем, что markMeshes загружены
-  //   if (this.markMeshes && this.markMeshes.length > 0) {
-  //     const markMeshTemplate = this.markMeshes[0]; // Используем первый mesh как шаблон
-
-  //     // Создаем массив для хранения ссылок на знаки в зонах
-  //     this.zoneSigns = [];
-
-  //     // --- Первый триггер (с отображением знака) ---
-
-  //     // Позиция первой триггер-зоны
-  //     const firstZonePosition = new Vector3(...this.zone);
-
-  //     // Клонируем знак для первой зоны
-  //     const firstZoneSign = markMeshTemplate.clone("firstZoneSign");
-  //     firstZoneSign.position = firstZonePosition.clone();
-  //     firstZoneSign.position.y = 6; // Устанавливаем высоту знака для первой зоны
-  //     firstZoneSign.isVisible = true; // Убеждаемся, что знак видим
-
-  //     // Добавляем знак в сцену
-  //     this.scene.addMesh(firstZoneSign);
-
-  //     // Сохраняем ссылку на знак для дальнейшего удаления
-  //     this.zoneSigns.push(firstZoneSign);
-
-  //     // Создаем первую триггер-зону
-  //     const firstTriggerZone = this.triggerManager.setupZoneTrigger(
-  //       firstZonePosition,
-  //       () => {
-  //         // Вход в первую зону
-  //         if (!this.zoneTriggered) {
-  //           this.zoneTriggered = true;
-  //           console.log("Камера пересекла зону взаимодействия!");
-
-  //           // Удаляем знак
-  //           if (firstZoneSign) {
-  //             firstZoneSign.dispose();
-  //           }
-
-  //           this.triggerManager.createStartButton(() => {
-  //             this.triggerManager.disableCameraMovement();
-  //             const targetPosition = firstTriggerZone.getInteractionZone().getAbsolutePosition();
-  //             this.triggerManager.setCameraPositionAndTarget(
-  //               Math.PI / 2,
-  //               -1,
-  //               0,
-  //               targetPosition
-  //             );
-  //             this.triggerManager.createRadioButtons(() => {
-  //               this.triggerManager.enableCameraMovement();
-  //             });
-  //           });
-  //         }
-  //       },
-  //       undefined, // onExitZone
-  //       2 // camSize
-  //       // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
-  //     );
-
-  //     // --- Второй триггер (с отображением знака) ---
-
-  //     // Позиция второй триггер-зоны
-  //     const clickZonePosition = new Vector3(
-  //       13.057004227460391,
-  //       2.0282419080806964,
-  //       13.477405516648421
-  //     );
-
-  //     // Клонируем знак для второй зоны
-  //     const secondZoneSign = markMeshTemplate.clone("secondZoneSign");
-  //     secondZoneSign.position = clickZonePosition.clone();
-  //     secondZoneSign.position.y = -1; // Устанавливаем высоту знака для второй зоны
-  //     secondZoneSign.isVisible = true; // Убеждаемся, что знак видим
-
-  //     // Добавляем знак в сцену
-  //     this.scene.addMesh(secondZoneSign);
-
-  //     // Сохраняем ссылку на знак для дальнейшего удаления
-  //     this.zoneSigns.push(secondZoneSign);
-
-  //     let clickCount = 0;
-  //     let clickCountText: TextBlock;
-
-  //     // Создаем вторую триггер-зону
-  //     const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-  //       clickZonePosition,
-  //       () => {
-  //         console.log("Вошли в зону кликов");
-
-  //         // Удаляем знак
-  //         if (secondZoneSign) {
-  //           secondZoneSign.dispose();
-  //         }
-
-  //         // Показываем сообщение
-  //         const warningText = new TextBlock();
-  //         warningText.text = "Не отходите далеко от колонны пока не сделаете измерения";
-  //         warningText.color = "white";
-  //         warningText.fontSize = 24;
-  //         warningText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-  //         warningText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-  //         warningText.top = "10%";
-  //         this.guiTexture.addControl(warningText);
-
-  //         // Скрываем сообщение через 5 секунд
-  //         setTimeout(() => {
-  //           this.guiTexture.removeControl(warningText);
-  //         }, 5000);
-
-  //         // Активируем взаимодействие с beam2
-  //         if (this.beam2) {
-  //           this.triggerManager.setupClickableMesh(this.beam2, () => {
-  //             clickCount++;
-  //             // Обновляем или создаем текст с количеством кликов
-  //             if (!clickCountText) {
-  //               clickCountText = new TextBlock();
-  //               clickCountText.text = `Клики: ${clickCount}`;
-  //               clickCountText.color = "white";
-  //               clickCountText.fontSize = 24;
-  //               clickCountText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-  //               clickCountText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-  //               clickCountText.top = "100px";
-  //               clickCountText.right = "20px";
-  //               this.guiTexture.addControl(clickCountText);
-  //             } else {
-  //               clickCountText.text = `Клики: ${clickCount}`;
-  //             }
-  //           });
-  //         }
-  //       },
-  //       () => {
-  //         console.log("Вышли из зоны кликов");
-  //                 // Показываем сообщение с общим количеством кликов
-  //         const totalClicksMessage = new TextBlock();
-  //         totalClicksMessage.text = `Вы кликнули ${clickCount} раз(а)`;
-  //         totalClicksMessage.color = "white";
-  //         totalClicksMessage.fontSize = 24;
-  //         totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-  //         totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-  //         this.guiTexture.addControl(totalClicksMessage);
-
-  //         // Удаляем сообщение через 3 секунды
-  //         setTimeout(() => {
-  //           this.guiTexture.removeControl(totalClicksMessage);
-  //         }, 3000);
-
-  //         // Ваш существующий код по выходу из зоны...
-
-  //         // Очищаем
-  //         if (clickCountText) {
-  //           this.guiTexture.removeControl(clickCountText);
-  //           clickCountText = null;
-  //         }
-  //         clickCount = 0;
-
-  //         // Отключаем взаимодействие с beam2
-  //         if (this.beam2) {
-  //           this.triggerManager.removeMeshAction(this.beam2);
-  //         }
-  //       },
-  //       5 // camSize
-  //       // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
-  //     );
-  //   } else {
-  //     console.error("markMeshes не загружены или пусты.");
-  //   }
-  // }
-
-
-
-
   setupTriggers(): void {
       // Проверяем, что markMeshes загружены
       if (this.markMeshes && this.markMeshes.length > 0) {
@@ -480,7 +338,7 @@ export class TestScene {
                               0,
                               targetPosition
                             );
-                              this.triggerManager.enableCameraMovement();
+                            this.triggerManager.enableCameraMovement();
                           });
                       });
                   }

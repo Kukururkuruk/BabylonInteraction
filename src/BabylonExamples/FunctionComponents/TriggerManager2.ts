@@ -146,8 +146,9 @@ export class TriggerManager2 {
   
       // Создаем контейнер для радио-кнопок
       const container = new Rectangle();
-      container.width = "80%"; // Увеличили ширину для горизонтального размещения
+      container.width = "15%"; // Увеличили ширину для горизонтального размещения
       container.height = "50%"; // Уменьшили высоту
+      container.top = "3%"
       container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
       container.thickness = 0;
@@ -162,13 +163,12 @@ export class TriggerManager2 {
       grid.addColumnDefinition(1); // Колонка для кнопки 1
       grid.addColumnDefinition(1); // Колонка для кнопок 2 и 3
       grid.addColumnDefinition(1); // Колонка для кнопки 4
-      grid.addColumnDefinition(1); // Колонка для кнопки 5
   
       // Определяем строки
       grid.addRowDefinition(1); // Строка 0
       grid.addRowDefinition(1); // Строка 1 (для кнопки 3)
   
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
           // Контейнер для радио-кнопки и лейбла
           const buttonContainer = new Rectangle();
           buttonContainer.width = "100%";
@@ -179,7 +179,7 @@ export class TriggerManager2 {
           // Радио-кнопка
           const radioButton = new RadioButton();
           radioButton.width = "30%";
-          radioButton.height = "30%"; // Занимает 30% высоты контейнера
+          radioButton.height = "13%"; // Занимает 30% высоты контейнера
           radioButton.color = "white";
           radioButton.background = "grey";
           radioButton.group = "group1";
@@ -188,19 +188,9 @@ export class TriggerManager2 {
           radioButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
           radioButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
   
-          // Лейбл
-          const label = new TextBlock();
-          label.text = `Вариант ${i + 1}`;
-          label.fontSize = "14px";
-          label.color = "white";
-          label.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          label.top = "35%"; // Отступ сверху, чтобы разместить под радио-кнопкой
-          label.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          label.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-  
           // Добавляем радио-кнопку и лейбл в контейнер
           buttonContainer.addControl(radioButton);
-          buttonContainer.addControl(label);
+
   
           // Определяем позицию в Grid
           let row = 0;
@@ -209,18 +199,24 @@ export class TriggerManager2 {
           if (i === 0) {
               column = 0; // Кнопка 1 в колонке 0, строке 0
               row = 0;
+              buttonContainer.top = "85%"
+              buttonContainer.left = "35%"
+
           } else if (i === 1) {
               column = 1; // Кнопка 2 в колонке 1, строке 0
               row = 0;
+              buttonContainer.top = "80%"
+
           } else if (i === 2) {
               column = 1; // Кнопка 3 в колонке 1, строке 1
               row = 1;
+              buttonContainer.top = "60%"
+
           } else if (i === 3) {
               column = 2; // Кнопка 4 в колонке 2, строке 0
               row = 0;
-          } else if (i === 4) {
-              column = 3; // Кнопка 5 в колонке 3, строке 0
-              row = 0;
+              buttonContainer.top = "85%"
+
           }
   
           // Добавляем контейнер кнопки в Grid
@@ -233,7 +229,7 @@ export class TriggerManager2 {
           radioButton.onIsCheckedChangedObservable.add((state) => {
               if (state) {
                   console.log(`Выбрана радио-кнопка: ${i + 1}`);
-                  if (i === 2) { // Третья кнопка
+                  if (i === 1) { // Третья кнопка
                       this.guiTexture.removeControl(container);
                       onHide();
                       this.activateLaserMode();
@@ -267,6 +263,7 @@ activateLaserMode(): void {
     camera.inputs.clear(); // Удаляем все входы
     camera.inputs.addMouse(); // Добавляем только вращение мышью
     camera.attachControl(this.canvas, true);
+    camera.fov /= 2;
 
     const cubeSize = 0.5; // Уменьшенный размер куба
     this.centralCube = MeshBuilder.CreateBox("centralCube", { size: cubeSize }, this.scene);
@@ -302,7 +299,7 @@ activateLaserMode(): void {
     this.redRay.color = rayMaterial.emissiveColor;
 
     // Создание точки пересечения (маленькая сфера), изначально скрытая
-    const pointSize = 0.3;
+    const pointSize = 0.15;
     this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
     const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
     pointMaterial.emissiveColor = new Color3(1, 0, 0); // Красный цвет
@@ -326,13 +323,13 @@ activateLaserMode(): void {
 private createAdditionalSpheres(): void {
     // Координаты сфер
     const sphereCoordinates = [
-        new Vector3(12.35, 8.80, -3.64),
-        new Vector3(12.42, 8.55, -3.62),
-        new Vector3(12.18, 7.85, -3.62)
+        new Vector3(-0.34, 8.52, -3.62),
+        new Vector3(-0.34, 8.30, -3.62),
+        new Vector3(-0.34, 7.87, -3.62)
     ];
 
     // Общие настройки для всех сфер
-    const sphereDiameter = 0.4;
+    const sphereDiameter = 0.2;
     const sphereMaterial = new StandardMaterial("additionalSphereMaterial", this.scene);
     sphereMaterial.diffuseColor = new Color3(0, 0, 1); // Синий цвет
     sphereMaterial.emissiveColor = new Color3(0, 0, 1);
@@ -363,10 +360,10 @@ private checkSphereIntersection(): void {
     const mainPosition = this.intersectionPoint.position;
 
     // Определяем радиус основной сферы
-    const mainRadius = 0.2; // Половина диаметра 0.4
+    const mainRadius = 0.1; // Половина диаметра 0.4
 
     // Определяем радиусы дополнительных сфер
-    const additionalRadius = 0.2; // Половина диаметра 0.4
+    const additionalRadius = 0.1; // Половина диаметра 0.4
 
     // Функция для вычисления расстояния между двумя точками
     const distance = (a: Vector3, b: Vector3): number => {
@@ -394,6 +391,7 @@ private checkSphereIntersection(): void {
 
 // Метод для создания кнопки "Завершить"
 private createFinishButton(): void {
+  const camera = this.scene.activeCamera as FreeCamera;
     this.finishButton = Button.CreateSimpleButton("finishBtn", "Завершить");
     this.finishButton.width = "150px";
     this.finishButton.height = "50px";
@@ -410,6 +408,7 @@ private createFinishButton(): void {
             // Пересечение с первой сферой
             this.showMessage("Все правильно! Все исчезает.");
             this.exitLaserMode(); // Завершаем режим лазера
+            camera.fov = 0.8
         } else if (this.currentIntersectedSphere === 2 || this.currentIntersectedSphere === 3) {
             // Пересечение с второй или третьей сферой
             this.showMessage("Неправильный выбор. Попробуйте снова.");

@@ -5,6 +5,8 @@ import Base from './components/Base';
 import Tutor from './components/Tutor';
 import BabylonTest from './components/BabylonTest';
 import BabylonQuestion from './components/BabylonQuestion';
+import BabylonBook from './components/BabylonBook';
+
 
 const App: React.FC = () => {
   return (
@@ -15,6 +17,7 @@ const App: React.FC = () => {
         <Route path="/tutor" element={<Tutor />} />
         <Route path="/test" element={<BabylonTest />} />
         <Route path="/question" element={<BabylonQuestion />} />
+        <Route path='/book' element={<BabylonBook />} />
       </Routes>
     </Router>
   );

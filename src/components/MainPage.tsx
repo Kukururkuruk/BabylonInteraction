@@ -17,6 +17,9 @@ const Main: React.FC = () => {
       <button>
         <Link to="/question">Go to Question Page</Link>
       </button>
+      <button>
+        <Link to="/book">Go to Book Page</Link>
+      </button>
     </div>
   );
 };
