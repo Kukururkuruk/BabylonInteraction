@@ -601,6 +601,7 @@ export class TestScene {
         this.scene.addMesh(thirdZoneSign);
         this.zoneSigns.push(thirdZoneSign);
 
+        
         const thirdTriggerZone = this.triggerManager.setupZoneTrigger(
             thirdZonePosition,
             () => {
