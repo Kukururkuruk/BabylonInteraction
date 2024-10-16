@@ -20,7 +20,7 @@ import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor';
 import { GUIManager } from '../components/GUIManager'; 
 import { TriggersManager } from './FunctionComponents/TriggerManager3'; 
 import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
-import { AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
+import { StackPanel, Rectangle, AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
 import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
 
 
@@ -56,6 +56,7 @@ export class FullExample {
   points: AbstractMesh[] = [];
   advancedTexture: AdvancedDynamicTexture | null = null;
   MainCamera: FreeCamera | null = null;  // Добавлено объявление MainCamera
+  questionTexture: AdvancedDynamicTexture | null = null; // Для второго интерфейса
 
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -70,12 +71,13 @@ export class FullExample {
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.guiManager = new GUIManager(this.scene, []);
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    
 
     // Создание окружения и скрытие индикатора загрузки
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
     });
-
+    
     // Создание контроллера
     this.CreateController();
 
@@ -253,8 +255,6 @@ pointsPositions.forEach((position, index) => {
       
   });
 
-    await this.CreateHandModel();
-    await this.CreateRulerModel();
   }
 
   // Метод для отображения точек и интерфейса вопросов
@@ -291,7 +291,7 @@ pointsPositions.forEach((position, index) => {
     button1.color = "white";
     button1.background = "blue";
     button1.onPointerUpObservable.add(() => {
-        this.handleButtonClick("Дерево", this.MainCamera);
+        this.handleButtonClick("Линейка", this.MainCamera);
     });
     this.advancedTexture.addControl(button1);
 
@@ -304,30 +304,224 @@ pointsPositions.forEach((position, index) => {
     button2.color = "white";
     button2.background = "blue";
     button2.onPointerUpObservable.add(() => {
-        this.handleButtonClick("Металл", this.MainCamera);
+        this.handleButtonClick("Штангенциркуль", this.MainCamera);
     });
     this.advancedTexture.addControl(button2);
-}
+  }
 
-handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
-    const isCorrect = this.checkAnswer(selectedAnswer); // Проверяем ответ и сохраняем результат
+  handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
+    console.log(`Обработчик нажатия кнопки: ${selectedAnswer}`);
+    
+    if (selectedAnswer === "Линейка" || selectedAnswer === "Штангенциркуль") {
+        console.log(`${selectedAnswer} выбран, скрываем текущий интерфейс.`);
 
-    if (targetCamera) {
-        this.scene.activeCamera = targetCamera;
-        console.log(`Переключено на ${targetCamera.name || "камера не инициализирована"} при нажатии на кнопку`);
+        if (this.advancedTexture) {
+            this.advancedTexture.dispose(); 
+            this.advancedTexture = null;
+            console.log("Интерфейс скрыт.");
+        }
+
+        // В зависимости от выбранного инструмента создается новый интерфейс
+        if (selectedAnswer === "Линейка") {
+            this.createSecondQuestionInterface(); 
+        } else {
+            this.createCaliperQuestionInterface(); 
+        }
     } else {
         console.log("Целевая камера не инициализирована");
     }
+}
 
-    // Убираем панель только если ответ правильный
-    if (isCorrect && this.advancedTexture) {
-        this.advancedTexture.dispose();
-        this.advancedTexture = null;
-    }
+// Интерфейс для штангенциркуля
+createCaliperQuestionInterface(): void {
+  console.log("Создаем интерфейс для штангенциркуля.");
+
+  if (this.questionTexture) {
+      return;
+  }
+
+  this.questionTexture = AdvancedDynamicTexture.CreateFullscreenUI("QuestionUI");
+
+  const backgroundRect = new Rectangle();
+  backgroundRect.width = "55%";
+  backgroundRect.height = "32%";
+  backgroundRect.cornerRadius = 16;
+  backgroundRect.color = "white";
+  backgroundRect.thickness = 2;
+  backgroundRect.background = "rgba(0, 0, 0, 0)";
+  backgroundRect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+  backgroundRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+  backgroundRect.paddingBottom = "10px";
+  this.questionTexture.addControl(backgroundRect);
+
+  const questionText = new TextBlock();
+  questionText.text = "Произведите замер выбраных элементов?";
+  questionText.color = "white";
+  questionText.fontSize = 22.4;
+  questionText.height = "24px";
+  questionText.top = "-64px";
+  questionText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+  questionText.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+  backgroundRect.addControl(questionText);
+
+  const correctAnswer = "4 сантиметра";
+
+  const createAnswerButton = (answerText: string) => {
+      const button = Button.CreateSimpleButton("answer", answerText);
+      button.width = "144px";
+      button.height = "40px";
+      button.color = "white";
+      button.fontSize = 12;
+      button.background = "#007acc";
+      button.cornerRadius = 8;
+      button.paddingTop = "8px";
+      button.paddingBottom = "8px";
+      button.paddingLeft = "12px";
+      button.paddingRight = "12px";
+      button.thickness = 0;
+      button.hoverCursor = "pointer";
+      
+      button.onPointerEnterObservable.add(() => button.background = "#005f99");
+      button.onPointerOutObservable.add(() => button.background = "#007acc");
+
+      button.onPointerClickObservable.add(() => {
+          console.log(`Вы выбрали: ${answerText}`);
+          if (answerText === correctAnswer) {
+              questionText.text = "Правильный ответ!";
+              questionText.color = "lightgreen";
+          } else {
+              questionText.text = "Неправильный ответ.";
+              questionText.color = "red";
+          }
+
+          setTimeout(() => {
+              if (this.questionTexture) {
+                  this.questionTexture.dispose();
+                  this.questionTexture = null;
+                  console.log("Интерфейс удален.");
+              }
+          }, 3000);
+      });
+
+      return button;
+  };
+
+  const buttonStack = new StackPanel();
+  buttonStack.isVertical = false;
+  buttonStack.height = "64px";
+  buttonStack.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+  buttonStack.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+  backgroundRect.addControl(buttonStack);
+
+  const answers = ["4 сантиметра", "8 сантиметра", "5 сантиметра", "3 сантиметра"];
+  answers.forEach(answer => {
+      const button = createAnswerButton(answer);
+      buttonStack.addControl(button);
+  });
+
+  console.log("Интерфейс для штангенциркуля успешно создан.");
+}
+    
+createSecondQuestionInterface(): void {
+  console.log("Создаем второй интерфейс вопросов.");
+
+  // Проверяем, не был ли уже создан интерфейс
+  if (this.questionTexture) {
+      console.log("Интерфейс уже существует, выходим.");
+      return;
+  }
+
+  // Создаем текстуру для интерфейса вопросов
+  this.questionTexture = AdvancedDynamicTexture.CreateFullscreenUI("QuestionUI");
+
+  // Добавляем фоновую панель для вопросов и ответов
+  const backgroundRect = new Rectangle();
+backgroundRect.width = "55%"; // Уменьшено на 20%
+backgroundRect.height = "32%"; // Уменьшено на 20%
+backgroundRect.cornerRadius = 16; // Уменьшено на 20%
+backgroundRect.color = "white";
+backgroundRect.thickness = 2;
+backgroundRect.background = "rgba(0, 0, 0, 0)"; // Прозрачный фон
+backgroundRect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+backgroundRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Разместим по низу экрана
+backgroundRect.paddingBottom = "10px"; // Отступ от нижнего края
+this.questionTexture.addControl(backgroundRect);
+
+// Вопрос
+const questionText = new TextBlock();
+questionText.text = "Какова длина дефекта?";
+questionText.color = "white";
+questionText.fontSize = 22.4; // Уменьшено на 20%
+questionText.height = "24px"; // Уменьшено на 20%
+questionText.top = "-64px"; // Уменьшено на 20%
+questionText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+questionText.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+backgroundRect.addControl(questionText);
+
+const correctAnswer = "42 сантиметра";
+
+// Функция для создания кнопки ответа
+const createAnswerButton = (answerText: string) => {
+    const button = Button.CreateSimpleButton("answer", answerText);
+    button.width = "144px"; // Уменьшено на 20%
+    button.height = "40px"; // Уменьшено на 20%
+    button.color = "white";
+    button.fontSize = 12; // Уменьшено на 20%
+    button.background = "#007acc";
+    button.cornerRadius = 8; // Уменьшено на 20%
+    button.paddingTop = "8px"; // Уменьшено на 20%
+    button.paddingBottom = "8px"; // Уменьшено на 20%
+    button.paddingLeft = "12px"; // Уменьшено на 20%
+    button.paddingRight = "12px"; // Уменьшено на 20%
+    button.thickness = 0;
+    button.hoverCursor = "pointer";
+    
+    button.onPointerEnterObservable.add(() => button.background = "#005f99");
+    button.onPointerOutObservable.add(() => button.background = "#007acc");
+
+    button.onPointerClickObservable.add(() => {
+        console.log(`Вы выбрали: ${answerText}`);
+        if (answerText === correctAnswer) {
+            questionText.text = "Правильный ответ!";
+            questionText.color = "lightgreen";
+        } else {
+            questionText.text = "Неправильный ответ.";
+            questionText.color = "red";
+        }
+
+        // Убираем интерфейс после отображения ответа
+        setTimeout(() => {
+            if (this.questionTexture) {
+                this.questionTexture.dispose();
+                this.questionTexture = null;
+                console.log("Интерфейс вопросов удален.");
+            }
+        }, 3000);
+    });
+
+    return button;
+};
+
+// Горизонтальный стек для размещения кнопок
+const buttonStack = new StackPanel();
+buttonStack.isVertical = false;
+buttonStack.height = "64px"; // Уменьшено на 20%
+buttonStack.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+buttonStack.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+backgroundRect.addControl(buttonStack);
+
+// Добавляем кнопки с вариантами ответов
+const answers = ["52 сантиметра", "50 сантиметров", "48 сантиметров", "42 сантиметра"];
+answers.forEach(answer => {
+    const button = createAnswerButton(answer);
+    buttonStack.addControl(button);
+});
+
+console.log("Вопрос с вариантами успешно отображен.");
 }
 
 checkAnswer(selectedAnswer: string): boolean {
-    const correctAnswers = ["Металл", "Дерево"]; // Массив с правильными ответами
+    const correctAnswers = ["Штангенциркуль", "Линейка"]; // Массив с правильными ответами
 
     if (correctAnswers.includes(selectedAnswer)) { // Проверка на наличие выбранного ответа в массиве
         console.log("Правильный ответ!"); // Можно добавить сообщение в зависимости от ответа
@@ -339,26 +533,6 @@ checkAnswer(selectedAnswer: string): boolean {
 }
 
 
-  async CreateHandModel(): Promise<void> {
-    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
-    this.handModel = meshes[0];
-    this.handModel.position = new Vector3(2, -4.5, 2);
-    this.handModel.scaling = new Vector3(5, 5, 5);
-    this.attachHandToCamera();
-
-    this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
-      mass: 0,
-      friction: 0,
-      restitution: 0
-    });
-  }
-
-  async CreateRulerModel(): Promise<void> {
-    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
-    this.rulerModel = meshes[0];
-    this.rulerModel.position = new Vector3(2, -4.5, 2);
-    this.rulerModel.scaling = new Vector3(5, 5, 5);
-  }
 
   createRayAboveMesh(mesh: AbstractMesh): void {
     const ray = new Ray(mesh.position, Vector3.Up(), 100);
@@ -373,9 +547,12 @@ checkAnswer(selectedAnswer: string): boolean {
   CreateController(): void {
     const controller = MeshBuilder.CreateBox("controller", { size: 0.1 }, this.scene);
     controller.position = new Vector3(1, 1, 1);
+    // Переключаемся обратно на основную камеру
+    this.scene.activeCamera = this.MainCamera;
     controller.physicsImpostor = new PhysicsImpostor(controller, PhysicsImpostor.BoxImpostor, {
       mass: 1,
       restitution: 0.9
+      
     });
 
 
