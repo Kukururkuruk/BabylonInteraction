@@ -3,12 +3,14 @@ import {
   Engine,
   SceneLoader,
   Vector3,
+  Mesh,
   HemisphericLight,
   FreeCamera,
   ActionManager,
   ExecuteCodeAction,
   AbstractMesh,
   Ray,
+  HighlightLayer,
   StandardMaterial,
   Color3,
   MeshBuilder,
@@ -23,8 +25,11 @@ import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
 import { StackPanel, Rectangle, AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
 import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
 
-
-
+// Определение интерфейса для взаимодействующих объектов
+export interface MeshItem {
+  name: string;
+  mesh: AbstractMesh;
+}
 // Определение класса InteractionObject
 export class InteractionObject {
   private mesh: AbstractMesh; // Сохраняем ссылку на меш
@@ -57,6 +62,9 @@ export class FullExample {
   advancedTexture: AdvancedDynamicTexture | null = null;
   MainCamera: FreeCamera | null = null;  // Добавлено объявление MainCamera
   questionTexture: AdvancedDynamicTexture | null = null; // Для второго интерфейса
+  highlightLayer: HighlightLayer;
+
+  
 
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -66,7 +74,10 @@ export class FullExample {
     this.scene = this.CreateScene();
     this.setupCamera();
     this.setupLighting();
-
+     // Создаем HighlightLayer
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение, если нужно
+    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение, если нужно
     // Инициализация GUIManager и TriggersManager
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.guiManager = new GUIManager(this.scene, []);
@@ -132,9 +143,10 @@ export class FullExample {
   async CreateEnvironment(): Promise<void> {
     const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
     this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
-
+    this.engine.displayLoadingUI();
     mapMeshes.forEach((mesh) => {
       mesh.checkCollisions = true;
+      
     });
 
     this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
@@ -255,6 +267,84 @@ pointsPositions.forEach((position, index) => {
       
   });
 
+// Определите массив с именами мешей
+const meshNames: string[] = [
+  "SM_0_SpanStructureBeam_1_Armature_R",
+  "SM_0_SpanStructureBeam_1_Cable_R",
+  "SM_0_SpanStructureBeam_2_Armature_L",
+  "SM_0_SpanStructureBeam_2_Cable_L",
+  // Добавьте сюда другие имена мешей, если необходимо
+];
+
+// Пример мешей (добавьте ваши меши сюда)
+const meshesToHighlight: Mesh[] = [
+  this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R"),
+  this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Cable_R"),
+  this.scene.getMeshByName("SM_0_SpanStructureBeam_2_Armature_L"),
+  this.scene.getMeshByName("SM_0_SpanStructureBeam_2_Cable_L"),
+].filter(mesh => mesh !== null) as Mesh[]; // Убедитесь, что меши не null
+
+// Добавляем меши в HighlightLayer
+meshesToHighlight.forEach(mesh => {
+  this.highlightLayer.addMesh(mesh, Color3.FromHexString("#88FF88")); // Ярко-зеленый цвет
+  
+});
+
+
+// Логируем все меши в сцене для проверки
+function logAllMeshesInScene(scene: Scene) {
+  const allMeshes = scene.meshes.map(mesh => mesh.name);
+  console.log("Все меши в сцене:", allMeshes);
+}
+
+// Функция для получения мешей по именам
+function getMeshesByNames(scene: Scene, names: string[]): Mesh[] {
+  console.log("Ищем меши с именами:", names); // Логируем массив имен
+  const foundMeshes = names.map(name => scene.getMeshByName(name)).filter(mesh => mesh !== null) as Mesh[];
+
+  console.log("Найденные меши:", foundMeshes); // Логируем найденные меши
+  return foundMeshes;
+}
+
+// Логируем все меши перед поиском
+logAllMeshesInScene(this.scene);
+
+// Использование функции для получения мешей из сцены
+const meshes: Mesh[] = getMeshesByNames(this.scene, meshNames);
+
+// Проверяем, были ли найдены меши
+if (meshes.length === 0) {
+  console.warn("Не найдено ни одного меша."); // Логируем предупреждение, если меши не найдены
+} else {
+  console.log("Загруженные меши:", meshes); // Логируем загруженные меши
+}
+
+// Работа с полученными мешами
+meshes.forEach((mesh) => {
+  console.log("Обрабатываем меш:", mesh.name); // Логируем имя меша
+  console.log("Позиция меша:", mesh.position); // Логируем позицию меша
+  console.log("Размеры меша:", mesh.getBoundingInfo().boundingBox.extendSize); // Логируем размеры меша
+
+  mesh.checkCollisions = true; // Включаем коллизии
+  mesh.isPickable = true; // Делаем меши выбираемыми
+  mesh.isVisible = true; // Делаем видимыми
+  mesh.setEnabled(true); // Включаем меши
+
+  // Создаем менеджер действий для меша
+  mesh.actionManager = new ActionManager(this.scene);
+  mesh.actionManager.registerAction(
+    new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+      console.log("Меш кликнут:", mesh.name, "Координаты:", mesh.position); // Логируем информацию о клике
+      this.interactionObject = mesh; // Устанавливаем выбранный меш для взаимодействия
+      this.scene.activeCamera = this.MainCamera; // Устанавливаем активную камеру
+      this.showPointsAndQuestions(mesh); // Показать точки и вопросы
+    })
+  );
+});
+
+// Скрываем загрузочный интерфейс
+this.engine.hideLoadingUI();
+  
   }
 
   // Метод для отображения точек и интерфейса вопросов
@@ -296,6 +386,7 @@ pointsPositions.forEach((position, index) => {
     this.advancedTexture.addControl(button1);
 
     // Кнопка 2
+    
     const button2 = Button.CreateSimpleButton("button2", "Измерить толщину штангенцирулем");
     button2.width = "150px";
     button2.height = "60px";
@@ -305,8 +396,16 @@ pointsPositions.forEach((position, index) => {
     button2.background = "blue";
     button2.onPointerUpObservable.add(() => {
         this.handleButtonClick("Штангенциркуль", this.MainCamera);
+        this.points.forEach(point => {
+          point.isVisible = false; // Скрываем точки
+      });
+  
+      // Вызов метода для обработки нажатия на кнопку
+      this.handleButtonClick("Штангенциркуль", this.MainCamera);
+        
     });
     this.advancedTexture.addControl(button2);
+    
   }
 
   handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
