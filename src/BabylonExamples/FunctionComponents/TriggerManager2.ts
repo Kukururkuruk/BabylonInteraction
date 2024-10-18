@@ -12,6 +12,7 @@ import {
   LinesMesh,
   Mesh,
   RayHelper,
+  Tools,
 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
@@ -312,10 +313,25 @@ activateLaserMode(): void {
     // Добавление кнопки отображения координат сферы (опционально)
     this.AddSpherePositionButton();
 
+    const angleText = new TextBlock();
+    angleText.text = "Угол X: 0°, Угол Y: 0°";
+    angleText.color = "white";
+    angleText.fontSize = 24;
+    angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    angleText.top = "10px";
+    angleText.left = "10px";
+    this.guiTexture.addControl(angleText);
+
     // Добавление обновления пересечений перед каждым кадром
     this.scene.registerBeforeRender(() => {
         this.updateRayIntersection();
         this.checkSphereIntersection();
+
+        const euler = camera.rotation;
+            const angleX = Tools.ToDegrees(euler.x);
+            const angleY = Tools.ToDegrees(euler.y);
+            angleText.text = `Угол X: ${angleX.toFixed(2)}°, Угол Y: ${angleY.toFixed(2)}°`;
     });
 }
 
