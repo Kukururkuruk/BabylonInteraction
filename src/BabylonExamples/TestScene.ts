@@ -348,113 +348,121 @@ export class TestScene {
               // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
           );
 
-          // --- Второй триггер (с отображением знака) ---
+          // --- Второй триггер (с отображением знака и лазером) ---
 
-          // Позиция второй триггер-зоны
-          const clickZonePosition = new Vector3(
-              13.057004227460391,
-              2.0282419080806964,
-              13.477405516648421
-          );
+    // Позиция второй триггер-зоны
+    const clickZonePosition = new Vector3(
+      13.057004227460391,
+      2.0282419080806964,
+      13.477405516648421
+    );
 
-          // Клонируем знак для второй зоны
-          const secondZoneSign = markMeshTemplate.clone("secondZoneSign");
-          secondZoneSign.position = clickZonePosition.clone();
-          secondZoneSign.position.y = -1; // Устанавливаем высоту знака для второй зоны
-          secondZoneSign.isVisible = true; // Убеждаемся, что знак видим
+    // Клонируем знак для второй зоны
+    const secondZoneSign = markMeshTemplate.clone("secondZoneSign");
+    secondZoneSign.position = clickZonePosition.clone();
+    secondZoneSign.position.y = -1; // Устанавливаем высоту знака для второй зоны
+    secondZoneSign.isVisible = true; // Убеждаемся, что знак видим
 
-          // Добавляем знак в сцену
-          this.scene.addMesh(secondZoneSign);
+    // Добавляем знак в сцену
+    this.scene.addMesh(secondZoneSign);
 
-          // Сохраняем ссылку на знак для дальнейшего удаления
-          this.zoneSigns.push(secondZoneSign);
+    // Сохраняем ссылку на знак для дальнейшего удаления
+    this.zoneSigns.push(secondZoneSign);
 
-          let clickCount = 0;
-          let clickCountText: TextBlock | null = null;
+    let clickCount = 0;
+    let clickCountText: TextBlock | null = null;
 
-          // Создаем вторую триггер-зону
-          const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-              clickZonePosition,
-              () => {
-                  console.log("Вошли в зону кликов");
+    // Предположим, что beam2 — это меш, с которым будем взаимодействовать в режиме лазера
+    const targetMeshForLaser2 = this.beam2; // Убедитесь, что this.beam2 инициализирован
 
-                  // Удаляем знак
-                  if (secondZoneSign) {
-                      secondZoneSign.dispose();
-                  }
+    // Создаем вторую триггер-зону
+    const secondTriggerZone = this.triggerManager.setupZoneTrigger(
+      clickZonePosition,
+      () => {
+        console.log("Вошли в зону кликов");
 
-                  // Показываем сообщение
-                  const warningText = new TextBlock();
-                  warningText.text = "Не отходите далеко от колонны пока не сделаете измерения";
-                  warningText.color = "white";
-                  warningText.fontSize = 24;
-                  warningText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-                  warningText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-                  warningText.top = "10%";
-                  this.guiTexture.addControl(warningText);
+        // Удаляем знак
+        if (secondZoneSign) {
+          secondZoneSign.dispose();
+        }
 
-                  // Скрываем сообщение через 5 секунд
-                  setTimeout(() => {
-                      this.guiTexture.removeControl(warningText);
-                  }, 5000);
+        // Показываем сообщение
+        const warningText = new TextBlock();
+        warningText.text = "Не отходите далеко от колонны пока не сделаете измерения";
+        warningText.color = "white";
+        warningText.fontSize = 24;
+        warningText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        warningText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        warningText.top = "10%";
+        this.guiTexture.addControl(warningText);
 
-                  // Активируем взаимодействие с beam2
-                  if (this.beam2) {
-                      this.triggerManager.setupClickableMesh(this.beam2, () => {
-                          clickCount++;
-                          // Обновляем или создаем текст с количеством кликов
-                          if (!clickCountText) {
-                              clickCountText = new TextBlock();
-                              clickCountText.text = `Клики: ${clickCount}`;
-                              clickCountText.color = "white";
-                              clickCountText.fontSize = 24;
-                              clickCountText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-                              clickCountText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-                              clickCountText.top = "100px";
-                              clickCountText.right = "20px";
-                              this.guiTexture.addControl(clickCountText);
-                          } else {
-                              clickCountText.text = `Клики: ${clickCount}`;
-                          }
-                      });
-                  }
-              },
-              () => {
-                  console.log("Вышли из зоны кликов");
-                  // Показываем сообщение с общим количеством кликов
-                  const totalClicksMessage = new TextBlock();
-                  totalClicksMessage.text = `Вы кликнули ${clickCount} раз(а)`;
-                  totalClicksMessage.color = "white";
-                  totalClicksMessage.fontSize = 24;
-                  totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-                  totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-                  this.guiTexture.addControl(totalClicksMessage);
+        // Скрываем сообщение через 5 секунд
+        setTimeout(() => {
+          this.guiTexture.removeControl(warningText);
+        }, 5000);
 
-                  // Удаляем сообщение через 3 секунды
-                  setTimeout(() => {
-                      this.guiTexture.removeControl(totalClicksMessage);
-                  }, 3000);
+        // Активируем взаимодействие с beam2
+        if (this.beam2) {
+          this.triggerManager.setupClickableMesh(this.beam2, () => {
+            clickCount++;
+            // Обновляем или создаем текст с количеством кликов
+            if (!clickCountText) {
+              clickCountText = new TextBlock();
+              clickCountText.text = `Клики: ${clickCount}`;
+              clickCountText.color = "white";
+              clickCountText.fontSize = 24;
+              clickCountText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+              clickCountText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+              clickCountText.top = "100px";
+              clickCountText.right = "20px";
+              this.guiTexture.addControl(clickCountText);
+            } else {
+              clickCountText.text = `Клики: ${clickCount}`;
+            }
+          });
 
-                  // Ваш существующий код по выходу из зоны...
+          // Активируем режим лазера для второй триггер-зоны
+          this.triggerManager.activateLaserMode2(this.beam2);
+        }
+      },
+      () => {
+        console.log("Вышли из зоны кликов");
+        // Показываем сообщение с общим количеством кликов
+        const totalClicksMessage = new TextBlock();
+        totalClicksMessage.text = `Вы кликнули ${clickCount} раз(а)`;
+        totalClicksMessage.color = "white";
+        totalClicksMessage.fontSize = 24;
+        totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        totalClicksMessage.top = "-10%";
+        this.guiTexture.addControl(totalClicksMessage);
 
-                  // Очищаем
-                  if (clickCountText) {
-                      this.guiTexture.removeControl(clickCountText);
-                      clickCountText = null;
-                  }
-                  clickCount = 0;
+        // Удаляем сообщение через 3 секунды
+        setTimeout(() => {
+          this.guiTexture.removeControl(totalClicksMessage);
+        }, 3000);
 
-                  // Отключаем взаимодействие с beam2
-                  if (this.beam2) {
-                      this.triggerManager.removeMeshAction(this.beam2);
-                  }
-              },
-              5 // camSize
-              // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
-          );
-      } else {
-          console.error("markMeshes не загружены или пусты.");
-      }
+        // Очищаем
+        if (clickCountText) {
+          this.guiTexture.removeControl(clickCountText);
+          clickCountText = null;
+        }
+        clickCount = 0;
+
+        // Отключаем взаимодействие с beam2
+        if (this.beam2) {
+          this.triggerManager.removeMeshAction(this.beam2);
+        }
+
+        // Деактивируем режим лазера для второй триггер-зоны
+        this.triggerManager.exitLaserMode2();
+      },
+      10 // camSize
+      // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
+    );
+  } else {
+    console.error("markMeshes не загружены или пусты.");
+  }
   }
 
 
