@@ -64,6 +64,7 @@ export class FullExample {
   questionTexture: AdvancedDynamicTexture | null = null; // Для второго интерфейса
   highlightLayer: HighlightLayer;
 
+
   
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -83,7 +84,7 @@ export class FullExample {
     this.guiManager = new GUIManager(this.scene, []);
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
     
-
+    this.CreateHandModel(); // Загружаем модель
     // Создание окружения и скрытие индикатора загрузки
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -120,7 +121,7 @@ export class FullExample {
     scene.collisionsEnabled = true;
     scene.createDefaultSkybox(hdrTexture, true, 1000);
     scene.environmentIntensity = 0.5;
-  
+
     return scene;
   }
   private setupCamera(): void {
@@ -139,6 +140,38 @@ export class FullExample {
     const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
     light.intensity = 0.7;
   }
+
+  async CreateHandModel(): Promise<void> {
+    console.log("Загрузка модели штангенциркуля начата...");
+    try {
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
+        this.handModel = meshes[0];
+        
+        // Устанавливаем позицию и масштаб модели
+        this.handModel.position = new Vector3(1, -1, 0.4);  // Центрируем по оси X и Y, поднимаем по Z
+        this.handModel.rotation.x += Math.PI / 2; 
+        this.handModel.rotation.y = Math.PI / 4;  // Вращение на 45 градусов по Y
+        this.handModel.scaling = new Vector3(1.5, 1.5, 1.5);  // Уменьшаем размер модели
+
+        // Привязываем модель к камере, чтобы она всегда была на экране
+        this.handModel.parent = this.MainCamera; 
+
+        // Устанавливаем физику
+        this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
+            mass: 0,
+            friction: 0,
+            restitution: 0
+        });
+
+        this.handModel.isVisible = false; // Модель изначально видна
+        console.log("Модель штангенциркуля загружена и закреплена за камерой.");
+    } catch (error) {
+        console.error("Ошибка при загрузке модели штангенциркуля:", error);
+    }
+}
+
+
+
 
   async CreateEnvironment(): Promise<void> {
     const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
@@ -190,8 +223,8 @@ export class FullExample {
 const pointsPositions = [
   new Vector3(12.46, 6.3, 4.79),   // Первая точка
   new Vector3(12.46, 6.3, 5.21),   // Вторая точка
-  new Vector3(12.46, 6.11, 4.72),     // Третья точка
-  new Vector3(12.46, 0.7, 4.72)     // Четвертая точка
+  new Vector3(12.46, 6.11, 4.72),  // Третья точка
+  new Vector3(12.46, 0.7, 4.72)    // Четвертая точка
   
 ];
 
@@ -266,7 +299,7 @@ pointsPositions.forEach((position, index) => {
       );
       
   });
-
+//
 // Определите массив с именами мешей
 const meshNames: string[] = [
   "SM_0_SpanStructureBeam_1_Armature_R",
@@ -287,7 +320,8 @@ const meshesToHighlight: Mesh[] = [
 // Добавляем меши в HighlightLayer
 meshesToHighlight.forEach(mesh => {
   this.highlightLayer.addMesh(mesh, Color3.FromHexString("#88FF88")); // Ярко-зеленый цвет
-  
+  this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
+  this.highlightLayer.outerGlow = false; // Включаем внешнее свечение, если нужно
 });
 
 
@@ -346,7 +380,7 @@ meshes.forEach((mesh) => {
 this.engine.hideLoadingUI();
   
   }
-
+//
   // Метод для отображения точек и интерфейса вопросов
   showPointsAndQuestions(mesh: AbstractMesh): void {
     // Делаем точки видимыми
@@ -398,6 +432,15 @@ this.engine.hideLoadingUI();
         this.handleButtonClick("Штангенциркуль", this.MainCamera);
         this.points.forEach(point => {
           point.isVisible = false; // Скрываем точки
+          this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение, если нужно
+          this.highlightLayer.outerGlow = true; // Включаем внешнее свечение, если нужно
+          
+          if (this.handModel) {
+            this.handModel.isVisible = true; // Делаем модель видимой при клике
+            console.log("Модель штангенциркуля теперь видна.");
+        } else {
+            console.warn("Модель штангенциркуля не загружена.");
+        }
       });
   
       // Вызов метода для обработки нажатия на кнопку
@@ -407,6 +450,8 @@ this.engine.hideLoadingUI();
     this.advancedTexture.addControl(button2);
     
   }
+
+  
 
   handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
     console.log(`Обработчик нажатия кнопки: ${selectedAnswer}`);
@@ -432,7 +477,7 @@ this.engine.hideLoadingUI();
 }
 
 // Интерфейс для штангенциркуля
-createCaliperQuestionInterface(): void {
+createCaliperQuestionInterface(newAnswers: string[] = []): void {
   console.log("Создаем интерфейс для штангенциркуля.");
 
   if (this.questionTexture) {
@@ -463,7 +508,8 @@ createCaliperQuestionInterface(): void {
   questionText.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
   backgroundRect.addControl(questionText);
 
-  const correctAnswer = "4 сантиметра";
+  // Установим правильный ответ в зависимости от переданных данных
+  const correctAnswer = newAnswers.length > 0 ? "8 сантиметра" : "4 сантиметра";
 
   const createAnswerButton = (answerText: string) => {
       const button = Button.CreateSimpleButton("answer", answerText);
@@ -488,18 +534,22 @@ createCaliperQuestionInterface(): void {
           if (answerText === correctAnswer) {
               questionText.text = "Правильный ответ!";
               questionText.color = "lightgreen";
+
+              // Скрыть интерфейс и создать новый через 3 секунды
+              setTimeout(() => {
+                  if (this.questionTexture) {
+                      this.questionTexture.dispose();
+                      this.questionTexture = null;
+                      console.log("Интерфейс удален.");
+                      
+                      // Создать новый интерфейс с другими данными
+                      this.createCaliperQuestionInterface(["6 сантиметра", "8 сантиметра", "10 сантиметров", "12 сантиметров"]);
+                  }
+              }, 3000);
           } else {
               questionText.text = "Неправильный ответ.";
               questionText.color = "red";
           }
-
-          setTimeout(() => {
-              if (this.questionTexture) {
-                  this.questionTexture.dispose();
-                  this.questionTexture = null;
-                  console.log("Интерфейс удален.");
-              }
-          }, 3000);
       });
 
       return button;
@@ -512,7 +562,7 @@ createCaliperQuestionInterface(): void {
   buttonStack.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
   backgroundRect.addControl(buttonStack);
 
-  const answers = ["4 сантиметра", "8 сантиметра", "5 сантиметра", "3 сантиметра"];
+  const answers = newAnswers.length > 0 ? newAnswers : ["4 сантиметра", "8 сантиметра", "5 сантиметра", "3 сантиметра"]; // Если новые данные не переданы, используем старые
   answers.forEach(answer => {
       const button = createAnswerButton(answer);
       buttonStack.addControl(button);
