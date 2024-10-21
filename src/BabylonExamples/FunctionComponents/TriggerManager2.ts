@@ -25,6 +25,7 @@ import {
   Rectangle,
 } from "@babylonjs/gui";
 import { TriggerZone } from "./TriggerZone";
+import { GUIManager } from "./GUIManager";
 
 export class TriggerManager2 {
   private scene: Scene;
@@ -39,7 +40,9 @@ export class TriggerManager2 {
   private sphere3: Mesh | null = null;
   private finishButton: Button | null = null;
   private messageText: TextBlock | null = null;
+  private angleText: TextBlock | null = null;
   private currentIntersectedSphere: number | null = null;
+  private guiManager: GUIManager;
 
 
    // Новые свойства для второго режима лазера
@@ -56,6 +59,7 @@ export class TriggerManager2 {
       this.scene = scene;
       this.canvas = canvas;
       this.guiTexture = guiTexture;
+      this.guiManager = new GUIManager(this.scene, this.textMessages);
     }
   
     setupZoneTrigger(
@@ -121,12 +125,13 @@ export class TriggerManager2 {
       angle: number,
       distance: number,
       rotationX: number,
+      positionY: number,
       targetPosition: Vector3
     ): void {
       const camera = this.scene.activeCamera as FreeCamera;
       const x = targetPosition.x + distance * Math.sin(angle);
       const z = targetPosition.z + distance * Math.cos(angle);
-      const y = targetPosition.y;
+      const y = targetPosition.y + positionY;
   
       camera.position = new Vector3(x, y, z);
       camera.setTarget(targetPosition);
@@ -207,12 +212,12 @@ export class TriggerManager2 {
           } else if (i === 1) {
               column = 1; // Кнопка 2 в колонке 1, строке 0
               row = 0;
-              buttonContainer.top = "80%"
+              buttonContainer.top = "40%"
 
           } else if (i === 2) {
               column = 1; // Кнопка 3 в колонке 1, строке 1
               row = 1;
-              buttonContainer.top = "60%"
+              buttonContainer.top = "15%"
 
           } else if (i === 3) {
               column = 2; // Кнопка 4 в колонке 2, строке 0
@@ -231,10 +236,12 @@ export class TriggerManager2 {
           radioButton.onIsCheckedChangedObservable.add((state) => {
               if (state) {
                   console.log(`Выбрана радио-кнопка: ${i + 1}`);
-                  if (i === 1) { // Третья кнопка
+                  if (i === 2) { // Третья кнопка
                       this.guiTexture.removeControl(container);
                       onHide();
                       this.activateLaserMode();
+                  } else if (i !== 2) {
+                    this.showMessage("Неправильный выбор. Попробуйте снова.");
                   }
               }
           });
@@ -303,17 +310,21 @@ export class TriggerManager2 {
         this.createAdditionalSpheres();
 
         // Добавление кнопки отображения координат сферы (опционально)
-        this.AddSpherePositionButton();
+        // this.AddSpherePositionButton();
 
-        const angleText = new TextBlock();
-        angleText.text = "Угол X: 0°, Угол Y: 0°";
-        angleText.color = "white";
-        angleText.fontSize = 24;
-        angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        angleText.top = "10px";
-        angleText.left = "10px";
-        this.guiTexture.addControl(angleText);
+        if (!this.angleText) {
+        this.angleText = new TextBlock();
+        this.angleText.text = "Угол X: 0°, Угол Y: 0°";
+        this.angleText.color = "white";
+        this.angleText.fontSize = 24;
+        this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        this.angleText.top = "10px";
+        this.angleText.left = "10px";
+        this.guiTexture.addControl(this.angleText);
+      }
+        
+        
 
         // Добавление обновления пересечений перед каждым кадром
         this.scene.registerBeforeRender(() => {
@@ -323,7 +334,9 @@ export class TriggerManager2 {
             const euler = camera.rotation;
                 const angleX = Tools.ToDegrees(euler.x);
                 const angleY = Tools.ToDegrees(euler.y);
-                angleText.text = `Угол X: ${angleX.toFixed(2)}°, Угол Y: ${angleY.toFixed(2)}°`;
+                if (this.angleText) {
+                  this.angleText.text = `Угол X: ${angleX.toFixed(2)}°, Угол Y: ${angleY.toFixed(2)}°`;
+              }
         });
     }
 
@@ -416,6 +429,8 @@ export class TriggerManager2 {
                 // Пересечение с первой сферой
                 this.showMessage("Все правильно! Все исчезает.");
                 this.exitLaserMode(); // Завершаем режим лазера
+                this.guiManager.CreateDialogBox('Отлично, теперь переходи к следующему заданию')
+                this.removeAngle()
                 camera.fov = 0.8
             } else if (this.currentIntersectedSphere === 2 || this.currentIntersectedSphere === 3) {
                 // Пересечение с второй или третьей сферой
@@ -444,8 +459,9 @@ export class TriggerManager2 {
         setTimeout(() => {
             if (this.messageText) {
                 this.messageText.text = "";
+                this.removeMessage();
             }
-        }, 3000);
+        }, 2000);
     }
 
 // Метод для выхода из режима лазера
@@ -472,6 +488,8 @@ export class TriggerManager2 {
 
         // Удаление сообщения
         this.removeMessage();
+        this.removeAngle();
+        this.scene.render();
 
         // Восстановление управления камерой
         const camera = this.scene.activeCamera as FreeCamera;
@@ -514,6 +532,13 @@ export class TriggerManager2 {
             this.messageText = null;
         }
     }
+
+    private removeAngle(): void {
+      if (this.angleText) {
+          this.guiTexture.removeControl(this.angleText);
+          this.angleText = null;
+      }
+  }
 
 // Метод для обновления пересечения луча с объектами
     updateRayIntersection(): void {

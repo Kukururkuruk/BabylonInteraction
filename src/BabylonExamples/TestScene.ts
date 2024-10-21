@@ -63,8 +63,8 @@ export class TestScene {
   
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    // const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-    // hemiLight.intensity = 0.5; // Установите желаемую интенсивность
+    const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    hemiLight.intensity = 0.5; // Установите желаемую интенсивность
 
     const framesPerSecond = 60;
     const gravity = -9.81;
@@ -80,41 +80,11 @@ export class TestScene {
     return scene;
   }
 
-
-//   CreateScene(): Scene {
-//     const scene = new Scene(this.engine);
-//     const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-//         hemiLight.intensity = 0.3; // Установите желаемую интенсивность
-
-//     const framesPerSecond = 60;
-//     const gravity = -9.81;
-//     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
-//     scene.collisionsEnabled = true;
-
-//     // Загрузка панорамной JPEG-текстуры для окружения
-//     const equirectangularTexture = new EquiRectangularCubeTexture(
-//         "/models/test_4.jpg",
-//         scene,
-//         512,
-//         false,
-//         true // gammaSpace
-//     );
-
-//     scene.environmentTexture = equirectangularTexture;
-//     scene.environmentIntensity = 1.0; // Настройте интенсивность по необходимости
-
-//     // Создание skybox с использованием панорамной текстуры
-//     scene.createDefaultSkybox(equirectangularTexture, true, 50000, undefined, false);
-
-//     return scene;
-// }
-
-
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
     camera.attachControl(this.canvas, true);
 
-    camera.applyGravity = false;
+    camera.applyGravity = true;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     camera.minZ = 0.45;
@@ -328,13 +298,15 @@ export class TestScene {
                           this.triggerManager.setCameraPositionAndTarget(
                               Math.PI / 2,
                               4,
-                              0,
+                              Math.PI / 12,
+                              1,
                               targetPosition
                           );
                           this.triggerManager.createRadioButtons(() => {
                             this.triggerManager.setCameraPositionAndTarget(
                               Math.PI / 2,
                               -1,
+                              0,
                               0,
                               targetPosition
                             );
