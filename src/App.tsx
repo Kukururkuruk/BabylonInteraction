@@ -6,6 +6,7 @@ import Tutor from './components/Tutor';
 import BabylonTest from './components/BabylonTest';
 import BabylonQuestion from './components/BabylonQuestion';
 import BabylonFull from './components/BabylonFull'; // Импортируйте FullExample
+import BasicLevel from './components/Level'; // Импортируйте Level
 
 const App: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const App: React.FC = () => {
         <Route path="/test" element={<BabylonTest />} />
         <Route path="/question" element={<BabylonQuestion />} />
         <Route path="/full" element={<BabylonFull />} />
+        <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
       </Routes>
     </Router>
   );

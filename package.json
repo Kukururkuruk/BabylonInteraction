@@ -16,6 +16,7 @@
     "@babylonjs/loaders": "^7.29.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "ammo.js": "^0.0.10",
     "babylonjs": "^7.25.1",
     "cannon": "^0.6.2",
     "cannon-es": "^0.20.0",

@@ -1770,3 +1770,123 @@ checkAnswer(selectedAnswer: string): boolean {
             console.log("Левый клик. Замеры не проводятся.");
         }
       }}}
+
+
+
+-------------------Пустая сцена----------------------------------
+Level.tsx
+import React, { useEffect, useRef } from 'react';
+import { Level as LevelScene } from '../BabylonExamples/BasicLevel'; // Импортируем класс сцены и переименовываем его
+
+const Level: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      new LevelScene(canvasRef.current); // Просто создаем сцену без присваивания
+    }
+  }, []);
+
+  return (
+    <div>
+      <h3>Babylon Tutor</h3>
+      <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+    </div>
+  );
+};
+
+export default Level; // Экспортируем компонент по умолчанию
+======================================================================================
+BasicLevel.ts
+import { 
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  SceneLoader,
+} from "@babylonjs/core";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.CreateController();
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+  }
+  
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
+    camera.attachControl(this.canvas, true);
+    camera.applyGravity = false;
+    camera.checkCollisions = true;
+    camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели успешно загружены:", map);
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+  }
+}
+===================================================================================
+App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Main from './components/MainPage';
+import Base from './components/Base';
+import Tutor from './components/Tutor';
+import BabylonTest from './components/BabylonTest';
+import BabylonQuestion from './components/BabylonQuestion';
+import BabylonFull from './components/BabylonFull'; // Импортируйте FullExample
+import BasicLevel from './components/Level'; // Импортируйте Level
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Main />} />
+        <Route path="/base" element={<Base />} />
+        <Route path="/tutor" element={<Tutor />} />
+        <Route path="/test" element={<BabylonTest />} />
+        <Route path="/question" element={<BabylonQuestion />} />
+        <Route path="/full" element={<BabylonFull />} />
+        <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
