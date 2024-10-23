@@ -40,7 +40,7 @@ export class TestScene {
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
 
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture);
+    this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
   
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -63,8 +63,8 @@ export class TestScene {
   
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-    hemiLight.intensity = 0.5; // Установите желаемую интенсивность
+    // const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    // hemiLight.intensity = 0.5; // Установите желаемую интенсивность
 
     const framesPerSecond = 60;
     const gravity = -9.81;
@@ -84,7 +84,7 @@ export class TestScene {
     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
     camera.attachControl(this.canvas, true);
 
-    camera.applyGravity = true;
+    camera.applyGravity = false;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     camera.minZ = 0.45;
@@ -252,6 +252,9 @@ export class TestScene {
     });
   }
 
+
+
+  
 
   setupTriggers(): void {
       // Проверяем, что markMeshes загружены
@@ -429,7 +432,7 @@ export class TestScene {
         // Деактивируем режим лазера для второй триггер-зоны
         this.triggerManager.exitLaserMode2();
       },
-      10 // camSize
+      20 // camSize
       // Не передаем markMeshTemplate и markMeshHeight, так как знак мы уже создали вручную
     );
   } else {

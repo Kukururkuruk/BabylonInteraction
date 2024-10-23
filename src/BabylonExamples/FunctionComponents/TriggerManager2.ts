@@ -14,6 +14,9 @@ import {
   RayHelper,
   Tools,
   Quaternion,
+  PointerInfo,
+  PointerEventTypes,
+  Space,
 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
@@ -43,22 +46,36 @@ export class TriggerManager2 {
   private angleText: TextBlock | null = null;
   private currentIntersectedSphere: number | null = null;
   private guiManager: GUIManager;
+  private camera: FreeCamera;
 
 
    // Новые свойства для второго режима лазера
-   private centralCube2: Mesh | null = null;
    private redRay2: LinesMesh | null = null;
    private intersectionSphere2: Mesh | null = null;
    private targetMeshLaser2: AbstractMesh | null = null;
+   private centralCube2: Mesh | null = null;
+   private pointerMoveHandler: ((pointerInfo: PointerInfo) => void) | null = null;
+
+
+   private keyDownHandler: ((evt: KeyboardEvent) => void) | null = null;
+   private keyUpHandler: ((evt: KeyboardEvent) => void) | null = null;
+   private rotateDirection: number = 0;
+   private beforeRenderHandler = () => this.onBeforeRender();
+ 
+   private targetPosition: Vector3 = new Vector3();
+   private targetRotationQuaternion: Quaternion = new Quaternion();
+   private accumulatedRotation: number = 0;
   
     constructor(
       scene: Scene,
       canvas: HTMLCanvasElement,
-      guiTexture: AdvancedDynamicTexture
+      guiTexture: AdvancedDynamicTexture,
+      camera: FreeCamera
     ) {
       this.scene = scene;
       this.canvas = canvas;
       this.guiTexture = guiTexture;
+      this.camera = camera;
       this.guiManager = new GUIManager(this.scene, this.textMessages);
     }
   
@@ -427,10 +444,9 @@ export class TriggerManager2 {
         this.finishButton.onPointerUpObservable.add(() => {
             if (this.currentIntersectedSphere === 1) {
                 // Пересечение с первой сферой
-                this.showMessage("Все правильно! Все исчезает.");
                 this.exitLaserMode(); // Завершаем режим лазера
                 this.guiManager.CreateDialogBox('Отлично, теперь переходи к следующему заданию')
-                this.removeAngle()
+                this.guiManager.createRouteButton('/test')
                 camera.fov = 0.8
             } else if (this.currentIntersectedSphere === 2 || this.currentIntersectedSphere === 3) {
                 // Пересечение с второй или третьей сферой
@@ -616,114 +632,344 @@ export class TriggerManager2 {
 
 
 
-     // Новый метод для активации режима лазера во второй триггер-зоне
-  activateLaserMode2(targetMesh: AbstractMesh): void {
+
+  // public activateLaserMode2(targetMesh: Mesh): void {
+  //   this.targetMeshLaser2 = targetMesh; // Сохраняем целевой меш
+
+  //   // Создаем куб
+  //   this.centralCube2 = MeshBuilder.CreateBox(
+  //     "centralCube2",
+  //     { size: 0.5 },
+  //     this.scene
+  //   );
+  //   this.centralCube2.rotationQuaternion = Quaternion.Identity();
+
+  //   // Создаем материал для куба
+  //   const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
+  //   cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
+  //   this.centralCube2.material = cubeMaterial;
+
+  //   // Скрываем куб по умолчанию
+  //   this.centralCube2.isVisible = false;
+
+  //   // Добавляем обработчик движения указателя
+  //   this.pointerMoveHandler = (pointerInfo: PointerInfo) => {
+  //     if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+  //       this.onPointerMove(pointerInfo);
+  //     }
+  //   };
+  //   this.scene.onPointerObservable.add(this.pointerMoveHandler);
+
+  //   // Добавляем обработчики клавиатуры
+  //   this.keyDownHandler = (evt: KeyboardEvent) => this.onKeyDown(evt);
+  //   this.keyUpHandler = (evt: KeyboardEvent) => this.onKeyUp(evt);
+  //   window.addEventListener("keydown", this.keyDownHandler);
+  //   window.addEventListener("keyup", this.keyUpHandler);
+
+  //   // Добавляем функцию в цикл рендера
+  //   this.scene.registerBeforeRender(this.beforeRenderHandler);
+  // }
+
+  // private onPointerMove(pointerInfo: PointerInfo): void {
+  //   const pickResult = this.scene.pick(
+  //     this.scene.pointerX,
+  //     this.scene.pointerY,
+  //     (mesh) => mesh !== this.centralCube2 && mesh.name !== "cameraCollider",
+  //     false,
+  //     this.camera
+  //   );
+
+  //   if (
+  //     pickResult?.hit &&
+  //     pickResult.pickedMesh === this.targetMeshLaser2 &&
+  //     this.centralCube2
+  //   ) {
+  //     // Делаем куб видимым
+  //     this.centralCube2.isVisible = true;
+
+  //     // Сохраняем целевую позицию куба в точке пересечения
+  //     this.targetPosition.copyFrom(pickResult.pickedPoint);
+
+  //     // Получаем нормаль поверхности в точке пересечения
+  //     const normal = pickResult.getNormal(true);
+  //     if (normal) {
+  //       // Смещаем куб вдоль нормали на половину его размера
+  //       const cubeHalfSize = -0.25; // Половина размера куба (размер куба 0.5)
+  //       const offset = normal.scale(-cubeHalfSize);
+  //       this.targetPosition.addInPlace(offset);
+
+  //       // Используем ваш метод расчёта вращения
+  //       const axis1 = normal;
+  //       const axis2 = Vector3.Up();
+  //       const axis3 = Vector3.Zero();
+  //       const start = new Vector3(Math.PI / 2, Math.PI / 2, 0);
+
+  //       Vector3.CrossToRef(start, axis1, axis2);
+  //       Vector3.CrossToRef(axis2, axis1, axis3);
+  //       const tmpVec = Vector3.RotationFromAxis(
+  //         axis3.negate(),
+  //         axis1,
+  //         axis2
+  //       );
+  //       const quat = Quaternion.RotationYawPitchRoll(
+  //         tmpVec.y,
+  //         tmpVec.x,
+  //         tmpVec.z
+  //       );
+
+  //       this.targetRotationQuaternion = quat;
+  //     }
+  //   } else if (this.centralCube2) {
+  //     // Скрываем куб, если указатель не над `this.targetMeshLaser2`
+  //     this.centralCube2.isVisible = false;
+  //   }
+  // }
+
+  // private onKeyDown(evt: KeyboardEvent): void {
+  //   if (evt.key === "q" || evt.key === "Q") {
+  //     this.rotateDirection = -1; // Вращение против часовой стрелки
+  //   } else if (evt.key === "e" || evt.key === "E") {
+  //     this.rotateDirection = 1; // Вращение по часовой стрелке
+  //   }
+  // }
+
+  // private onKeyUp(evt: KeyboardEvent): void {
+  //   if (
+  //     (evt.key === "q" || evt.key === "Q") &&
+  //     this.rotateDirection === -1
+  //   ) {
+  //     this.rotateDirection = 0;
+  //   } else if (
+  //     (evt.key === "e" || evt.key === "E") &&
+  //     this.rotateDirection === 1
+  //   ) {
+  //     this.rotateDirection = 0;
+  //   }
+  // }
+
+  // private onBeforeRender(): void {
+  //   if (this.centralCube2) {
+  //     // Плавное перемещение куба к целевой позиции
+  //     this.centralCube2.position = Vector3.Lerp(
+  //       this.centralCube2.position,
+  //       this.targetPosition,
+  //       0.1 // Скорость интерполяции (0.0 - медленно, 1.0 - мгновенно)
+  //     );
+
+  //     // Плавное вращение куба к целевому вращению
+  //     this.centralCube2.rotationQuaternion = Quaternion.Slerp(
+  //       this.centralCube2.rotationQuaternion || Quaternion.Identity(),
+  //       this.targetRotationQuaternion,
+  //       0.1 // Скорость интерполяции
+  //     );
+
+  //     // Вращение куба при нажатии клавиш Q и E
+  //     if (this.rotateDirection !== 0) {
+  //       const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+  //       const rotationSpeed = Math.PI;
+  //       const angle = rotationSpeed * deltaTime * this.rotateDirection;
+  //       this.centralCube2.rotate(Vector3.Up(), angle, Space.LOCAL);
+  //     }
+  //   }
+  // }
+
+  // public exitLaserMode2(): void {
+  //   // Удаляем обработчик движения указателя
+  //   if (this.pointerMoveHandler) {
+  //     this.scene.onPointerObservable.removeCallback(this.pointerMoveHandler);
+  //     this.pointerMoveHandler = null;
+  //   }
+
+  //   // Удаляем обработчики клавиатуры
+  //   if (this.keyDownHandler) {
+  //     window.removeEventListener("keydown", this.keyDownHandler);
+  //     this.keyDownHandler = null;
+  //   }
+  //   if (this.keyUpHandler) {
+  //     window.removeEventListener("keyup", this.keyUpHandler);
+  //     this.keyUpHandler = null;
+  //   }
+
+  //   // Удаляем функцию из цикла рендера
+  //   this.scene.unregisterBeforeRender(this.beforeRenderHandler);
+
+  //   // Удаляем куб из сцены
+  //   if (this.centralCube2) {
+  //     this.centralCube2.dispose();
+  //     this.centralCube2 = null;
+  //   }
+
+  //   this.targetMeshLaser2 = null;
+  // }
+
+
+
+
+
+  public activateLaserMode2(targetMesh: Mesh): void {
     this.targetMeshLaser2 = targetMesh; // Сохраняем целевой меш
 
-    const camera = this.scene.activeCamera as FreeCamera;
+    // Создаем куб
+    this.centralCube2 = MeshBuilder.CreateBox(
+      "centralCube2",
+      { size: 0.5 },
+      this.scene
+    );
+    this.centralCube2.rotationQuaternion = Quaternion.Identity();
 
-    const cubeSize = 0.5; // Уменьшенный размер куба
-    this.centralCube2 = MeshBuilder.CreateBox("centralCube2", { size: cubeSize }, this.scene);
+    // Создаем материал для куба
+    const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
+    cubeMaterial.diffuseColor = new Color3(0, 1, 1); // Зеленый цвет
+    this.centralCube2.material = cubeMaterial;
 
-    // Привязка куба к камере
-    this.centralCube2.parent = camera;
+    this.centralCube2.isPickable = false;
 
-    // Установка относительной позиции куба (чуть правее и вперед)
-    this.centralCube2.position = new Vector3(0, 0, 3); // Измените значения по своему усмотрению
-
-    // Создание материала для куба
-    const cubeMaterial2 = new StandardMaterial("cubeMaterial2", this.scene);
-    cubeMaterial2.diffuseColor = new Color3(0, 1, 0); // Зелёный цвет для куба
-    this.centralCube2.material = cubeMaterial2;
-
-    // Сделать куб невидимым для отладки
+    // Скрываем куб по умолчанию
     this.centralCube2.isVisible = false;
 
-    // Создание красного луча (линии) исходящего из передней грани куба
-    const rayLength = 100; // Длина лазера
-    const rayPoints = [
-      new Vector3(0, 0, cubeSize / 2 + 0.01), // Начало чуть перед грани куба
-      new Vector3(0, 0, cubeSize / 2 + 0.01 + rayLength), // Конец луча
-    ];
-    this.redRay2 = MeshBuilder.CreateLines("redRay2", { points: rayPoints }, this.scene);
+    // Добавляем обработчик движения указателя
+    this.pointerMoveHandler = (pointerInfo: PointerInfo) => {
+      if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+        this.onPointerMove(pointerInfo);
+      }
+    };
+    this.scene.onPointerObservable.add(this.pointerMoveHandler);
 
-    // Привязка луча к кубу, чтобы он двигался вместе с ним
-    this.redRay2.parent = this.centralCube2;
+    // Добавляем обработчики клавиатуры
+    this.keyDownHandler = (evt: KeyboardEvent) => this.onKeyDown(evt);
+    this.keyUpHandler = (evt: KeyboardEvent) => this.onKeyUp(evt);
+    window.addEventListener("keydown", this.keyDownHandler);
+    window.addEventListener("keyup", this.keyUpHandler);
 
-    // Создание материала для луча
-    const rayMaterial2 = new StandardMaterial("rayMaterial2", this.scene);
-    rayMaterial2.emissiveColor = new Color3(1, 0, 0); // Красный цвет
-    this.redRay2.color = rayMaterial2.emissiveColor;
-
-    // Создание сферы пересечения, изначально скрытой
-    this.intersectionSphere2 = MeshBuilder.CreateBox("intersectionSphere2", { size: 0.2 }, this.scene);
-    const sphereMaterial2 = new StandardMaterial("sphereMaterial2", this.scene);
-    sphereMaterial2.emissiveColor = new Color3(1, 1, 0); // Жёлтый цвет для шарика
-    this.intersectionSphere2.material = sphereMaterial2;
-    this.intersectionSphere2.isVisible = false; // Скрыта по умолчанию
-
-    // Добавление обновления пересечений перед каждым кадром
-    this.scene.registerBeforeRender(() => {
-      this.checkRayIntersection2();
-    });
+    // Добавляем функцию в цикл рендера
+    this.scene.registerBeforeRender(this.beforeRenderHandler);
   }
 
-  // Новый метод для деактивации режима лазера во второй триггер-зоне
-  exitLaserMode2(): void {
-    // Очистка центрального куба и луча
+  private onPointerMove(pointerInfo: PointerInfo): void {
+    const pickResult = pointerInfo.pickInfo;
+
+    if (
+      pickResult?.hit &&
+      pickResult.pickedMesh === this.targetMeshLaser2 &&
+      this.centralCube2
+    ) {
+      // Делаем куб видимым
+      this.centralCube2.isVisible = true;
+
+      // Обновляем целевую позицию куба
+      this.targetPosition.copyFrom(pickResult.pickedPoint);
+
+      // Получаем нормаль поверхности в точке пересечения
+      const normal = pickResult.getNormal(true);
+      if (normal) {
+        // Смещаем куб вдоль нормали на половину его размера
+        const cubeHalfSize = -0.25;
+        const offset = normal.scale(-cubeHalfSize);
+        this.targetPosition.addInPlace(offset);
+
+        // Используем ваш метод расчёта вращения
+        const axis1 = normal;
+        const axis2 = Vector3.Up();
+        const axis3 = Vector3.Zero();
+        const start = new Vector3(Math.PI / 2, Math.PI / 2, 0);
+
+        Vector3.CrossToRef(start, axis1, axis2);
+        Vector3.CrossToRef(axis2, axis1, axis3);
+        const tmpVec = Vector3.RotationFromAxis(
+          axis3.negate(),
+          axis1,
+          axis2
+        );
+        const quat = Quaternion.RotationYawPitchRoll(
+          tmpVec.y,
+          tmpVec.x,
+          tmpVec.z
+        );
+
+        this.targetRotationQuaternion = quat;
+      }
+    } else if (this.centralCube2) {
+      // Скрываем куб, если указатель не над `this.targetMeshLaser2`
+      this.centralCube2.isVisible = false;
+    }
+  }
+
+  private onBeforeRender(): void {
+    if (this.centralCube2 && this.centralCube2.isVisible) {
+      // Плавное перемещение куба к целевой позиции
+      this.centralCube2.position = Vector3.Lerp(
+        this.centralCube2.position,
+        this.targetPosition,
+        0.2 // Скорость интерполяции
+      );
+
+      // Накопление вращения от клавиш Q/E или Й/У
+      if (this.rotateDirection !== 0) {
+        const deltaTime = this.scene.getEngine().getDeltaTime() / 1000;
+        const rotationSpeed = Math.PI; // Скорость вращения
+        const angle = rotationSpeed * deltaTime * this.rotateDirection;
+        this.accumulatedRotation += angle;
+      }
+
+      // Объединение ориентации от поверхности и накопленного вращения
+      const totalRotation = Quaternion.RotationAxis(Vector3.Up(), this.accumulatedRotation);
+      const combinedRotation = this.targetRotationQuaternion.multiply(totalRotation);
+
+      // Плавное вращение куба к комбинированному вращению
+      this.centralCube2.rotationQuaternion = Quaternion.Slerp(
+        this.centralCube2.rotationQuaternion || Quaternion.Identity(),
+        combinedRotation,
+        0.2 // Скорость интерполяции
+      );
+    }
+  }
+
+  private onKeyDown(evt: KeyboardEvent): void {
+    const key = evt.key.toLowerCase();
+    if ((key === "q" || key === "й") && this.rotateDirection !== -1) {
+      this.rotateDirection = -1; // Вращение против часовой стрелки
+    } else if ((key === "e" || key === "у") && this.rotateDirection !== 1) {
+      this.rotateDirection = 1; // Вращение по часовой стрелке
+    }
+  }
+
+  private onKeyUp(evt: KeyboardEvent): void {
+    const key = evt.key.toLowerCase();
+    if ((key === "q" || key === "й") && this.rotateDirection === -1) {
+      this.rotateDirection = 0;
+    } else if ((key === "e" || key === "у") && this.rotateDirection === 1) {
+      this.rotateDirection = 0;
+    }
+  }
+
+  public exitLaserMode2(): void {
+    // Удаляем обработчик движения указателя
+    if (this.pointerMoveHandler) {
+      this.scene.onPointerObservable.removeCallback(this.pointerMoveHandler);
+      this.pointerMoveHandler = null;
+    }
+
+    // Удаляем обработчики клавиатуры
+    if (this.keyDownHandler) {
+      window.removeEventListener("keydown", this.keyDownHandler);
+      this.keyDownHandler = null;
+    }
+    if (this.keyUpHandler) {
+      window.removeEventListener("keyup", this.keyUpHandler);
+      this.keyUpHandler = null;
+    }
+
+    // Удаляем функцию из цикла рендера
+    this.scene.unregisterBeforeRender(this.beforeRenderHandler);
+
+    // Удаляем куб из сцены
     if (this.centralCube2) {
       this.centralCube2.dispose();
       this.centralCube2 = null;
     }
-    if (this.redRay2) {
-      this.redRay2.dispose();
-      this.redRay2 = null;
-    }
-    if (this.intersectionSphere2) {
-      this.intersectionSphere2.dispose();
-      this.intersectionSphere2 = null;
-    }
 
-    // Сброс целевого меша
     this.targetMeshLaser2 = null;
   }
-
-// Метод для проверки пересечения второго лазера с целевым мешем и поворота квадрата
-private checkRayIntersection2(): void {
-  if (!this.intersectionSphere2 || !this.targetMeshLaser2) return;
-
-  const origin = this.redRay2!.getAbsolutePosition();
-  const direction = this.redRay2!.getDirection(new Vector3(0, 0, 1)).normalize();
-  const rayLength = 100;
-
-  const ray = new Ray(origin, direction, rayLength);
-
-  // Используем scene.pickWithRay для обнаружения пересечений только с целевым мешем
-  const pickInfo = this.scene.pickWithRay(ray, (mesh) =>
-    mesh === this.targetMeshLaser2
-  );
-
-  if (pickInfo?.hit && pickInfo.pickedPoint) {
-    // Устанавливаем позицию квадрата
-    this.intersectionSphere2.position = pickInfo.pickedPoint;
-
-    // Поворачиваем квадрат так, чтобы его одна грань была направлена в сторону лазера
-    const from = new Vector3(0, 0, 1); // Стандартное направление плоскости (+Z)
-    const to = direction; // Направление лазера
-
-    const rotationQuaternion = new Quaternion();
-    Quaternion.FromUnitVectorsToRef(from, to, rotationQuaternion);
-    this.intersectionSphere2.rotationQuaternion = rotationQuaternion;
-
-    this.intersectionSphere2.isVisible = true;
-  } else {
-    // Скрываем квадрат, если пересечения нет
-    this.intersectionSphere2.isVisible = false;
-  }
-}
-
-
-
 
 
 

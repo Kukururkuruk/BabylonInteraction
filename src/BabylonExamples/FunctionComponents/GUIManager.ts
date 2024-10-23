@@ -77,6 +77,22 @@ export class GUIManager {
   }
 
 
+  createRouteButton(ref: string): void {
+    const startButton = Button.CreateSimpleButton("startBtn", "Вернуться на карту");
+    startButton.width = "150px";
+    startButton.height = "40px";
+    startButton.color = "white";
+    startButton.cornerRadius = 20;
+    startButton.background = "green";
+    startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+    this.advancedTexture.addControl(startButton);
+
+    startButton.onPointerUpObservable.add(() => {
+      window.location.href = ref;
+    });
+  }
+
 
   createGui(): Promise<void> {
     return new Promise((resolve) => {
