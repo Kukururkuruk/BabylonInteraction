@@ -27,10 +27,10 @@ export class BookScene {
     private blueHighlightLayer: HighlightLayer;
     private groupNameToBaseName: { [groupName: string]: string } = {};
     textMessages: string[] = [
-        "Нажмите на W",
-        "Нажмите на S",
-        "Нажмите на A",
-        "Нажмите на D",
+        "Чтобы идти вперед нажмите на W",
+        "Чтобы идти назад нажмите на S",
+        "Чтобы идти влево нажмите на A",
+        "Чтобы идти вправо нажмите на D",
         "А теперь осмотритесь по комнате",
       ];
 
@@ -54,7 +54,6 @@ export class BookScene {
         this.triggerManager = new TriggerManager2(
             this.scene,
             this.canvas,
-            this.guiTexture
         );
 
         this.CreateEnvironment().then(async () => {
@@ -62,8 +61,8 @@ export class BookScene {
       
             // После загрузки окружения вызываем CreateDialogBox
             const fullText1 =
-              "Привет! Это диалоговое окно с анимацией печатания текста. Теперь оно масштабируется по размеру экрана.";
-            const fullText2 = "Это второе сообщение после загрузки GUI.";
+              "Привет! Здесь ты можешь посмотреть информацию о сооружениях но перед этим пройди обучение по передвижению.";
+            const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты ты можешь узнать про них информацию. Синим подсвечиваются те на которые ты уже кликал. В левом верхнем углу общее количество кликабельных сооружений";
       
             this.guiManager.CreateDialogBox(fullText1, async () => {
               // После завершения печати первого текста вызываем createGui()
@@ -92,7 +91,7 @@ export class BookScene {
         scene.collisionsEnabled = true;
 
         const hdrTexture = new HDRCubeTexture(
-            "/models/cape_hill_4k.hdr",
+            "/models/railway_bridges_4k.hdr",
             scene,
             512
         );
@@ -109,15 +108,16 @@ export class BookScene {
 
     CreateController(): void {
         // Установка начальной позиции камеры для лучшей видимости
-        this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+        this.camera = new FreeCamera("camera", new Vector3(15, 3, 0), this.scene);
         this.camera.attachControl(this.canvas, true);
 
-        this.camera.applyGravity = false;
+        this.camera.applyGravity = true;
         this.camera.checkCollisions = true;
         this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
         this.camera.minZ = 0.45;
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
+        this.camera.rotation.y = -Math.PI/2
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
@@ -211,7 +211,7 @@ export class BookScene {
                 //Просто дорога сверху
                 "SM_0_Road_1_R",
                 //Бетонка по середине НьюДжерси
-                "SM_0_FenceRoadeCentre_LP",
+                "SM_ConcreteFence_LP",
                 //Плита переходная
                 "SM_0_TransitionPlate8M_LP_L_primitive0",
                 // Добавьте дополнительные одиночные меши по необходимости
@@ -324,10 +324,12 @@ export class BookScene {
         this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
     }
 
-    // Метод для деактивации мешей после ответа (удален, так как не нужен)
 }
 
 
+  
+  
+  
   
   
   

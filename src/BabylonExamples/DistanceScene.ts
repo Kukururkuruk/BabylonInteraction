@@ -113,7 +113,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
             () => {
                 if (!this.zoneTriggered) {
                     this.zoneTriggered = true;
-                    this.triggerManager.createStartButton(() => {
+                    this.triggerManager.createStartButton('Начать',() => {
                         this.guiManager.CreateDialogBox(fullText2)
                         this.triggerManager.disableCameraMovement();
                         const targetPosition = firstTriggerZone.getInteractionZone().getAbsolutePosition();
@@ -130,7 +130,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
                             Math.PI / 2,
                             -1,
                             -Math.PI / 12,
-                            -0.3,
+                            -0.9,
                             targetPosition
                           );
                           this.triggerManager.enableCameraMovement();

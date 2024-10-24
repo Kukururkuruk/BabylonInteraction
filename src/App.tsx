@@ -7,6 +7,7 @@ import BabylonTest from './components/BabylonTest';
 import BabylonQuestion from './components/BabylonQuestion';
 import BabylonBook from './components/BabylonBook';
 import BabylonDistance from './components/BabylonDistance';
+import BabylonBeton from './components/BabylonBeton';
 
 
 const App: React.FC = () => {
@@ -20,6 +21,7 @@ const App: React.FC = () => {
         <Route path="/question" element={<BabylonQuestion />} />
         <Route path='/book' element={<BabylonBook />} />
         <Route path='/distance' element={<BabylonDistance />} />
+        <Route path='/beton' element={<BabylonBeton />} />
       </Routes>
     </Router>
   );

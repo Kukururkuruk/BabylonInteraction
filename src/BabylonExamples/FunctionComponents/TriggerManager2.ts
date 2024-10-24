@@ -84,6 +84,7 @@ export class TriggerManager2 {
       onEnterZone: () => void,
       onExitZone?: () => void,
       camSize: number = 2,
+      enableCollision: boolean = false,
       markMeshTemplate?: AbstractMesh,
       markMeshHeight?: number // Новый параметр для высоты знака
     ): TriggerZone {
@@ -93,7 +94,8 @@ export class TriggerManager2 {
         zonePosition,
         onEnterZone,
         onExitZone,
-        camSize
+        camSize,
+        enableCollision
       );
 
       this.triggerZones.push(triggerZone);
@@ -121,8 +123,8 @@ export class TriggerManager2 {
       return triggerZone;
     }
   
-    createStartButton(onClick: () => void): void {
-      const startButton = Button.CreateSimpleButton("startBtn", "Начать");
+    createStartButton(text: string, onClick: () => void): void {
+      const startButton = Button.CreateSimpleButton("Btn", text);
       startButton.width = "150px";
       startButton.height = "40px";
       startButton.color = "white";
@@ -338,6 +340,7 @@ export class TriggerManager2 {
         this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         this.angleText.top = "10px";
         this.angleText.left = "10px";
+        this.angleText.isHitTestVisible = false;
         this.guiTexture.addControl(this.angleText);
       }
         
@@ -361,9 +364,9 @@ export class TriggerManager2 {
     private createAdditionalSpheres(): void {
         // Координаты сфер
         const sphereCoordinates = [
-            new Vector3(-0.34, 8.52, -3.62),
-            new Vector3(-0.34, 8.30, -3.62),
-            new Vector3(-0.34, 7.87, -3.62)
+            new Vector3(-1.00, 8.32, -3.59),
+            new Vector3(-0.98, 8.09, -3.59),
+            new Vector3(-0.81, 9.08, -3.59)
         ];
 
         // Общие настройки для всех сфер
@@ -819,7 +822,8 @@ export class TriggerManager2 {
 
     // Создаем материал для куба
     const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
-    cubeMaterial.diffuseColor = new Color3(0, 1, 1); // Зеленый цвет
+    cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
+    cubeMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет
     this.centralCube2.material = cubeMaterial;
 
     this.centralCube2.isPickable = false;

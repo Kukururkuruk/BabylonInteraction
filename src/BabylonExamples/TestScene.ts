@@ -295,7 +295,7 @@ export class TestScene {
                           firstZoneSign.dispose();
                       }
 
-                      this.triggerManager.createStartButton(() => {
+                      this.triggerManager.createStartButton('Начать', () => {
                           this.triggerManager.disableCameraMovement();
                           const targetPosition = firstTriggerZone.getInteractionZone().getAbsolutePosition();
                           this.triggerManager.setCameraPositionAndTarget(

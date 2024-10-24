@@ -12,6 +12,7 @@ import {
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
+import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
 
 export class QuestionScene {
   scene: Scene;
@@ -20,9 +21,17 @@ export class QuestionScene {
   camera: FreeCamera;
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
+  private guiManager: GUIManager; // Используем GUIManager
   openModal?: (keyword: string) => void;
   private highlightLayer: HighlightLayer;
   private groupNameToBaseName: { [groupName: string]: string } = {};
+  textMessages: string[] = [
+    "Чтобы идти вперед нажмите на W",
+    "Чтобы идти назад нажмите на S",
+    "Чтобы идти влево нажмите на A",
+    "Чтобы идти вправо нажмите на D",
+    "А теперь осмотритесь по комнате",
+  ];
 
   // Переменные для счетчиков
   private clickedMeshes: number = 0;
@@ -41,15 +50,29 @@ export class QuestionScene {
     this.scene = this.CreateScene();
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
 
+    this.guiManager = new GUIManager(this.scene, this.textMessages);
+
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggerManager2(
       this.scene,
       this.canvas,
-      this.guiTexture
     );
 
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
+
+      // После загрузки окружения вызываем CreateDialogBox
+      const fullText1 =
+      "Привет! Здесь тебя ждет тест по конструкциям. Но прежде пройти обучение.";
+      const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты тебя ждет по нему тест. В левом верхнем углу выведено число найденых конструкций, а также счетчик правильных и не правильных ответов";
+
+      this.guiManager.CreateDialogBox(fullText1, async () => {
+        // После завершения печати первого текста вызываем createGui()
+        await this.guiManager.createGui();
+
+        // Затем отображаем второй текст в диалоговом окне
+        this.guiManager.CreateDialogBox(fullText2);
+      });
     });
     this.CreateController();
 
@@ -68,7 +91,7 @@ export class QuestionScene {
     scene.collisionsEnabled = true;
 
     const hdrTexture = new HDRCubeTexture(
-      "/models/cape_hill_4k.hdr",
+      "/models/railway_bridges_4k.hdr",
       scene,
       512
     );
@@ -390,6 +413,9 @@ export class QuestionScene {
   }
   
 }
+
+
+
 
 
 
