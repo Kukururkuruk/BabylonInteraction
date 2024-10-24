@@ -366,3 +366,2016 @@ createButtonAboveMesh(): void {
   }
   
 }
+
+
+
+--------------------Экземпляр FullExample-----------------------------
+import {
+  Scene,
+  Engine,
+  SceneLoader,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  ActionManager,
+  ExecuteCodeAction,
+  AbstractMesh,
+  Ray,
+  StandardMaterial,
+  Color3,
+  MeshBuilder,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import * as CANNON from 'cannon-es'; 
+import { CannonJSPlugin } from '@babylonjs/core/Physics/Plugins/cannonJSPlugin';
+import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor'; 
+import { GUIManager } from '../components/GUIManager'; 
+import { TriggersManager } from './FunctionComponents/TriggerManager3'; 
+import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
+import { AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
+import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
+
+
+
+// Определение класса InteractionObject
+export class InteractionObject {
+  private mesh: AbstractMesh; // Сохраняем ссылку на меш
+
+  constructor(mesh: AbstractMesh) {
+      this.mesh = mesh; // Инициализируем меш
+  }
+
+  getMesh(): AbstractMesh {
+      return this.mesh; // Возвращаем меш
+  }
+}
+export class FullExample {
+  
+  guiTexture: AdvancedDynamicTexture;
+  scene: Scene;
+  engine: Engine;
+  guiManager: GUIManager;
+  triggerManager: TriggersManager;
+  secondaryCamera: FreeCamera | null = null; // Инициализируем с null
+  thirdCamera: FreeCamera | null = null;
+  textMessages: string[] = [];
+  targetMeshes: AbstractMesh[] = [];
+  handModel: AbstractMesh | null = null; 
+  rulerModel: AbstractMesh | null = null;  
+  selectedSize: number | null = null;
+  interactionObject: AbstractMesh | null = null; // Объявите interactionObject с типом
+  firstPoint: Vector3 | null = null;
+  secondPoint: Vector3 | null = null;
+  measuringDistance: boolean = false; // Флаг, указывающий, что мы находимся в процессе измерения
+  points: AbstractMesh[] = []; // Массив для хранения точек
+  advancedTexture: AdvancedDynamicTexture | null = null;
+  
+  
+  
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+        this.engine = new Engine(this.canvas, true);
+        this.engine.displayLoadingUI();
+
+        this.scene = this.CreateScene();
+            this.setupCamera();
+            this.setupLighting();
+        
+        // Инициализация GUIManager и TriggersManager
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.guiManager = new GUIManager(this.scene, []);
+        this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+
+        // Создание окружения и скрытие индикатора загрузки
+        this.CreateEnvironment().then(() => {
+            this.engine.hideLoadingUI();
+
+        });
+
+        // Создание контроллера
+        this.CreateController();
+
+        // Запуск цикла рендеринга
+            this.engine.runRenderLoop(() => {
+            this.scene.render();
+
+            
+            
+        });
+  }
+
+  
+// Добавляем метод start
+  start() {
+    console.log("Метод start вызван.");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    console.log("Триггер.");
+  }
+
+  CreateScene(): Scene {
+      const scene = new Scene(this.engine);
+      new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+
+      
+
+      // Настройка физической среды
+      const framesPerSecond = 60;
+      const gravity = -9.81;
+      scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+      scene.collisionsEnabled = true;
+      const hdrTexture = new HDRCubeTexture("./models/cape_hill_4k.hdr", scene, 512);
+      scene.environmentTexture = hdrTexture;
+      scene.createDefaultSkybox(hdrTexture, true, 1000);  // Последний параметр - размер skybox
+      scene.environmentIntensity = 0.5;
+
+      // Инициализируем камеры
+      this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), scene);
+      this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 5, 10), scene);
+      
+      
+
+      return scene;
+  }
+
+  create(): void {
+    this.createSceneObjects();
+}
+
+private setupCamera(): void {
+    const camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    camera.setTarget(Vector3.Zero());
+    camera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
+}
+
+private setupLighting(): void {
+    const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
+    light.intensity = 0.7;
+}
+
+private createSceneObjects(): void {
+    const box = MeshBuilder.CreateBox("box", { size: 1 }, this.scene);
+    box.position.y = 0.5; // Устанавливаем положение объекта
+
+}
+  
+  async CreateEnvironment(): Promise<void> {
+      // Загрузка основной карты
+      const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      // Фильтрация мешей по названию "stairs"
+  this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
+  
+      mapMeshes.forEach((mesh) => {
+          mesh.checkCollisions = true;
+      });
+  
+      this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
+  
+      this.targetMeshes.forEach(mesh => {
+          mesh.checkCollisions = true;
+          this.createRayAboveMesh(mesh);
+          this.guiManager.createButtonAboveMesh(mesh);
+  
+          // Создание объекта взаимодействия
+          const interactionObject = new InteractionObject(mesh); // Создаем объект взаимодействия
+          this.triggerManager.setupProximityTrigger(mesh, () => {
+              console.log("Камера вошла в зону триггера лестницы:", mesh.name);
+              this.switchToSecondaryCamera(interactionObject); // Передаем interactionObject для переключения камеры
+              this.switchToThirdCamera(interactionObject); // Передаем interactionObject для переключения камеры
+          });
+  
+          // Включение клика на объекте
+          this.triggerManager.enableClickInteraction(interactionObject.getMesh());
+  
+          // Настройка подсветки
+          this.triggerManager.setupClickTrigger(mesh, () => {
+              console.log("Лестница была кликнута:", mesh.name);
+
+          });
+      });
+      
+
+
+      // Работа с мешами типа "broken"
+  const brokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+  brokenMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.isPickable = true;
+      mesh.isVisible = true; // Делаем видимым
+      mesh.setEnabled(true);
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              console.log("Broken меш кликнут:", mesh.name, "Координаты:", mesh.position);
+              this.interactionObject = mesh;
+              this.switchToSecondaryCamera(new InteractionObject(mesh));
+              this.switchToThirdCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
+          })
+      );
+
+
+
+// Координаты точек
+const pointsPositions = [
+  new Vector3(12.46, 6.3, 4.79),   // Первая точка
+  new Vector3(12.46, 6.3, 5.21),   // Вторая точка
+  new Vector3(12.46, 6.11, 4.72),     // Третья точка
+  new Vector3(12.46, 0.7, 4.72)     // Четвертая точка
+  
+];
+
+
+// Создаем точки и применяем одинаковый материал
+pointsPositions.forEach((position, index) => {
+  // Задаем разные размеры для первой, второй и третьей точки
+  const diameter = index === 3 ? 0.05 : 0.01; // Увеличиваем диаметр третьей точки
+
+  const point = MeshBuilder.CreateSphere("point" + index, { diameter: diameter }, this.scene);
+  
+  // Устанавливаем фиксированное положение точки
+  // Используем mesh.position и добавляем координаты для создания точек выше меша
+  point.position = mesh.position.add(new Vector3(position.x, position.y , position.z)); 
+
+  // Увеличиваем y для размещения точек выше меша
+  //point.position.y += 1; // Поднимаем точки над мешом на 1 единицу
+
+  // Отладочные сообщения
+  console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
+
+  // Настраиваем материал для точки
+  const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
+  pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
+  point.material = pointMaterial;
+
+
+  // Убедитесь, что точки изначально скрыты
+  this.points.forEach(point => {
+  point.isVisible = false; // Принудительно скрываем все точки
+  });
+
+  // Делаем точку кликабельной
+  point.isPickable = true;
+  pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
+  point.actionManager = new ActionManager(this.scene);
+  point.actionManager.registerAction(
+      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          console.log("Точка кликнута:", point.name);
+          // Здесь можно добавить дополнительную логику для точки
+      })
+  );
+  // Сохраняем точку в массив
+  this.points.push(point);
+
+  
+});
+
+
+
+
+
+
+
+  });
+
+  // Работа с мешами типа "whole"
+  const wholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+  wholeMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.isPickable = true;
+      mesh.visibility = 0; // Делаем невидимым
+      mesh.setEnabled(true);
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
+              this.interactionObject = mesh;
+              this.switchToSecondaryCamera(new InteractionObject(mesh));
+              this.switchToThirdCamera(new InteractionObject(mesh)); // Передаем interactionObject для переключения камеры
+              
+          })
+      );
+      
+  });
+
+
+
+      this.guiManager.createGui();
+      await this.CreateHandModel(); 
+      await this.CreateRulerModel(); 
+  }
+
+  createQuestionInterface(): void {
+      // Проверяем, существует ли уже интерфейс, чтобы избежать повторного создания
+      if (this.advancedTexture) {
+          return; // Если интерфейс уже создан, выходим из функции
+      }
+  
+      this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+  
+      // Вопрос
+      const questionText = new TextBlock();
+      questionText.text = "Что вы хотите сделать?";
+      questionText.color = "white";
+      questionText.fontSize = 30;
+      this.advancedTexture.addControl(questionText);
+  
+      // Кнопка 1
+      const button1 = Button.CreateSimpleButton("button1", "Измерить размер повреждений линейкой");
+      button1.width = "150px";
+      button1.height = "60px";
+      button1.top = "100px";
+      button1.left = "-100px";
+      button1.color = "white";
+      button1.background = "blue";
+      button1.onPointerUpObservable.add(() => {
+          this.handleButtonClick("Дерево", this.secondaryCamera);
+      });
+      this.advancedTexture.addControl(button1);
+  
+      // Кнопка 2
+      const button2 = Button.CreateSimpleButton("button2", "Измерить толщину штангенцирулем");
+      button2.width = "150px";
+      button2.height = "60px";
+      button2.top = "100px";
+      button2.left = "100px";
+      button2.color = "white";
+      button2.background = "blue";
+      button2.onPointerUpObservable.add(() => {
+          this.handleButtonClick("Металл", this.thirdCamera);
+
+      });
+      this.advancedTexture.addControl(button2);
+  }
+  
+  handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
+      this.checkAnswer(selectedAnswer);
+  
+      // Переключаем активную камеру
+      // Переключаем активную камеру, если она не null
+      if (targetCamera) {
+          this.scene.activeCamera = targetCamera;
+          console.log(`Переключено на ${targetCamera.name || "камера не инициализирована"} при нажатии на кнопку`); // Используем оператор "или"
+      } else {
+          console.log("Целевая камера не инициализирована");
+      }
+  
+      // Убираем UI после нажатия на кнопку
+      if (this.advancedTexture) {
+          this.advancedTexture.dispose();
+          this.advancedTexture = null; // Обнуляем переменную интерфейса
+      }
+  
+      
+  }
+  
+  checkAnswer(selectedAnswer: string): void {
+      const correctAnswer = "Металл"; // Укажите правильный ответ
+  
+      if (selectedAnswer === correctAnswer) {
+          console.log("Правильный ответ!");
+      } else {
+          console.log("Неправильный ответ. Попробуйте снова.");
+      }
+  
+      // Восстанавливаем активную камеру
+      if (this.secondaryCamera) {
+          this.scene.activeCamera = this.secondaryCamera;
+      } else {
+          this.scene.activeCamera = this.thirdCamera;
+      }
+  }
+
+
+
+  async CreateHandModel(): Promise<void> {
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
+      this.handModel = meshes[0];
+      this.handModel.position = new Vector3(2, -4.5, 2);
+      this.handModel.scaling = new Vector3(5, 5, 5); 
+      this.attachHandToCamera(); 
+
+      this.handModel.physicsImpostor = new PhysicsImpostor(this.handModel, PhysicsImpostor.MeshImpostor, {
+          mass: 0,
+          friction: 0,
+          restitution: 0
+      });
+  }
+
+  async CreateRulerModel(): Promise<void> {
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
+      this.rulerModel = meshes[0];
+      this.rulerModel.position = new Vector3(2, -4.5, 2);
+      this.rulerModel.scaling = new Vector3(5, 5, 5); 
+      this.rulerModel.isVisible = false; 
+  }
+
+  attachHandToCamera(): void {
+      if (this.handModel) {
+          const camera = this.scene.getCameraByName("camera") as FreeCamera;
+          this.handModel.parent = camera;
+          this.handModel.position = new Vector3(2, -4.5, 2);
+          this.handModel.rotation.x += Math.PI / 2; 
+          this.handModel.rotation.y = Math.PI / 4;  // Вращение на 45 градусов по Y
+          this.handModel.scaling = new Vector3(5, 5, 5);
+      }
+  }
+
+  CreateController(): void {
+      const camera = new FreeCamera("camera", new Vector3(20, 100, 0), this.scene);
+      camera.attachControl(this.canvas, true);
+      this.scene.activeCamera = camera;
+
+      camera.applyGravity = true;
+      camera.checkCollisions = true;
+      camera.ellipsoid = new Vector3(1, 2, 1);
+      camera.minZ = 0.45;
+      camera.speed = 0.75;
+      camera.angularSensibility = 4000;
+      camera.keysUp.push(87); // W
+      camera.keysLeft.push(65); // A
+      camera.keysDown.push(83); // S
+      camera.keysRight.push(68); // D
+
+      this.scene.gravity = new Vector3(0, -0.98, 0);
+      camera.needMoveForGravity = true;
+      // Инициализация второй камеры
+      this.secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(0, 5, -10), this.scene);
+      this.secondaryCamera.setTarget(Vector3.Zero());
+
+      // Инициализация третей камеры
+      this.thirdCamera = new FreeCamera("thirdCamera", new Vector3(0, 5, -10), this.scene);
+      this.thirdCamera.setTarget(Vector3.Zero());
+      
+
+      const ground = this.scene.getMeshByName("ground");
+      if (ground) {
+          ground.checkCollisions = true;
+      }
+
+      this.scene.enablePhysics(new Vector3(0, -9.81, 0), new CannonJSPlugin(true, 10, CANNON));
+
+      // Обработчик нажатия клавиши для возврата к основной камере
+      window.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") { // Измените на нужную вам клавишу
+              this.switchToMainCamera(camera);
+          }
+      });
+  }
+
+  switchToThirdCamera(interactionObject: InteractionObject): void {
+      const mesh = interactionObject.getMesh();
+      const position = mesh.position;
+      // Функция для преобразования градусов в радианы
+      function degreesToRadians(degrees: number): number {
+          return degrees * (Math.PI / 180);
+}
+      // Установим значения смещений и углы камеры в зависимости от типа объекта
+      let offsetX = 2, offsetY = 2, offsetZ = 5; // Смещения по умолчанию
+      let targetYOffset = 0; // Смещение по оси Y для цели по умолчанию (камера нацелена чуть выше объекта)
+  
+      // Определение типа объекта по его имени
+      if (mesh.name.toLowerCase().includes("whole")) {
+          offsetX = 13.49; // Увеличиваем смещение по оси X
+          offsetY = 6.4; // Камера выше
+          offsetZ = -4.9; // Камера дальше
+          targetYOffset = 0; // Камера нацелена чуть выше объекта "whole"
+      } else if (mesh.name.toLowerCase().includes("broken")) {
+          offsetX = 13.49; // Среднее смещение по оси X
+          offsetY = 6.4; // Камера чуть выше объекта
+          offsetZ = -4.9; // Камера чуть ближе
+          targetYOffset = 0; // Камера нацелена чуть выше объекта "broken"
+      }
+  
+      if (this.thirdCamera) {
+          // Устанавливаем позицию камеры относительно объекта
+          this.thirdCamera.position = new Vector3(position.x + offsetX, position.y + offsetY, position.z - offsetZ);
+  
+          // Камера нацелена на объект
+          this.thirdCamera.setTarget(new Vector3(position.x, position.y + targetYOffset, position.z));
+  
+          // Переключаем активную камеру на третью
+          this.scene.activeCamera = this.thirdCamera;
+  
+          // Включаем видимость точек
+          this.points.forEach(point => point.isVisible = true);
+  
+          // Поворачиваем камеру вправо на 10 градусов, используя собственную функцию
+          this.thirdCamera.rotation.x = degreesToRadians(20); // Поворот камеры вправо на 10 градусов
+
+          // Поворачиваем камеру вправо на 10 градусов, используя собственную функцию
+          this.thirdCamera.rotation.y = degreesToRadians(-90); // Поворот камеры вправо на 10 градусов
+  
+          // Настраиваем параметры вращения камеры (можете изменить чувствительность, если требуется)
+          this.thirdCamera.angularSensibility = 800; // Чувствительность вращения камеры
+
+              // Включаем видимость модели руки
+          if (this.handModel) {
+              this.handModel.isVisible = true;
+          }
+
+          
+  
+          console.log(`Камера переключена на третью камеру, цель: ${mesh.name}`);
+      } else {
+          console.error("Третья камера не инициализирована.");
+      }
+  }
+  
+
+
+  // Метод для переключения на основную камеру
+  switchToMainCamera(camera: FreeCamera): void {
+      this.scene.activeCamera = camera;
+  
+      // Скрыть точки при переключении на основную камеру
+      this.points.forEach(point => point.isVisible = false);
+  
+      // Отключаем управление вторичной камерой
+      if (this.secondaryCamera) {
+          this.secondaryCamera.detachControl(); 
+      }
+
+      // Отключаем управление вторичной камерой
+      if (this.thirdCamera) {
+          this.thirdCamera.detachControl(); 
+      }
+  
+      // Включаем видимость модели руки
+      if (this.handModel) {
+          this.handModel.isVisible = true;
+      }
+  
+      // Отключаем измерение расстояния
+      this.disableDistanceMeasurement();
+      console.log("Камера переключена обратно на основную камеру");
+  }
+      disableDistanceMeasurement(): void {
+      this.measuringDistance = false;
+      this.scene.onPointerDown = undefined; // Отключаем обработку кликов
+  }
+
+  switchToSecondaryCamera(interactionObject: InteractionObject): void {
+      const mesh = interactionObject.getMesh();
+      const position = mesh.position;
+      
+
+      
+      // Установим значения смещений и углы камеры в зависимости от типа объекта
+      let offsetX = 4, offsetY = 2, offsetZ = 5; // Смещения по умолчанию
+      let targetYOffset = 1; // Смещение по оси Y для цели по умолчанию (камера нацелена чуть выше объекта)
+      // Определение типа объекта по его имени
+      if (mesh.name.toLowerCase().includes("whole")) {
+          offsetX = 13.7; // Увеличиваем смещение по оси X
+          offsetY = 6.5; // Камера выше
+          offsetZ = -5; // Камера дальше
+          targetYOffset = 1; // Камера нацелена чуть выше объекта "whole"
+      } else if (mesh.name.toLowerCase().includes("broken")) {
+          offsetX = 13.7; // Среднее смещение по оси X
+          offsetY = 6.5; // Камера чуть выше объекта
+          offsetZ = -5; // Камера чуть ближе
+          targetYOffset = 1; // Камера нацелена чуть выше объекта "broken"
+      } 
+      
+  
+      if (this.secondaryCamera) {
+          // Устанавливаем позицию камеры относительно объекта
+          this.secondaryCamera.position = new Vector3(position.x + offsetX, position.y + offsetY, position.z - offsetZ);
+  
+          // Камера нацелена на объект
+          this.secondaryCamera.setTarget(new Vector3(position.x, position.y + targetYOffset, position.z));
+  
+          // Переключаем активную камеру на вторичную
+          this.scene.activeCamera = this.secondaryCamera;
+
+
+          // Вызов интерфейса вопросов
+          this.createQuestionInterface();
+
+          // Включаем видимость точек
+          this.points.forEach(point => point.isVisible = true);
+
+          // Включаем управление камерой через мышь
+          this.secondaryCamera.attachControl(this.canvas, true); // true для разрешения захвата мыши
+  
+          // Настраиваем параметры вращения камеры (можете изменить чувствительность, если требуется)
+          this.secondaryCamera.angularSensibility = 800; // Чувствительность вращения камеры
+
+
+          console.log(`Камера переключена на вторичную камеру, цель: ${mesh.name}`);
+      } else {
+          console.error("Вторичная камера не инициализирована.");
+      }
+
+      
+      // Скрываем модель руки, если она есть
+       // Скрываем модель руки только если меш не является "whole"
+      if (this.handModel && !mesh.name.toLowerCase().includes("whole")) {
+      this.handModel.isVisible = false;
+      } else if (this.handModel && mesh.name.toLowerCase().includes("whole")) {
+      this.handModel.isVisible = true; // Оставляем модель рук видимой
+      }
+      
+      
+      
+      // Включаем измерение расстояния, если нужно
+      this.enableDistanceMeasurement();
+  
+      console.log(`Камера переключена на вторичную камеру, цель: ${mesh.name}`);
+  
+  
+
+  
+
+
+                  // Создаем GUI
+                  const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+                      
+                  const questionText = new TextBlock();
+                  questionText.text = "Выберите правильный ответ:";
+                  questionText.color = "white";
+                  questionText.fontSize = 24;
+                  questionText.height = "50px";
+                  questionText.top = "-200px";
+                  advancedTexture.addControl(questionText);
+
+                  const correctAnswer = "Ответ 48 сантиметров"; // Правильный ответ
+
+                  // Функция для создания кнопки ответа
+                  const createAnswerButton = (answerText: string, leftPosition: string) => {
+                      const button = Button.CreateSimpleButton("answer", answerText);
+                      button.width = "200px";
+                      button.height = "60px";
+                      button.color = "white";
+                      button.background = "blue";
+                      button.left = leftPosition; // Устанавливаем положение кнопки по горизонтали
+                      button.top = "-10px"; // Отступ от нижнего края экрана (с отрицательным значением, чтобы кнопки не были слишком высоко)
+                      button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Выравнивание по левому краю
+                      button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю экрана
+
+                      advancedTexture.addControl(button);
+
+                      button.onPointerClickObservable.add(() => {
+                          console.log(`Нажата кнопка: ${answerText}, правильный ответ: ${correctAnswer}`);
+                          if (answerText === correctAnswer) {
+                              console.log("Правильный ответ!");
+                              questionText.text = "Правильный ответ!";
+                          } else {
+                              console.log("Неправильный ответ.");
+                              questionText.text = "Неправильный ответ.";
+                          }
+                          // Удалить все элементы GUI после выбора
+                          setTimeout(() => {
+                              advancedTexture.dispose();
+                          }, 2000); // Убираем через 2 секунды
+                      });
+                  };
+
+          // Создаем 4 кнопки с разными вариантами ответов, расположенными в ряд снизу экрана
+          const buttonSpacing = 20; // Пробел между кнопками
+          const buttonWidth = 200; // Ширина кнопки
+          const startXPosition = (window.innerWidth - (buttonWidth * 4 + buttonSpacing * 3)) / 2; // Центрируем кнопки
+
+          // Создаем 4 кнопки с разными вариантами ответов
+          createAnswerButton("Ответ 52 сантиметров", `${startXPosition}px`); // 1-я кнопка
+          createAnswerButton("Ответ 50 сантиметров", `${startXPosition + buttonWidth + buttonSpacing}px`); // 2-я кнопка
+          createAnswerButton("Ответ 48 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 2}px`); // 3-я кнопка
+          createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 3}px`); // 4-я кнопка
+
+
+              }
+
+              createRayAboveMesh(mesh: AbstractMesh): void {
+                  // Создаем луч с начальной позицией выше меша и направлением
+                  const origin = new Vector3(mesh.position.x, mesh.position.y + 1, mesh.position.z);
+                  const direction = new Vector3(0, 1, 0); // Направление луча (например, вверх)
+                  
+                  // Создаем луч
+                  const ray = new Ray(origin, direction, 5); // Третий аргумент - длина луча
+                  
+                  // Используем RayHelper для визуализации луча
+                  const rayHelper = new RayHelper(ray);
+                  rayHelper.show(this.scene, new Color3(1, 0, 0)); // Показать луч в сцене
+              }
+
+              enableDistanceMeasurement(): void {
+                  this.measuringDistance = true;
+                  this.firstPoint = null;
+                  this.secondPoint = null;
+                  // Переключаем активную камеру на вторичную
+                  this.scene.activeCamera = this.secondaryCamera;
+              
+                  // Обработчик кликов
+                  this.scene.onPointerDown = (evt, pickResult) => {
+                      // Получаем позицию указателя
+                      const pointerX = evt.clientX;
+                      const pointerY = evt.clientY;
+                  
+                      console.log(`Клик по координатам: (${pointerX}, ${pointerY})`);
+                  
+                  // Проверяем, был ли клик правой кнопкой мыши
+                  if (evt.button === 2) {
+                      console.log("Правый клик.");
+      
+                  if (pickResult.hit && pickResult.pickedPoint) {
+                  if (!this.firstPoint) {
+                      // Запоминаем первую точку
+                      this.firstPoint = pickResult.pickedPoint.clone();
+                      console.log("Первая точка:", this.firstPoint);
+                  } else if (!this.secondPoint) {
+                      // Запоминаем вторую точку
+                      this.secondPoint = pickResult.pickedPoint.clone();
+                      console.log("Вторая точка:", this.secondPoint);
+      
+                      // Вычисляем расстояние
+                      const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+                      console.log("Расстояние между точками:", distance);
+      
+                      if (this.firstPoint && this.secondPoint) {
+                          // Показываем расстояние через GUI
+                          this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
+      
+                          // Сброс для нового измерения
+                          this.firstPoint = null;
+                          this.secondPoint = null;
+              }
+          }
+      }
+  } 
+  
+  else if (evt.button === 0) {
+      console.log("Левый клик. Замеры не проводятся.");
+  }
+
+      };
+
+  }
+
+
+}
+
+
+
+--------------------Интеграция в Битрикс-----------------------------
+1. Подготовка проекта на TypeScript
+Убедитесь, что ваш TypeScript-проект уже собран в виде JavaScript- или React-приложения с использованием инструмента сборки, например, Webpack, Vite или другого. Для этого вам нужно:
+
+Компилировать TypeScript в JavaScript (tsc или с помощью инструментов сборки).
+Сгенерировать оптимизированные файлы JavaScript и CSS для последующей интеграции.
+
+2. Добавление файлов в Bitrix
+После сборки вашего проекта добавьте скомпилированные файлы (JavaScript и CSS) в ваш шаблон или компонент Bitrix:
+
+Создайте папку в шаблоне сайта, например, /local/templates/название_шаблона/js/ваш_проект.
+Скопируйте туда все сгенерированные файлы проекта.
+
+3. Подключение файлов в шаблон Bitrix
+В шаблоне сайта или в компоненте нужно подключить сгенерированные файлы через HTML-теги <script> и <link> для стилистики.
+
+4. Интеграция с Битрикс
+Если ваш TypeScript-проект взаимодействует с бэкендом (например, отправка данных на сервер), то нужно обеспечить его интеграцию с Bitrix через API или AJAX-запросы. Для этого можно использовать AJAX-функционал Bitrix или интеграцию через REST API.
+
+Пример использования AJAX в Bitrix:
+
+5. Создание AJAX-обработчика на стороне Bitrix
+Для обработки запросов создайте PHP-файл, например, ajax.php в компоненте:
+
+6. Настройка роутинга или компонентов Bitrix
+Если TypeScript-приложение представляет собой одностраничное приложение (SPA), необходимо настроить роутинг на стороне Bitrix, чтобы перенаправлять запросы на нужную страницу, где рендерится приложение. Можно использовать встроенные механизмы Bitrix для организации маршрутизации.
+
+7. Тестирование и отладка
+После всех шагов протестируйте работоспособность вашего TypeScript-проекта в рамках системы Bitrix, убедитесь, что скрипты и стили подключены корректно, а взаимодействие с серверной частью Bitrix работает без проблем.
+
+Эти шаги позволят вам интегрировать сторонний TypeScript-проект в 1С-Битрикс с минимальными изменениями в структуре сайта.
+
+
+
+
+
+
+
+
+
+
+
+
+// Вопрос
+const questionText2 = new TextBlock();
+questionText2.text = "Выберите правильный ответ:";
+questionText2.color = "white";
+questionText2.fontSize = 24;
+questionText2.height = "50px";
+questionText2.top = "30px"; // Отступ для текста
+this.advancedTexture.addControl(questionText2);
+
+const correctAnswer = "Ответ 48 сантиметров"; // Правильный ответ
+
+// Функция для создания кнопки ответа
+const createAnswerButton = (answerText: string, leftPosition: string) => {
+    const button = Button.CreateSimpleButton("answer", answerText);
+    button.width = "200px";
+    button.height = "60px";
+    button.color = "white";
+    button.background = "blue";
+    button.left = leftPosition; // Устанавливаем положение кнопки по горизонтали
+    button.top = "220px"; // Отступ от нижнего края экрана
+    button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Выравнивание по левому краю
+    button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Выравнивание по нижнему краю экрана
+
+
+    button.onPointerClickObservable.add(() => {
+        console.log(`Нажата кнопка: ${answerText}, правильный ответ: ${correctAnswer}`);
+        if (answerText === correctAnswer) {
+            console.log("Правильный ответ!");
+            questionText.text = "Правильный ответ!";
+        } else {
+            console.log("Неправильный ответ.");
+            questionText.text = "Неправильный ответ.";
+        }
+        // Удалить все элементы GUI после выбора
+        setTimeout(() => {
+            this.advancedTexture = null; // Обнуляем ссылку на интерфейс
+        }, 2000); // Убираем через 2 секунды
+    });};
+
+// Создаем 4 кнопки с разными вариантами ответов, расположенными в ряд снизу экрана
+const buttonSpacing = 20; // Пробел между кнопками
+const buttonWidth = 200; // Ширина кнопки
+const startXPosition = (window.innerWidth - (buttonWidth * 4 + buttonSpacing * 3)) / 2; // Центрируем кнопки
+
+// Создаем 4 кнопки с разными вариантами ответов
+createAnswerButton("Ответ 52 сантиметров", `${startXPosition}px`); // 1-я кнопка
+createAnswerButton("Ответ 50 сантиметров", `${startXPosition + buttonWidth + buttonSpacing}px`); // 2-я кнопка
+createAnswerButton("Ответ 48 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 2}px`); // 3-я кнопка
+createAnswerButton("Ответ 46 сантиметров", `${startXPosition + (buttonWidth + buttonSpacing) * 3}px`); // 4-я кнопка
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import {
+  Scene,
+  Engine,
+  SceneLoader,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  ActionManager,
+  ExecuteCodeAction,
+  AbstractMesh,
+  Ray,
+  StandardMaterial,
+  Color3,
+  MeshBuilder,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import * as CANNON from 'cannon-es'; 
+import { CannonJSPlugin } from '@babylonjs/core/Physics/Plugins/cannonJSPlugin';
+import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor'; 
+import { GUIManager } from '../components/GUIManager'; 
+import { TriggersManager } from './FunctionComponents/TriggerManager3'; 
+import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
+import { StackPanel, Rectangle, AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
+import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
+
+
+
+// Определение класса InteractionObject
+export class InteractionObject {
+  private mesh: AbstractMesh; // Сохраняем ссылку на меш
+
+  constructor(mesh: AbstractMesh) {
+    this.mesh = mesh; // Инициализируем меш
+  }
+
+  getMesh(): AbstractMesh {
+    return this.mesh; // Возвращаем меш
+  }
+}
+
+export class FullExample {
+  guiTexture: AdvancedDynamicTexture;
+  scene: Scene;
+  engine: Engine;
+  guiManager: GUIManager;
+  triggerManager: TriggersManager;
+  textMessages: string[] = [];
+  targetMeshes: AbstractMesh[] = [];
+  handModel: AbstractMesh | null = null;
+  rulerModel: AbstractMesh | null = null;
+  selectedSize: number | null = null;
+  interactionObject: AbstractMesh | null = null;
+  firstPoint: Vector3 | null = null;
+  secondPoint: Vector3 | null = null;
+  measuringDistance: boolean = false;
+  points: AbstractMesh[] = [];
+  advancedTexture: AdvancedDynamicTexture | null = null;
+  MainCamera: FreeCamera | null = null;  // Добавлено объявление MainCamera
+  questionTexture: AdvancedDynamicTexture | null = null; // Для второго интерфейса
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.setupCamera();
+    this.setupLighting();
+
+    // Инициализация GUIManager и TriggersManager
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.guiManager = new GUIManager(this.scene, []);
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    
+
+    // Создание окружения и скрытие индикатора загрузки
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+    
+    // Создание контроллера
+    this.CreateController();
+
+    // Запуск цикла рендеринга
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+  }
+
+  start() {
+    console.log("Метод start вызван.");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    console.log("Триггер.");
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+  
+    // Включение физики
+    const gravityVector = new Vector3(0, -9.81, 0);
+    const physicsPlugin = new CannonJSPlugin(true, 5, CANNON); // Это должно работать
+    scene.enablePhysics(gravityVector, physicsPlugin);
+    
+  
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+  
+    const hdrTexture = new HDRCubeTexture("./models/cape_hill_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.collisionsEnabled = true;
+    scene.createDefaultSkybox(hdrTexture, true, 1000);
+    scene.environmentIntensity = 0.5;
+  
+    return scene;
+  }
+  private setupCamera(): void {
+    this.MainCamera = new FreeCamera("MainCamera", new Vector3(13.7, 6.3, 5.0), this.scene);
+    // Установка цели камеры чуть выше и правее
+    const targetPosition = new Vector3(13.5 + 1, 6.3 + 1, 4.9); // Смещение по оси X и Y
+    this.MainCamera.setTarget(targetPosition);
+    this.MainCamera.setTarget(Vector3.Zero());
+    this.MainCamera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
+    this.scene.activeCamera = this.MainCamera; // Установка активной камеры
+    // Включаем измерение расстояния, если нужно
+    this.enableDistanceMeasurement();
+  }
+
+  private setupLighting(): void {
+    const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
+    light.intensity = 0.7;
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+    this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
+
+    mapMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+    });
+
+    this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
+
+    this.targetMeshes.forEach(mesh => {
+      mesh.checkCollisions = true;
+      this.createRayAboveMesh(mesh);
+      this.guiManager.createButtonAboveMesh(mesh);
+
+      const interactionObject = new InteractionObject(mesh); // Создаем объект взаимодействия
+      this.triggerManager.setupProximityTrigger(mesh, () => {
+        console.log("Камера вошла в зону триггера лестницы:", mesh.name);
+        this.scene.activeCamera = this.MainCamera; // Используйте MainCamera
+      });
+
+      this.triggerManager.enableClickInteraction(interactionObject.getMesh());
+      this.triggerManager.setupClickTrigger(mesh, () => {
+        console.log("Лестница была кликнута:", mesh.name);
+      });
+    });
+    // Работа с мешами типа "broken"
+  const brokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+  brokenMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.isPickable = true;
+      mesh.isVisible = true; // Делаем видимым
+      mesh.setEnabled(true);
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              console.log("Broken меш кликнут:", mesh.name, "Координаты:", mesh.position);
+              this.interactionObject = mesh;
+              this.scene.activeCamera = this.MainCamera;
+              this.showPointsAndQuestions(mesh); // Показать точки и вопросы
+          })
+      );
+
+
+
+// Координаты точек
+const pointsPositions = [
+  new Vector3(12.46, 6.3, 4.79),   // Первая точка
+  new Vector3(12.46, 6.3, 5.21),   // Вторая точка
+  new Vector3(12.46, 6.11, 4.72),     // Третья точка
+  new Vector3(12.46, 0.7, 4.72)     // Четвертая точка
+  
+];
+
+
+// Создаем точки и применяем одинаковый материал
+pointsPositions.forEach((position, index) => {
+  // Задаем разные размеры для первой, второй и третьей точки
+  const diameter = index === 3 ? 0.05 : 0.01; // Увеличиваем диаметр третьей точки
+
+  const point = MeshBuilder.CreateSphere("point" + index, { diameter: diameter }, this.scene);
+  
+  // Устанавливаем фиксированное положение точки
+  // Используем mesh.position и добавляем координаты для создания точек выше меша
+  point.position = mesh.position.add(new Vector3(position.x, position.y , position.z)); 
+
+  // Увеличиваем y для размещения точек выше меша
+  //point.position.y += 1; // Поднимаем точки над мешом на 1 единицу
+
+  // Отладочные сообщения
+  console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
+
+  // Настраиваем материал для точки
+  const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
+  pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
+  point.material = pointMaterial;
+
+
+  // Убедитесь, что точки изначально скрыты
+  this.points.forEach(point => {
+  point.isVisible = false; // Принудительно скрываем все точки
+  });
+
+  // Делаем точку кликабельной
+  point.isPickable = true;
+  pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
+  point.actionManager = new ActionManager(this.scene);
+  point.actionManager.registerAction(
+      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          console.log("Точка кликнута:", point.name);
+          // Здесь можно добавить дополнительную логику для точки
+      })
+  );
+  // Сохраняем точку в массив
+  this.points.push(point);
+
+  
+});
+
+
+
+
+
+
+
+  });
+
+  // Работа с мешами типа "whole"
+  const wholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+  wholeMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.isPickable = true;
+      mesh.visibility = 0; // Делаем невидимым
+      mesh.setEnabled(true);
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
+              this.interactionObject = mesh;
+              this.scene.activeCamera = this.MainCamera;
+              this.showPointsAndQuestions(mesh); // Показать точки и вопросы
+          })
+      );
+      
+  });
+
+  }
+
+  // Метод для отображения точек и интерфейса вопросов
+  showPointsAndQuestions(mesh: AbstractMesh): void {
+    // Делаем точки видимыми
+    this.points.forEach(point => {
+      point.isVisible = true; // Показываем все точки
+    });
+
+    // Создаем интерфейс вопросов
+    this.createQuestionInterface();
+  }
+  createQuestionInterface(): void {
+    // Проверяем, существует ли уже интерфейс, чтобы избежать повторного создания
+    if (this.advancedTexture) {
+        return; // Если интерфейс уже создан, выходим из функции
+    }
+
+    this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    // Вопрос
+    const questionText = new TextBlock();
+    questionText.text = "Что вы хотите сделать?";
+    questionText.color = "white";
+    questionText.fontSize = 30;
+    this.advancedTexture.addControl(questionText);
+
+    // Кнопка 1
+    const button1 = Button.CreateSimpleButton("button1", "Измерить размер повреждений линейкой");
+    button1.width = "150px";
+    button1.height = "60px";
+    button1.top = "100px";
+    button1.left = "-100px";
+    button1.color = "white";
+    button1.background = "blue";
+    button1.onPointerUpObservable.add(() => {
+        this.handleButtonClick("Линейка", this.MainCamera);
+    });
+    this.advancedTexture.addControl(button1);
+
+    // Кнопка 2
+    const button2 = Button.CreateSimpleButton("button2", "Измерить толщину штангенцирулем");
+    button2.width = "150px";
+    button2.height = "60px";
+    button2.top = "100px";
+    button2.left = "100px";
+    button2.color = "white";
+    button2.background = "blue";
+    button2.onPointerUpObservable.add(() => {
+        this.handleButtonClick("Штангенциркуль", this.MainCamera);
+    });
+    this.advancedTexture.addControl(button2);
+  }
+
+  handleButtonClick(selectedAnswer: string, targetCamera: FreeCamera | null): void {
+    console.log(`Обработчик нажатия кнопки: ${selectedAnswer}`);
+    
+    // Проверяем, какой кнопкой нажали
+    if (selectedAnswer === "Линейка") {
+        console.log("Линейка выбрана, скрываем текущий интерфейс.");
+
+        // Если нажата кнопка "Линейка", скрываем текущий интерфейс
+        if (this.advancedTexture) {
+            this.advancedTexture.dispose(); // Скрываем текущий интерфейс
+            this.advancedTexture = null; // Обнуляем ссылку на интерфейс
+            console.log("Интерфейс скрыт.");
+        }
+
+        // Затем открываем новый интерфейс
+        this.createSecondQuestionInterface();
+    } else {
+        // Обработка для других кнопок (например, "Штангенциркуль")
+        const isCorrect = this.checkAnswer(selectedAnswer); // Проверяем ответ и сохраняем результат
+        console.log(`Ответ: ${selectedAnswer}, правильный: ${isCorrect}`);
+
+        if (targetCamera) {
+            this.scene.activeCamera = targetCamera;
+            console.log(`Переключено на ${targetCamera.name || "камера не инициализирована"} при нажатии на кнопку`);
+        } else {
+            console.log("Целевая камера не инициализирована");
+        }
+
+        // Убираем панель только если ответ правильный
+        if (isCorrect && this.advancedTexture) {
+            this.advancedTexture.dispose();
+            this.advancedTexture = null;
+            console.log("Правильный ответ, интерфейс скрыт.");
+        }
+    }
+}
+    
+createSecondQuestionInterface(): void {
+  console.log("Создаем второй интерфейс вопросов.");
+
+  // Проверяем, не был ли уже создан интерфейс
+  if (this.questionTexture) {
+      console.log("Интерфейс уже существует, выходим.");
+      return;
+  }
+
+  // Создаем текстуру для интерфейса вопросов
+  this.questionTexture = AdvancedDynamicTexture.CreateFullscreenUI("QuestionUI");
+
+  // Добавляем фоновую панель для вопросов и ответов
+  const backgroundRect = new Rectangle();
+backgroundRect.width = "55%"; // Уменьшено на 20%
+backgroundRect.height = "32%"; // Уменьшено на 20%
+backgroundRect.cornerRadius = 16; // Уменьшено на 20%
+backgroundRect.color = "white";
+backgroundRect.thickness = 2;
+backgroundRect.background = "rgba(0, 0, 0, 0)"; // Прозрачный фон
+backgroundRect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+backgroundRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM; // Разместим по низу экрана
+backgroundRect.paddingBottom = "10px"; // Отступ от нижнего края
+this.questionTexture.addControl(backgroundRect);
+
+// Вопрос
+const questionText = new TextBlock();
+questionText.text = "Какова длина дефекта?";
+questionText.color = "white";
+questionText.fontSize = 22.4; // Уменьшено на 20%
+questionText.height = "24px"; // Уменьшено на 20%
+questionText.top = "-64px"; // Уменьшено на 20%
+questionText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+questionText.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+backgroundRect.addControl(questionText);
+
+const correctAnswer = "42 сантиметра";
+
+// Функция для создания кнопки ответа
+const createAnswerButton = (answerText: string) => {
+    const button = Button.CreateSimpleButton("answer", answerText);
+    button.width = "144px"; // Уменьшено на 20%
+    button.height = "40px"; // Уменьшено на 20%
+    button.color = "white";
+    button.fontSize = 12; // Уменьшено на 20%
+    button.background = "#007acc";
+    button.cornerRadius = 8; // Уменьшено на 20%
+    button.paddingTop = "8px"; // Уменьшено на 20%
+    button.paddingBottom = "8px"; // Уменьшено на 20%
+    button.paddingLeft = "12px"; // Уменьшено на 20%
+    button.paddingRight = "12px"; // Уменьшено на 20%
+    button.thickness = 0;
+    button.hoverCursor = "pointer";
+    
+    button.onPointerEnterObservable.add(() => button.background = "#005f99");
+    button.onPointerOutObservable.add(() => button.background = "#007acc");
+
+    button.onPointerClickObservable.add(() => {
+        console.log(`Вы выбрали: ${answerText}`);
+        if (answerText === correctAnswer) {
+            questionText.text = "Правильный ответ!";
+            questionText.color = "lightgreen";
+        } else {
+            questionText.text = "Неправильный ответ.";
+            questionText.color = "red";
+        }
+
+        // Убираем интерфейс после отображения ответа
+        setTimeout(() => {
+            if (this.questionTexture) {
+                this.questionTexture.dispose();
+                this.questionTexture = null;
+                console.log("Интерфейс вопросов удален.");
+            }
+        }, 3000);
+    });
+
+    return button;
+};
+
+// Горизонтальный стек для размещения кнопок
+const buttonStack = new StackPanel();
+buttonStack.isVertical = false;
+buttonStack.height = "64px"; // Уменьшено на 20%
+buttonStack.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+buttonStack.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+backgroundRect.addControl(buttonStack);
+
+// Добавляем кнопки с вариантами ответов
+const answers = ["52 сантиметра", "50 сантиметров", "48 сантиметров", "42 сантиметра"];
+answers.forEach(answer => {
+    const button = createAnswerButton(answer);
+    buttonStack.addControl(button);
+});
+
+console.log("Вопрос с вариантами успешно отображен.");
+}
+
+checkAnswer(selectedAnswer: string): boolean {
+    const correctAnswers = ["Штангенциркуль", "Линейка"]; // Массив с правильными ответами
+
+    if (correctAnswers.includes(selectedAnswer)) { // Проверка на наличие выбранного ответа в массиве
+        console.log("Правильный ответ!"); // Можно добавить сообщение в зависимости от ответа
+        return true; // Возвращаем true для правильного ответа
+    } else {
+        console.log("Неправильный ответ. Попробуйте снова."); // Сообщение для неправильного ответа
+        return false; // Возвращаем false для неправильного ответа
+    }
+}
+
+
+
+  createRayAboveMesh(mesh: AbstractMesh): void {
+    const ray = new Ray(mesh.position, Vector3.Up(), 100);
+  }
+
+  attachHandToCamera(): void {
+    if (this.handModel) {
+      this.handModel.parent = this.scene.activeCamera;
+    }
+  }
+
+  CreateController(): void {
+    const controller = MeshBuilder.CreateBox("controller", { size: 0.1 }, this.scene);
+    controller.position = new Vector3(1, 1, 1);
+    // Переключаемся обратно на основную камеру
+    this.scene.activeCamera = this.MainCamera;
+    controller.physicsImpostor = new PhysicsImpostor(controller, PhysicsImpostor.BoxImpostor, {
+      mass: 1,
+      restitution: 0.9
+      
+    });
+
+
+    
+  }
+
+
+
+  enableDistanceMeasurement(): void {
+    this.measuringDistance = true;
+    this.firstPoint = null;
+    this.secondPoint = null;
+    
+    // Переключаемся обратно на основную камеру
+    this.scene.activeCamera = this.MainCamera;
+
+    // Обработчик кликов
+    this.scene.onPointerDown = (evt, pickResult) => {
+        // Получаем позицию указателя
+        const pointerX = evt.clientX;
+        const pointerY = evt.clientY;
+        
+        console.log(`Клик по координатам: (${pointerX}, ${pointerY})`);
+
+        // Проверяем, был ли клик правой кнопкой мыши
+        if (evt.button === 2) {
+            console.log("Правый клик.");
+
+            if (pickResult.hit && pickResult.pickedPoint) {
+                if (!this.firstPoint) {
+                    // Запоминаем первую точку
+                    this.firstPoint = pickResult.pickedPoint.clone();
+                    console.log("Первая точка:", this.firstPoint);
+                } else if (!this.secondPoint) {
+                    // Запоминаем вторую точку
+                    this.secondPoint = pickResult.pickedPoint.clone();
+                    console.log("Вторая точка:", this.secondPoint);
+
+                    // Вычисляем расстояние
+                    const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+                    console.log("Расстояние между точками:", distance);
+
+                    if (this.firstPoint && this.secondPoint) {
+                        // Показываем расстояние через GUI
+                        this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
+
+                        // Сброс для нового измерения
+                        this.firstPoint = null;
+                        this.secondPoint = null;
+
+                        // Переключаемся обратно на основную камеру
+                        this.scene.activeCamera = this.MainCamera;
+                    }
+                }
+            }
+        } else if (evt.button === 0) {
+            console.log("Левый клик. Замеры не проводятся.");
+        }
+      }}}
+
+
+
+-------------------Пустая сцена----------------------------------
+Level.tsx
+import React, { useEffect, useRef } from 'react';
+import { Level as LevelScene } from '../BabylonExamples/BasicLevel'; // Импортируем класс сцены и переименовываем его
+
+const Level: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      new LevelScene(canvasRef.current); // Просто создаем сцену без присваивания
+    }
+  }, []);
+
+  return (
+    <div>
+      <h3>Babylon Tutor</h3>
+      <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+    </div>
+  );
+};
+
+export default Level; // Экспортируем компонент по умолчанию
+======================================================================================
+BasicLevel.ts
+import { 
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  SceneLoader,
+} from "@babylonjs/core";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.CreateController();
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+  }
+  
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
+    camera.attachControl(this.canvas, true);
+    camera.applyGravity = false;
+    camera.checkCollisions = true;
+    camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели успешно загружены:", map);
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+  }
+}
+===================================================================================
+App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Main from './components/MainPage';
+import Base from './components/Base';
+import Tutor from './components/Tutor';
+import BabylonTest from './components/BabylonTest';
+import BabylonQuestion from './components/BabylonQuestion';
+import BabylonFull from './components/BabylonFull'; // Импортируйте FullExample
+import BasicLevel from './components/Level'; // Импортируйте Level
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Main />} />
+        <Route path="/base" element={<Base />} />
+        <Route path="/tutor" element={<Tutor />} />
+        <Route path="/test" element={<BabylonTest />} />
+        <Route path="/question" element={<BabylonQuestion />} />
+        <Route path="/full" element={<BabylonFull />} />
+        <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
+
+
+======================================================================================================
+import { 
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  HighlightLayer,
+  SceneLoader,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
+import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+  camera!: FreeCamera;
+  triggerManager: TriggersManager;
+  guiTexture: AdvancedDynamicTexture;
+  highlightLayer: HighlightLayer;
+
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.triggerManager = new TriggersManager(
+      this.scene,
+      this.canvas,
+      this.guiTexture
+    );
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+    this.CreateController();
+
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+  }
+  
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture(
+      "/models/cape_hill_4k.hdr",
+      scene,
+      512
+    );
+
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    // Установка начальной позиции камеры для лучшей видимости
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera.attachControl(this.canvas, true);
+
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 4000;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели успешно загружены:", map);
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+
+    
+  }
+}
+=======================================Со сферой======================================
+import { 
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  HighlightLayer,
+  SceneLoader,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  ActionManager,
+  Mesh,
+  ExecuteCodeAction,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture } from "@babylonjs/gui";
+import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+  camera!: FreeCamera;
+  triggerManager: TriggersManager;
+  guiTexture: AdvancedDynamicTexture;
+  highlightLayer: HighlightLayer;
+  bubble: Mesh | null = null; // Изменение типа на Mesh | null
+  bubblePosition: Vector3; // Позиция пузырька
+  inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
+  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли пузырек
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+
+    this.bubblePosition = new Vector3(0, 0, 0); // Инициализация позиции пузырька в конструкторе
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.CreateController();
+
+    // Добавляем обработчики событий для управления клавиатурой
+    this.AddKeyboardControls();
+
+    this.engine.runRenderLoop(() => {
+      this.UpdateBubble(); // Обновляем позицию пузырька
+      this.scene.render();
+    });
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera.attachControl(this.canvas, true);
+
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 4000;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели успешно загружены:", map);
+
+      // Создаем сферу в центре карты
+      const sphere = MeshBuilder.CreateSphere("centerSphere", { diameter: 1 }, this.scene);
+      const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
+      sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красная сфера
+      sphere.material = sphereMaterial;
+      sphere.position = new Vector3(0, 0.5, 0); // Позиция в центре
+
+      // Добавляем кликабельность только для сферы
+      sphere.actionManager = new ActionManager(this.scene);
+      sphere.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          this.CreateBubbleLevel(); // Создаем пузырек при клике на сферу
+        })
+      );
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+}
+
+
+  // Создаем пузырек уровня
+  // Создаем пузырек уровня
+CreateBubbleLevel(): void {
+  if (this.isBubbleCreated) {
+    console.log("Пузырек уже создан, пропускаем создание");
+    return; // Если пузырек уже создан, выходим из функции
+  }
+
+  const bubbleMaterial = new StandardMaterial("bubbleMaterial", this.scene);
+  bubbleMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет пузырька
+
+  this.bubble = MeshBuilder.CreateSphere("bubble", { diameter: 0.5 }, this.scene);
+  this.bubble.material = bubbleMaterial;
+  this.bubble.position = new Vector3(0, 0.5, 0); // Центр карты
+
+  this.isBubbleCreated = true; // Флаг, что пузырек создан
+  console.log("Пузырек создан в центре карты с координатами:", this.bubble.position);
+}
+
+
+
+  // Добавляем обработчики для отслеживания нажатий клавиш
+  AddKeyboardControls(): void {
+    window.addEventListener("keydown", (event) => {
+      this.inputMap[event.key] = true;
+    });
+
+    window.addEventListener("keyup", (event) => {
+      this.inputMap[event.key] = false;
+    });
+  }
+
+  // Обновление позиции пузырька
+  UpdateBubble(): void {
+    // Обновляем положение пузырька, если он создан
+    if (this.bubble) {
+      let moveSpeed = 0.01; // Скорость перемещения пузырька
+  
+      // Перемещаем пузырек по поверхности сферы в ответ на стрелочки
+      if (this.inputMap["ArrowUp"]) {
+        this.bubblePosition.z -= moveSpeed;
+      }
+      if (this.inputMap["ArrowDown"]) {
+        this.bubblePosition.z += moveSpeed;
+      }
+      if (this.inputMap["ArrowLeft"]) {
+        this.bubblePosition.x -= moveSpeed;
+      }
+      if (this.inputMap["ArrowRight"]) {
+        this.bubblePosition.x += moveSpeed;
+      }
+  
+      // Ограничиваем перемещение пузырька в пределах сферы
+      const radius = 0.5; // Радиус сферы (или другой размер)
+      this.bubblePosition.normalize().scaleInPlace(radius); // Ограничиваем на поверхности сферы
+  
+      this.bubble.position.copyFrom(this.bubblePosition); // Применяем обновленную позицию пузырька
+  
+      // Логируем позицию пузырька для отладки
+      console.log("Текущая позиция пузырька:", this.bubblePosition);
+    }
+  }
+}
+============================Готовый код со сферой================================
+import {  
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  HighlightLayer,
+  SceneLoader,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  ActionManager,
+  Mesh,
+  ExecuteCodeAction,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture } from "@babylonjs/gui";
+import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+  camera!: FreeCamera;
+  triggerManager: TriggersManager;
+  guiTexture: AdvancedDynamicTexture;
+  highlightLayer: HighlightLayer;
+  bubble: Mesh | null = null; // Изменение типа на Mesh | null
+  bubblePosition: Vector3; // Позиция пузырька
+  inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
+  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли пузырек
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+
+    this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции пузырька
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.CreateController();
+
+    // Добавляем обработчики событий для управления клавиатурой
+    this.AddKeyboardControls();
+
+    this.engine.runRenderLoop(() => {
+      this.UpdateBubble(); // Обновляем позицию пузырька
+      this.scene.render();
+    });
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera.attachControl(this.canvas, true);
+
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 4000;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели успешно загружены:", map);
+
+      // Создаем сферу в центре карты
+      const sphere = MeshBuilder.CreateSphere("centerSphere", { diameter: 1 }, this.scene);
+      const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
+      sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красная сфера
+      sphere.material = sphereMaterial;
+      sphere.position = new Vector3(0, 1.1, 0); // Позиция в центре
+
+      // Добавляем кликабельность только для сферы
+      sphere.actionManager = new ActionManager(this.scene);
+      sphere.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          this.CreateBubbleLevel(); // Создаем пузырек при клике на сферу
+        })
+      );
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+  }
+
+  // Создаем пузырек уровня
+  // Создаем пузырек уровня
+CreateBubbleLevel(): void {
+  if (this.isBubbleCreated) {
+      console.log("Пузырек уже создан, пропускаем создание");
+      return; // Если пузырек уже создан, выходим из функции
+  }
+  
+  const bubbleMaterial = new StandardMaterial("bubbleMaterial", this.scene);
+  bubbleMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет пузырька
+  bubbleMaterial.alpha = 1; // Убедитесь, что материал не прозрачный
+  
+  this.bubble = MeshBuilder.CreateSphere("bubble", { diameter: 0.2 }, this.scene); // Увеличил размер пузырька
+  this.bubble.material = bubbleMaterial;
+  
+  // Установите позицию Y немного выше сферы
+  this.bubble.position = new Vector3(0, 0.4, 0); // Пузырек над сферой (сфера на высоте 1.5)
+  this.bubble.setEnabled(true); // Убедитесь, что пузырек включен
+  
+  this.bubble.isVisible = true; // Убедитесь, что пузырек видим
+  
+  this.isBubbleCreated = true; // Флаг, что пузырек создан
+  console.log("Пузырек создан в позиции:", this.bubble.position);
+}
+
+  // Добавляем обработчики для отслеживания нажатий клавиш
+  // Обновленный метод AddKeyboardControls
+AddKeyboardControls(): void {
+  window.addEventListener("keydown", (event) => {
+      this.inputMap[event.key] = true;
+  });
+
+  window.addEventListener("keyup", (event) => {
+      this.inputMap[event.key] = false;
+  });
+}
+
+// Обновленный метод UpdateBubble
+UpdateBubble(): void {
+  if (this.bubble) {
+      let moveSpeed = 0.01;
+
+      // Перемещение пузырька по кнопкам
+      if (this.inputMap["8"]) { // Вверх
+          this.bubble.position.z -= moveSpeed;
+      }
+      if (this.inputMap["2"]) { // Вниз
+          this.bubble.position.z += moveSpeed;
+      }
+      if (this.inputMap["4"]) { // Влево
+          this.bubble.position.x -= moveSpeed;
+      }
+      if (this.inputMap["6"]) { // Вправо
+          this.bubble.position.x += moveSpeed;
+      }
+
+      // Получаем центр сферы
+      const sphereCenter = new Vector3(0, 1.1, 0); // Центр сферы (сфера на высоте 1.5)
+      const sphereRadius = 0.5; // Радиус сферы
+
+      // Вычисляем расстояние от пузырька до центра сферы
+      const distanceFromCenter = Vector3.Distance(this.bubble.position, sphereCenter);
+
+      // Если пузырек находится вне границ сферы, перемещаем его на поверхность
+      if (distanceFromCenter > sphereRadius) {
+          // Нормализуем вектор от центра до пузырька и устанавливаем пузырек на радиус сферы
+          const directionToCenter = this.bubble.position.subtract(sphereCenter).normalize();
+          this.bubble.position = sphereCenter.add(directionToCenter.scale(sphereRadius)); // Устанавливаем пузырек на поверхность сферы
+      } else {
+          // Если пузырек внутри сферы, вычисляем его положение на поверхности сферы
+          const distanceToSurface = Math.sqrt(sphereRadius * sphereRadius - 
+              Math.pow(this.bubble.position.x - sphereCenter.x, 2) - 
+              Math.pow(this.bubble.position.z - sphereCenter.z, 2));
+          this.bubble.position.y = sphereCenter.y + distanceToSurface; // Обновляем позицию Y пузырька
+      }
+  }
+}
+
+}
+
+
