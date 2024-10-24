@@ -5,6 +5,7 @@ import {
     ExecuteCodeAction,
     MeshBuilder,
     AbstractMesh,
+    Mesh, // Импортируем Mesh для доступа к константам sideOrientation
   } from "@babylonjs/core";
   
   export class TriggerZone {
@@ -19,19 +20,25 @@ import {
       zonePosition: Vector3,
       onEnterZone: () => void,
       onExitZone?: () => void,
-      camSize: number = 2
+      camSize: number = 2,
+      enableCollision: boolean = false
     ) {
       this.onEnterZone = onEnterZone;
       this.onExitZone = onExitZone;
   
+      // Создаём куб с инвертированными нормалями
       this.interactionZone = MeshBuilder.CreateBox(
         "interactionZone",
-        { size: camSize },
+        { 
+          size: camSize,
+          sideOrientation: Mesh.BACKSIDE // Инвертируем нормали
+        },
         scene
       );
-      this.interactionZone.isVisible = false;
+      this.interactionZone.isVisible = false; // Сделаем куб невидимым, если не требуется визуализация
       this.interactionZone.position = zonePosition;
-      this.interactionZone.checkCollisions = false;
+      this.interactionZone.checkCollisions = enableCollision;
+      this.interactionZone.isPickable = false;
   
       this.cameraCollider = MeshBuilder.CreateBox(
         "cameraCollider",
@@ -40,6 +47,7 @@ import {
       );
       this.cameraCollider.isVisible = false;
       this.cameraCollider.parent = scene.activeCamera;
+      this.cameraCollider.isPickable = false;
   
       this.cameraCollider.actionManager = new ActionManager(scene);
   
