@@ -1,4 +1,4 @@
-import {  
+import {
   Scene,
   Engine,
   Vector3,
@@ -13,6 +13,7 @@ import {
   ActionManager,
   Mesh,
   ExecuteCodeAction,
+  AbstractMesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
@@ -25,10 +26,11 @@ export class Level {
   triggerManager: TriggersManager;
   guiTexture: AdvancedDynamicTexture;
   highlightLayer: HighlightLayer;
-  bubble: Mesh | null = null; // Изменение типа на Mesh | null
-  bubblePosition: Vector3; // Позиция пузырька
+  bubbleMesh: Mesh | null = null; // Меш для Bubble.glb
+  bubblePosition: Vector3; // Позиция меша Bubble.glb
   inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
-  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли пузырек
+  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли меш Bubble.glb
+  glassMesh: Mesh | null = null; // Меш для Glass.glb
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -39,7 +41,7 @@ export class Level {
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
 
-    this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции пузырька
+    this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции меша
 
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -51,7 +53,7 @@ export class Level {
     this.AddKeyboardControls();
 
     this.engine.runRenderLoop(() => {
-      this.UpdateBubble(); // Обновляем позицию пузырька
+      this.UpdateBubbleMesh(); // Обновляем позицию меша
       this.scene.render();
     });
   }
@@ -91,128 +93,124 @@ export class Level {
 
   async CreateEnvironment(): Promise<void> {
     try {
+      // Загрузка карты
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
-      console.log("Модели успешно загружены:", map);
+      console.log("Модели карты успешно загружены:", map);
 
-      // Создаем сферу в центре карты
-      const sphere = MeshBuilder.CreateSphere("centerSphere", { diameter: 1 }, this.scene);
-      const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
-      sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красная сфера
-      sphere.material = sphereMaterial;
-      sphere.position = new Vector3(0, 1.1, 0); // Позиция в центре
+      // Загрузка меша Bubble.glb
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
 
-      // Добавляем кликабельность только для сферы
-      sphere.actionManager = new ActionManager(this.scene);
-      sphere.actionManager.registerAction(
-        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-          this.CreateBubbleLevel(); // Создаем пузырек при клике на сферу
-        })
-      );
+      meshes.forEach((mesh) => {
+        mesh.isPickable = true; // Делаем меш кликабельным
+        mesh.position = new Vector3(0, 0.7, 0); // Задаем начальную позицию меша
+        mesh.rotation.y = Math.PI; // Поворачиваем на 180 градусов
+        mesh.scaling = new Vector3(1, 1, 1); // Масштаб
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Часть меша Bubble.glb была кликнута!");
+            this.CreateBubbleMesh(mesh); // Передаем меш в функцию
+          })
+        );
+      });
+
+      console.log("Меш Bubble.glb загружен и обработан.");
+
+      // Загрузка меша Glass.glb
+      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
+
+      glassMeshes.forEach((mesh) => {
+        // Приведение к типу Mesh для правильного использования
+        const glassMesh = mesh as Mesh;
+        this.glassMesh = glassMesh; // Сохраняем как glassMesh
+        glassMesh.isPickable = false; // Делаем его некликабельным
+        glassMesh.position = new Vector3(0, 0.7, 0); // Устанавливаем позицию ниже Bubble.glb
+        glassMesh.scaling = new Vector3(1, 1, 1); // Задаем масштаб для модели стекла
+      });
+
+      console.log("Меш Glass.glb загружен и установлен.");
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
   }
 
-  // Создаем пузырек уровня
-  // Создаем пузырек уровня
-CreateBubbleLevel(): void {
-  if (this.isBubbleCreated) {
-      console.log("Пузырек уже создан, пропускаем создание");
-      return; // Если пузырек уже создан, выходим из функции
+  // Создаем меш Bubble.glb
+  CreateBubbleMesh(mesh: AbstractMesh): void {
+    if (this.isBubbleCreated) {
+      console.log("Меш уже создан, пропускаем создание");
+      return; // Если меш уже создан, выходим из функции
+    }
+
+    // Приведение AbstractMesh к Mesh
+    const bubbleMesh = mesh as Mesh;
+    if (!bubbleMesh) {
+      console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
+      return;
+    }
+
+    this.bubbleMesh = bubbleMesh; // Сохраняем меш как тип Mesh
+    this.bubbleMesh.position = new Vector3(0, 0.7, 0); // Устанавливаем начальную позицию меша
+    this.isBubbleCreated = true; // Флаг, что меш создан
+    console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
   }
-  
-  const bubbleMaterial = new StandardMaterial("bubbleMaterial", this.scene);
-  bubbleMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет пузырька
-  bubbleMaterial.alpha = 1; // Убедитесь, что материал не прозрачный
-  
-  this.bubble = MeshBuilder.CreateSphere("bubble", { diameter: 0.2 }, this.scene); // Увеличил размер пузырька
-  this.bubble.material = bubbleMaterial;
-  
-  // Установите позицию Y немного выше сферы
-  this.bubble.position = new Vector3(0, 0.4, 0); // Пузырек над сферой (сфера на высоте 1.5)
-  this.bubble.setEnabled(true); // Убедитесь, что пузырек включен
-  
-  this.bubble.isVisible = true; // Убедитесь, что пузырек видим
-  
-  this.isBubbleCreated = true; // Флаг, что пузырек создан
-  console.log("Пузырек создан в позиции:", this.bubble.position);
-}
 
   // Добавляем обработчики для отслеживания нажатий клавиш
-  // Обновленный метод AddKeyboardControls
-AddKeyboardControls(): void {
-  window.addEventListener("keydown", (event) => {
+  AddKeyboardControls(): void {
+    window.addEventListener("keydown", (event) => {
       this.inputMap[event.key] = true;
-  });
+    });
 
-  window.addEventListener("keyup", (event) => {
+    window.addEventListener("keyup", (event) => {
       this.inputMap[event.key] = false;
-  });
-}
+    });
+  }
 
-
-
-// Обновленный метод UpdateBubble
-UpdateBubble(): void {   
-  if (this.bubble) {
+  // Обновленный метод UpdateBubbleMesh
+  UpdateBubbleMesh(): void {
+    if (this.bubbleMesh && this.glassMesh) {
       let moveSpeed = 0.01;
-      let isMoving = false; // Флаг для отслеживания, движется ли пузырек
+      let isMoving = false; // Флаг для отслеживания, движется ли меш
 
-      // Перемещение пузырька по кнопкам
+      // Перемещение меша по кнопкам
       if (this.inputMap["8"]) { // Вверх
-          this.bubble.position.z -= moveSpeed;
-          isMoving = true;
+        this.bubbleMesh.position.z -= moveSpeed;
+        isMoving = true;
       }
       if (this.inputMap["2"]) { // Вниз
-          this.bubble.position.z += moveSpeed;
-          isMoving = true;
+        this.bubbleMesh.position.z += moveSpeed;
+        isMoving = true;
       }
       if (this.inputMap["4"]) { // Влево
-          this.bubble.position.x -= moveSpeed;
-          isMoving = true;
+        this.bubbleMesh.position.x -= moveSpeed;
+        isMoving = true;
       }
       if (this.inputMap["6"]) { // Вправо
-          this.bubble.position.x += moveSpeed;
-          isMoving = true;
+        this.bubbleMesh.position.x += moveSpeed;
+        isMoving = true;
       }
 
-      // Получаем центр сферы
-      const sphereCenter = new Vector3(0, 1.1, 0); // Центр сферы (сфера на высоте 1.1)
-      const sphereRadius = 0.5; // Радиус сферы
-      const tolerance = 0.5; // Увеличенная погрешность для определения центра
+      // Получаем центр меша (Glass.glb)
+      const sphereCenter = this.glassMesh.position; // Центр меша Glass.glb
 
-      // Вычисляем расстояние от пузырька до центра сферы
-      const distanceFromCenter = Vector3.Distance(this.bubble.position, sphereCenter);
+      // Получаем радиус меша Glass.glb
+      const glassRadius = this.glassMesh.scaling.x; // Предполагаем, что меш стекла симметричен
 
-      // Если пузырек движется, устанавливаем цвет на синий
+      // Ограничиваем перемещение по поверхности сферы
+      const directionToCenter = this.bubbleMesh.position.subtract(sphereCenter).normalize();
+      const distanceToCenter = Vector3.Distance(this.bubbleMesh.position, sphereCenter);
+
+      // Проверка, выходит ли меш Bubble.glb за пределы меша Glass.glb
+      if (distanceToCenter > glassRadius - 0.1) { // 0.1 - запас, чтобы не прижимать плотно
+        // Если выходит, возвращаем Bubble.glb обратно на допустимую позицию
+        this.bubbleMesh.position = sphereCenter.add(directionToCenter.scale(glassRadius - 0.1));
+      }
+
       if (isMoving) {
-          if (this.bubble.material instanceof StandardMaterial) {
-              this.bubble.material.diffuseColor = new Color3(0, 0, 1); // Устанавливаем синий цвет
-          }
-      } else if (distanceFromCenter < tolerance) { 
-          // Если пузырек вернулся в центр, устанавливаем цвет на зеленый
-          if (this.bubble.material instanceof StandardMaterial) {
-              this.bubble.material.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
-          }
+        console.log("Bubble.glb двигается в позиции:", this.bubbleMesh.position);
       }
-
-      // Если пузырек находится вне границ сферы, перемещаем его на поверхность
-      if (distanceFromCenter > sphereRadius) {
-          // Нормализуем вектор от центра до пузырька и устанавливаем пузырек на радиус сферы
-          const directionToCenter = this.bubble.position.subtract(sphereCenter).normalize();
-          this.bubble.position = sphereCenter.add(directionToCenter.scale(sphereRadius)); // Устанавливаем пузырек на поверхность сферы
-      } else {
-          // Если пузырек внутри сферы, вычисляем его положение на поверхности сферы
-          const distanceToSurface = Math.sqrt(sphereRadius * sphereRadius - 
-              Math.pow(this.bubble.position.x - sphereCenter.x, 2) - 
-              Math.pow(this.bubble.position.z - sphereCenter.z, 2));
-          this.bubble.position.y = sphereCenter.y + distanceToSurface; // Обновляем позицию Y пузырька
-      }
+    }
   }
-}
-
-
 }
