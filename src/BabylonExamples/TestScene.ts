@@ -60,19 +60,19 @@ export class TestScene {
   
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    // const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-    // hemiLight.intensity = 0.5; // Установите желаемую интенсивность
+    const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+    hemiLight.intensity = 0.5; // Установите желаемую интенсивность
 
     const framesPerSecond = 60;
     const gravity = -9.81;
     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
     scene.collisionsEnabled = true;
 
-    const hdrTexture = new HDRCubeTexture("/models/test_5.hdr", scene, 512);
+    const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
 
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
-    scene.environmentIntensity = 1;
+    scene.environmentIntensity = 0.5;
 
     return scene;
   }
@@ -112,6 +112,18 @@ export class TestScene {
       this.WholeMeshes.forEach((mesh) => {
         mesh.visibility = 0; // Полностью невидимый
       });
+
+      const { meshes: glass } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
+      glass.forEach((mesh) => {
+        mesh.position = new Vector3(0, 10, 0)
+          });
+      const { meshes: bubble } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
+      bubble.forEach((mesh) => {
+        mesh.position = new Vector3(0, 10, 0)
+          });
+
+
+
     
       const keywords = ["beam", "rack", "stairs", "wall", "stand", "anchor", "console", "wave", "fenctrack", "column", "rostverc", "support", "whole"];
       let clickedMeshes = 0;
@@ -224,6 +236,24 @@ export class TestScene {
 
     screenshotButton.onPointerUpObservable.add(() => {
       Tools.CreateScreenshotUsingRenderTarget(this.engine, this.scene.activeCamera!, { width: 1920, height: 1080 });
+    });
+  }
+
+  AddReturnButton(): void {
+    const screenshotButton = Button.CreateSimpleButton("screenshotButton", "Сделать скриншот");
+    screenshotButton.width = "150px";
+    screenshotButton.height = "40px";
+    screenshotButton.color = "white";
+    screenshotButton.cornerRadius = 20;
+    screenshotButton.background = "blue";
+    screenshotButton.top = "20px";
+    screenshotButton.paddingRight = "50px"
+    screenshotButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+    this.guiTexture.addControl(screenshotButton);
+
+    screenshotButton.onPointerUpObservable.add(() => {
+      
     });
   }
 

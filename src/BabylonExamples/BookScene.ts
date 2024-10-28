@@ -75,6 +75,7 @@ export class BookScene {
 
 
         this.CreateController();
+        this.guiManager.createTextInputDialog();
 
         this.engine.runRenderLoop(() => {
             this.scene.render();

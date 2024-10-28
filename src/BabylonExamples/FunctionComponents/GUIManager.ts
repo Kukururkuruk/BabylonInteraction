@@ -1,4 +1,4 @@
-import { AbstractMesh, MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, Animation, MeshBuilder, Scene, Vector3 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
   TextBlock,
@@ -7,6 +7,8 @@ import {
   Rectangle,
   Image,
   TextWrapping,
+  Grid,
+  InputText,
 } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
 
@@ -27,8 +29,12 @@ export class GUIManager {
   private scene: Scene;
   public advancedTexture: AdvancedDynamicTexture;
   private textBlock: TextBlock;
-  private textMessages: string[] | null = null;;
+  private textMessages: string[] | null = null;
   private currentTextIndex: number = 0;
+  private dialogAnimation: Animation;
+  private dialogContainer: Rectangle;
+  private currentDialogBox: Rectangle | null = null;
+  dialogVisible: boolean = true;
 
   constructor(scene: Scene, textMessages: string[]) {
     this.scene = scene;
@@ -94,6 +100,7 @@ export class GUIManager {
   }
 
 
+  
   createGui(): Promise<void> {
     return new Promise((resolve) => {
       // Создаем TextBlock для отображения счетчика кликов
@@ -103,7 +110,9 @@ export class GUIManager {
       this.textBlock.fontSize = 24;
       this.textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       this.textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      this.textBlock.isPointerBlocker = false;
       this.advancedTexture.addControl(this.textBlock);
+
 
       // Добавляем обработчик событий для клавиатуры
       const keydownHandler = (event: KeyboardEvent) => {
@@ -201,24 +210,32 @@ export class GUIManager {
     }
   }
 
-  // Новый метод для создания диалогового окна с переданным текстом
   CreateDialogBox(fullText: string, onComplete?: () => void): void {
+
+    if (this.currentDialogBox) {
+      this.advancedTexture.removeControl(this.currentDialogBox);
+    }
+    // Флаг для видимости окна диалога
+    this.dialogVisible = true;
+
     // Создаем контейнер для диалогового окна
-    const dialogContainer = new Rectangle();
-    dialogContainer.width = "30%";
-    dialogContainer.height = "80%";
-    dialogContainer.thickness = 0;
-    dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    dialogContainer.top = "-10%";
-    dialogContainer.left = "2%";
-    this.advancedTexture.addControl(dialogContainer);
+    this.dialogContainer = new Rectangle();
+    this.dialogContainer.width = "30%";
+    this.dialogContainer.height = "80%";
+    this.dialogContainer.thickness = 0;
+    this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.dialogContainer.top = "-13%";
+    this.dialogContainer.left = "2%";
+    this.advancedTexture.addControl(this.dialogContainer);
+
+    this.currentDialogBox = this.dialogContainer;
 
     // Добавляем изображение диалогового облачка
     const dialogImage = new Image("dialogImage", "/models/pixelSpeech.png");
     dialogImage.width = "100%";
     dialogImage.height = "100%";
-    dialogContainer.addControl(dialogImage);
+    this.dialogContainer.addControl(dialogImage);
 
     // Добавляем текст с эффектом печатания
     const dialogText = new TextBlock();
@@ -231,7 +248,7 @@ export class GUIManager {
     dialogText.paddingLeft = "15%";
     dialogText.paddingRight = "15%";
     dialogText.paddingBottom = "7%";
-    dialogContainer.addControl(dialogText);
+    this.dialogContainer.addControl(dialogText);
 
     let currentIndex = 0;
 
@@ -246,7 +263,125 @@ export class GUIManager {
         }
       }
     }, 50); // Скорость печатания (в миллисекундах)
+
+    // Создаем кнопку для скрытия диалогового окна
+    const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
+    hideButton.width = "150px";
+    hideButton.height = "50px";
+    hideButton.color = "white";
+    hideButton.background = "gray";
+    hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    hideButton.top = "-10px";
+    this.advancedTexture.addControl(hideButton);
+
+    // Анимация появления и исчезновения диалогового окна
+    this.dialogAnimation = new Animation(
+        "dialogAnimation",
+        "left",
+        30,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+
+    // Обработка события клика по кнопке
+    hideButton.onPointerUpObservable.add(() => {
+      this.dialogVisible = !this.dialogVisible;
+        this.updateDialogAnimation(this.dialogVisible);
+    });
+
+    // Запускаем анимацию для первоначального появления
+    this.updateDialogAnimation(this.dialogVisible);
   }
+
+  updateDialogAnimation(visible) {
+    const keys = [];
+    if (visible) {
+        keys.push({ frame: 0, value: 400 });
+        keys.push({ frame: 30, value: 20 });
+    } else {
+        keys.push({ frame: 0, value: 20 });
+        keys.push({ frame: 30, value: 400 });
+    }
+    this.dialogAnimation.setKeys(keys);
+    this.scene.beginDirectAnimation(this.dialogContainer, [this.dialogAnimation], 0, 30, false);
+  }
+
+  createTextInputDialog(): void {
+    const textBlocks: TextBlock[] = [];
+    const inputFields: InputText[] = [];
+
+    // Создаем контейнер для элементов
+    const container = new Rectangle();
+    container.width = "30%";
+    container.height = "80%";
+    container.thickness = 0;
+    container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    container.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    container.top = "-13%";
+    container.left = "2%";
+    this.advancedTexture.addControl(container);
+
+    // Добавляем изображение диалогового облачка
+    const containerImage = new Image("dialogImage", "/models/pixelSpeech.png");
+    containerImage.width = "100%";
+    containerImage.height = "100%";
+    container.addControl(containerImage);
+
+    // Создаем Grid внутри контейнера
+    const grid = new Grid();
+    grid.width = "80%";
+    grid.height = "50%";
+    grid.paddingBottom = '10%'
+    grid.background = 'red'
+
+    // Определяем 2 колонки для текст-блоков и полей ввода
+    grid.addColumnDefinition(1); // Колонка для TextBlock
+    grid.addColumnDefinition(1); // Колонка для InputText
+
+    // Определяем 3 строки для трех элементов
+    grid.addRowDefinition(1); // Строка 0
+    grid.addRowDefinition(1); // Строка 1
+    grid.addRowDefinition(1); // Строка 2
+
+    for (let i = 0; i < 3; i++) {
+        // Создаем текстовый блок
+        const textBlock = new TextBlock();
+        textBlock.text = `Текст ${i + 1}`;
+        textBlock.color = "black";
+        textBlock.fontSize = 24;
+        textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        
+        // Добавляем TextBlock в первую колонку Grid
+        grid.addControl(textBlock, i, 0);
+        textBlocks.push(textBlock);
+
+        // Создаем поле ввода
+        const inputField = new InputText();
+        inputField.width = "90%";
+        inputField.height = "30px";
+        inputField.color = "white";
+        inputField.background = "grey";
+        
+        // Добавляем InputText во вторую колонку Grid
+        grid.addControl(inputField, i, 1);
+        inputFields.push(inputField);
+
+        // Пример использования: при изменении текста
+        inputField.onBlurObservable.add(() => {
+            console.log(`Введенное значение в поле ${i + 1}: ${inputField.text}`);
+        });
+    }
+
+    // Добавляем Grid в контейнер
+    container.addControl(grid);
+
+    // Добавляем контейнер на экран
+    this.advancedTexture.addControl(container);
+}
+
+
 }
 
 
