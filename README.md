@@ -2379,3 +2379,496 @@ UpdateBubble(): void {
 }
 
 
+=====================================Готовый код с управлением с экрана =====================================================
+import {
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  HighlightLayer,
+  SceneLoader,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  ActionManager,
+  Mesh,
+  ExecuteCodeAction,
+  AbstractMesh,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
+import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+  camera!: FreeCamera;
+  triggerManager: TriggersManager;
+  guiTexture: AdvancedDynamicTexture;
+  highlightLayer: HighlightLayer;
+  bubbleMesh: Mesh | null = null; // Меш для Bubble.glb
+  bubblePosition: Vector3; // Позиция меша Bubble.glb
+  inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
+  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли меш Bubble.glb
+  glassMesh: Mesh | null = null; // Меш для Glass.glb
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+
+    this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции меша
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.CreateController();
+
+    // Добавляем обработчики событий для управления клавиатурой
+    this.AddKeyboardControls();
+    
+    // Создаем UI с кнопками стрелок
+    this.CreateArrowsUI();
+
+    // Активируем управление правой кнопкой мыши
+    this.EnableRightClickMovement();
+
+    this.engine.runRenderLoop(() => {
+      this.UpdateBubbleMesh(); // Обновляем позицию меша
+      this.scene.render();
+    });
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera.attachControl(this.canvas, true);
+
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 4000;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      // Загрузка карты
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели карты успешно загружены:", map);
+
+      // Загрузка меша Bubble.glb
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
+
+      meshes.forEach((mesh) => {
+        mesh.isPickable = true; // Делаем меш кликабельным
+        mesh.position = new Vector3(0, 0.7, 0); // Задаем начальную позицию меша
+        mesh.rotation.y = Math.PI; // Поворачиваем на 180 градусов
+        mesh.scaling = new Vector3(1, 1, 1); // Масштаб
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Часть меша Bubble.glb была кликнута!");
+            this.CreateBubbleMesh(mesh); // Передаем меш в функцию
+          })
+        );
+      });
+
+      console.log("Меш Bubble.glb загружен и обработан.");
+
+      // Загрузка меша Glass.glb
+      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
+
+      glassMeshes.forEach((mesh) => {
+        const glassMesh = mesh as Mesh;
+        this.glassMesh = glassMesh;
+        glassMesh.isPickable = false;
+        glassMesh.position = new Vector3(0, 0.7, 0);
+        glassMesh.scaling = new Vector3(1, 1, 1);
+      });
+
+      console.log("Меш Glass.glb загружен и установлен.");
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+  }
+
+  // Создаем меш Bubble.glb
+  CreateBubbleMesh(mesh: AbstractMesh): void {
+    if (this.isBubbleCreated) {
+      console.log("Меш уже создан, пропускаем создание");
+      return;
+    }
+
+    const bubbleMesh = mesh as Mesh;
+    if (!bubbleMesh) {
+      console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
+      return;
+    }
+
+    this.bubbleMesh = bubbleMesh;
+    this.bubbleMesh.position = new Vector3(0, 0.7, 0);
+    this.isBubbleCreated = true;
+    console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
+  }
+
+  // Добавляем обработчики для отслеживания нажатий клавиш
+  AddKeyboardControls(): void {
+    window.addEventListener("keydown", (event) => {
+      this.inputMap[event.key] = true;
+    });
+
+    window.addEventListener("keyup", (event) => {
+      this.inputMap[event.key] = false;
+    });
+  }
+
+  // Обновленный метод UpdateBubbleMesh
+  UpdateBubbleMesh(): void {
+    if (this.bubbleMesh && this.glassMesh) {
+      let moveSpeed = 0.01;
+      let isMoving = false;
+
+      // Перемещение меша по кнопкам
+      if (this.inputMap["8"]) { // Вверх
+        this.bubbleMesh.position.z -= moveSpeed;
+        isMoving = true;
+      }
+      if (this.inputMap["2"]) { // Вниз
+        this.bubbleMesh.position.z += moveSpeed;
+        isMoving = true;
+      }
+      if (this.inputMap["4"]) { // Влево
+        this.bubbleMesh.position.x -= moveSpeed;
+        isMoving = true;
+      }
+      if (this.inputMap["6"]) { // Вправо
+        this.bubbleMesh.position.x += moveSpeed;
+        isMoving = true;
+      }
+
+      const sphereCenter = this.glassMesh.position;
+      const glassRadius = this.glassMesh.scaling.x;
+
+      const directionToCenter = this.bubbleMesh.position.subtract(sphereCenter).normalize();
+      const distanceToCenter = Vector3.Distance(this.bubbleMesh.position, sphereCenter);
+
+      if (distanceToCenter > glassRadius - 0.1) {
+        this.bubbleMesh.position = sphereCenter.add(directionToCenter.scale(glassRadius - 0.1));
+      }
+
+      if (isMoving) {
+        console.log("Bubble.glb двигается в позиции:", this.bubbleMesh.position);
+      }
+    }
+  }
+
+  // Создаем стрелки для управления в интерфейсе
+  CreateArrowsUI(): void {
+    const moveSpeed = 0.01;
+
+    const createArrowButton = (text: string, position: [number, number], onClick: () => void) => {
+      const button = Button.CreateSimpleButton(`button${text}`, text);
+      button.width = "40px";
+      button.height = "40px";
+      button.color = "white";
+      button.background = "grey";
+      button.onPointerClickObservable.add(onClick);
+      button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      button.left = `${position[0]}px`;
+      button.top = `${position[1]}px`;
+      this.guiTexture.addControl(button);
+    };
+
+    // Создаем кнопки и устанавливаем их позицию на экране
+createArrowButton("↑", [0, 100], () => {  // Перемещаем вверх
+  if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
+});
+createArrowButton("↓", [0, 150], () => { // Перемещаем вниз
+  if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
+});
+createArrowButton("←", [-100, 125], () => { // Перемещаем влево
+  if (this.bubbleMesh) this.bubbleMesh.position.x -= moveSpeed; 
+});
+createArrowButton("→", [100, 125], () => { // Перемещаем вправо
+  if (this.bubbleMesh) this.bubbleMesh.position.x += moveSpeed; 
+});
+  
+  }
+
+  // Обработчик правой кнопки мыши для перемещения
+  EnableRightClickMovement(): void {
+    window.addEventListener("mousedown", (event) => {
+        if (event.button === 2) {
+            const moveSpeed = 0.01;
+            if (this.bubbleMesh) {
+                this.bubbleMesh.position.x += moveSpeed;
+            }
+        }
+    });
+}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+import {
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  FreeCamera,
+  HDRCubeTexture,
+  HighlightLayer,
+  SceneLoader,
+  Mesh,
+  ActionManager,
+  ExecuteCodeAction,
+  Color3,
+  AbstractMesh,
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
+import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+
+export class Level {
+  scene: Scene;
+  engine: Engine;
+  camera!: FreeCamera;
+  triggerManager: TriggersManager;
+  guiTexture: AdvancedDynamicTexture;
+  highlightLayer: HighlightLayer;
+  bubbleMesh: Mesh | null = null; // Меш для Bubble.glb
+  bubblePosition: Vector3; // Позиция меша Bubble.glb
+  inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
+  isBubbleCreated: boolean = false; // Флаг для проверки, создан ли меш Bubble.glb
+  glassMesh: Mesh | null = null; // Меш для Glass.glb
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+  
+
+    this.scene = this.CreateScene();
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+    this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    
+
+    this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции меша
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.CreateController();
+
+    // Добавляем обработчики событий для управления клавиатурой
+    this.AddKeyboardControls();
+    
+    // Создаем UI с кнопками стрелок
+    this.CreateArrowsUI();
+
+    // Активируем управление правой кнопкой мыши
+    this.EnableRightClickMovement();
+
+    this.engine.runRenderLoop(() => {
+      // Здесь можно вставить любые обновления состояния
+      this.CheckCenterPosition(); // Проверяем позицию для подсветки
+  
+      // Рендерим сцену
+      this.scene.render();
+  });
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera.attachControl(this.canvas, true);
+
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 4000;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели карты успешно загружены:", map);
+
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
+      meshes.forEach((mesh) => {
+        mesh.isPickable = true;
+        mesh.position = new Vector3(0, 0.7, 0);
+        mesh.rotation.y = Math.PI;
+        mesh.scaling = new Vector3(0.7, 0.7, 0.7);
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            console.log("Часть меша Bubble.glb была кликнута!");
+            this.CreateBubbleMesh(mesh);
+          })
+        );
+      });
+      console.log("Меш Bubble.glb загружен и обработан.");
+
+      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
+      glassMeshes.forEach((mesh) => {
+        const glassMesh = mesh as Mesh;
+        this.glassMesh = glassMesh;
+        glassMesh.isPickable = false;
+        glassMesh.position = new Vector3(0, 0.7, 0);
+        glassMesh.scaling = new Vector3(0.7, 0.7, 0.7);
+      });
+
+      console.log("Меш Glass.glb загружен и установлен.");
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    }
+  }
+
+  CreateBubbleMesh(mesh: AbstractMesh): void {
+    if (this.isBubbleCreated) {
+      console.log("Меш уже создан, пропускаем создание");
+      return;
+    }
+    const bubbleMesh = mesh as Mesh;
+    if (!bubbleMesh) {
+      console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
+      return;
+    }
+    this.bubbleMesh = bubbleMesh;
+    this.bubbleMesh.position = new Vector3(0, 0.7, 0);
+    this.isBubbleCreated = true;
+    console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
+  }
+
+  AddKeyboardControls(): void {
+    window.addEventListener("keydown", (event) => {
+      this.inputMap[event.key] = true;
+    });
+    window.addEventListener("keyup", (event) => {
+      this.inputMap[event.key] = false;
+    });
+  }
+
+  CreateArrowsUI(): void {
+    const moveSpeed = 0.01;
+    const createArrowButton = (text: string, position: [number, number], onClick: () => void) => {
+      const button = Button.CreateSimpleButton(`button${text}`, text);
+      button.width = "40px";
+      button.height = "40px";
+      button.color = "white";
+      button.background = "grey";
+      button.onPointerClickObservable.add(onClick);
+      button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      button.left = `${position[0]}px`;
+      button.top = `${position[1]}px`;
+      this.guiTexture.addControl(button);
+    };
+
+    createArrowButton("↑", [0, 100], () => {  
+      if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
+    });
+    createArrowButton("↓", [0, 150], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
+    });
+    createArrowButton("←", [-100, 125], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.x -= moveSpeed; 
+    });
+    createArrowButton("→", [100, 125], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.x += moveSpeed; 
+    });
+  }
+
+  EnableRightClickMovement(): void {
+    window.addEventListener("mousedown", (event) => {
+        if (event.button === 2) {
+            const moveSpeed = 0.01;
+            if (this.bubbleMesh) {
+                this.bubbleMesh.position.x += moveSpeed;
+            }
+        }
+    });
+  }
+
+  // Проверка позиции и подсветка, если меш в центре
+  CheckCenterPosition(): void {
+    const centerPosition = new Vector3(0, 0.7, 0);
+    const threshold = 0.05;
+    if (this.bubbleMesh && this.bubbleMesh.position.subtract(centerPosition).length() < threshold) {
+      this.highlightLayer.addMesh(this.bubbleMesh, Color3.Green());
+    } else if (this.bubbleMesh) {
+      this.highlightLayer.removeMesh(this.bubbleMesh);
+    }
+  }
+}

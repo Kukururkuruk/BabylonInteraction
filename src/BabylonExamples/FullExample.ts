@@ -75,6 +75,7 @@ export class FullExample {
     this.scene = this.CreateScene();
     this.setupCamera();
     this.setupLighting();
+    
      // Создаем HighlightLayer
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
     this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение, если нужно

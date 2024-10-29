@@ -7,16 +7,14 @@ import {
   HDRCubeTexture,
   HighlightLayer,
   SceneLoader,
-  MeshBuilder,
-  StandardMaterial,
-  Color3,
-  ActionManager,
   Mesh,
+  ActionManager,
   ExecuteCodeAction,
+  Color3,
   AbstractMesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { TriggersManager } from "./FunctionComponents/TriggerManager3";
 
 export class Level {
@@ -31,15 +29,20 @@ export class Level {
   inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
   isBubbleCreated: boolean = false; // Флаг для проверки, создан ли меш Bubble.glb
   glassMesh: Mesh | null = null; // Меш для Glass.glb
+  isHighlighted: boolean = false; // Флаг для отслеживания состояния подсветки
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
     this.engine.displayLoadingUI();
+  
 
     this.scene = this.CreateScene();
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+    this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    
 
     this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции меша
 
@@ -51,11 +54,20 @@ export class Level {
 
     // Добавляем обработчики событий для управления клавиатурой
     this.AddKeyboardControls();
+    
+    // Создаем UI с кнопками стрелок
+    this.CreateArrowsUI();
+
+    // Активируем управление правой кнопкой мыши
+    this.EnableRightClickMovement();
 
     this.engine.runRenderLoop(() => {
-      this.UpdateBubbleMesh(); // Обновляем позицию меша
+      // Здесь можно вставить любые обновления состояния
+      this.CheckCenterPosition(); // Проверяем позицию для подсветки
+  
+      // Рендерим сцену
       this.scene.render();
-    });
+  });
   }
 
   CreateScene(): Scene {
@@ -93,42 +105,35 @@ export class Level {
 
   async CreateEnvironment(): Promise<void> {
     try {
-      // Загрузка карты
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
       console.log("Модели карты успешно загружены:", map);
 
-      // Загрузка меша Bubble.glb
       const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
-
       meshes.forEach((mesh) => {
-        mesh.isPickable = true; // Делаем меш кликабельным
-        mesh.position = new Vector3(0, 0.7, 0); // Задаем начальную позицию меша
-        mesh.rotation.y = Math.PI; // Поворачиваем на 180 градусов
-        mesh.scaling = new Vector3(1, 1, 1); // Масштаб
+        mesh.isPickable = true;
+        mesh.position = new Vector3(0, 0.7, 0);
+        mesh.rotation.y = Math.PI;
+        mesh.scaling = new Vector3(0.7, 0.7, 0.7);
         mesh.actionManager = new ActionManager(this.scene);
         mesh.actionManager.registerAction(
           new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
             console.log("Часть меша Bubble.glb была кликнута!");
-            this.CreateBubbleMesh(mesh); // Передаем меш в функцию
+            this.CreateBubbleMesh(mesh);
           })
         );
       });
-
       console.log("Меш Bubble.glb загружен и обработан.");
 
-      // Загрузка меша Glass.glb
       const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
-
       glassMeshes.forEach((mesh) => {
-        // Приведение к типу Mesh для правильного использования
         const glassMesh = mesh as Mesh;
-        this.glassMesh = glassMesh; // Сохраняем как glassMesh
-        glassMesh.isPickable = false; // Делаем его некликабельным
-        glassMesh.position = new Vector3(0, 0.7, 0); // Устанавливаем позицию ниже Bubble.glb
-        glassMesh.scaling = new Vector3(1, 1, 1); // Задаем масштаб для модели стекла
+        this.glassMesh = glassMesh;
+        glassMesh.isPickable = false;
+        glassMesh.position = new Vector3(0, 0.7, 0);
+        glassMesh.scaling = new Vector3(0.7, 0.7, 0.7);
       });
 
       console.log("Меш Glass.glb загружен и установлен.");
@@ -137,79 +142,92 @@ export class Level {
     }
   }
 
-  // Создаем меш Bubble.glb
   CreateBubbleMesh(mesh: AbstractMesh): void {
     if (this.isBubbleCreated) {
       console.log("Меш уже создан, пропускаем создание");
-      return; // Если меш уже создан, выходим из функции
+      return;
     }
-
-    // Приведение AbstractMesh к Mesh
     const bubbleMesh = mesh as Mesh;
     if (!bubbleMesh) {
       console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
       return;
     }
-
-    this.bubbleMesh = bubbleMesh; // Сохраняем меш как тип Mesh
-    this.bubbleMesh.position = new Vector3(0, 0.7, 0); // Устанавливаем начальную позицию меша
-    this.isBubbleCreated = true; // Флаг, что меш создан
+    this.bubbleMesh = bubbleMesh;
+    this.bubbleMesh.position = new Vector3(0, 0.7, 0);
+    this.isBubbleCreated = true;
     console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
   }
 
-  // Добавляем обработчики для отслеживания нажатий клавиш
   AddKeyboardControls(): void {
     window.addEventListener("keydown", (event) => {
       this.inputMap[event.key] = true;
     });
-
     window.addEventListener("keyup", (event) => {
       this.inputMap[event.key] = false;
     });
   }
 
-  // Обновленный метод UpdateBubbleMesh
-  UpdateBubbleMesh(): void {
-    if (this.bubbleMesh && this.glassMesh) {
-      let moveSpeed = 0.01;
-      let isMoving = false; // Флаг для отслеживания, движется ли меш
+  CreateArrowsUI(): void {
+    const moveSpeed = 0.01;
+    const createArrowButton = (text: string, position: [number, number], onClick: () => void) => {
+      const button = Button.CreateSimpleButton(`button${text}`, text);
+      button.width = "40px";
+      button.height = "40px";
+      button.color = "white";
+      button.background = "grey";
+      button.onPointerClickObservable.add(onClick);
+      button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      button.left = `${position[0]}px`;
+      button.top = `${position[1]}px`;
+      this.guiTexture.addControl(button);
+    };
 
-      // Перемещение меша по кнопкам
-      if (this.inputMap["8"]) { // Вверх
-        this.bubbleMesh.position.z -= moveSpeed;
-        isMoving = true;
-      }
-      if (this.inputMap["2"]) { // Вниз
-        this.bubbleMesh.position.z += moveSpeed;
-        isMoving = true;
-      }
-      if (this.inputMap["4"]) { // Влево
-        this.bubbleMesh.position.x -= moveSpeed;
-        isMoving = true;
-      }
-      if (this.inputMap["6"]) { // Вправо
-        this.bubbleMesh.position.x += moveSpeed;
-        isMoving = true;
-      }
+    createArrowButton("↑", [0, 100], () => {  
+      if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
+    });
+    createArrowButton("↓", [0, 150], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
+    });
+    createArrowButton("←", [-100, 125], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.x -= moveSpeed; 
+    });
+    createArrowButton("→", [100, 125], () => { 
+      if (this.bubbleMesh) this.bubbleMesh.position.x += moveSpeed; 
+    });
+  }
 
-      // Получаем центр меша (Glass.glb)
-      const sphereCenter = this.glassMesh.position; // Центр меша Glass.glb
+  EnableRightClickMovement(): void {
+    window.addEventListener("mousedown", (event) => {
+        if (event.button === 2) {
+            const moveSpeed = 0.01;
+            if (this.bubbleMesh) {
+                this.bubbleMesh.position.x += moveSpeed;
+            }
+        }
+    });
+  }
 
-      // Получаем радиус меша Glass.glb
-      const glassRadius = this.glassMesh.scaling.x; // Предполагаем, что меш стекла симметричен
-
-      // Ограничиваем перемещение по поверхности сферы
-      const directionToCenter = this.bubbleMesh.position.subtract(sphereCenter).normalize();
-      const distanceToCenter = Vector3.Distance(this.bubbleMesh.position, sphereCenter);
-
-      // Проверка, выходит ли меш Bubble.glb за пределы меша Glass.glb
-      if (distanceToCenter > glassRadius - 0.1) { // 0.1 - запас, чтобы не прижимать плотно
-        // Если выходит, возвращаем Bubble.glb обратно на допустимую позицию
-        this.bubbleMesh.position = sphereCenter.add(directionToCenter.scale(glassRadius - 0.1));
-      }
-
-      if (isMoving) {
-        console.log("Bubble.glb двигается в позиции:", this.bubbleMesh.position);
+  // Проверка позиции и подсветка, если меш в центре
+  CheckCenterPosition(): void {
+    const centerPosition = new Vector3(0, 0.7, 0); // Определяем центр
+    const threshold = 0.01; // Уменьшаем порог для более строгой проверки
+  
+    if (this.bubbleMesh) {
+      // Проверяем, находится ли пузырь в пределах порога
+      const distance = this.bubbleMesh.position.subtract(centerPosition).length();
+      
+      // Проверяем, находится ли меш в центре
+      const isInCenter = distance < threshold;
+  
+      if (isInCenter && !this.isHighlighted) {
+        this.highlightLayer.addMesh(this.bubbleMesh, Color3.Green());
+        console.log("Пузырь в центре!"); // Логируем, когда пузырь в центре
+        this.isHighlighted = true; // Устанавливаем флаг подсветки
+      } else if (!isInCenter && this.isHighlighted) {
+        this.highlightLayer.removeMesh(this.bubbleMesh);
+        console.log("Пузырь не в центре!"); // Логируем, когда пузырь не в центре
+        this.isHighlighted = false; // Сбрасываем флаг подсветки
       }
     }
   }
