@@ -178,10 +178,15 @@ export class Level {
       return;
     }
     this.bubbleMesh = bubbleMesh;
-    this.bubbleMesh.position = new Vector3(0, 0.7, 0);
+
+    // Генерация случайной позиции с уменьшенным диапазоном ещё в 2 раза
+const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
+const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
+    this.bubbleMesh.position = new Vector3(randomX, 0.7, randomZ);
+
     this.isBubbleCreated = true;
     console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
-  }
+}
 
   AddKeyboardControls(): void {
     window.addEventListener("keydown", (event) => {
@@ -224,11 +229,13 @@ export class Level {
     });
 
     // Добавьте обработчик события для клавиши "i"
+    // Добавляем обработчик события для клавиш "i" и "ш"
     window.addEventListener("keydown", (event) => {
-        if (event.key === "i") {
-            this.ToggleInventory();
-        }
-    });
+      if (event.key === "i" || event.key === "ш") {
+          console.log("Клавиша 'i' или 'ш' нажата!"); // Лог для проверки
+          this.ToggleInventory();
+      }
+  });
 }
 
 // Метод для переключения состояния инвентаря
@@ -273,6 +280,29 @@ private HideInventory(): void {
     });
   }
 
+
+  CompleteLevel(): void {
+    console.log("Процесс завершен: Пузырь в центре!");
+    
+    // Отобразить финальное сообщение
+    const endMessage = Button.CreateSimpleButton("endMessage", "Пузырь установлен в центре!");
+    endMessage.width = "200px";
+    endMessage.height = "40px";
+    endMessage.color = "white";
+    endMessage.background = "green";
+    endMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    endMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    this.guiTexture.addControl(endMessage);
+  
+    // Остановить цикл рендеринга
+    this.engine.stopRenderLoop();
+  
+    // Закрыть приложение (если необходимо)
+    setTimeout(() => {
+      window.close(); // Это работает только для окон, открытых скриптами
+    }, 2000); // Подождать 2 секунды перед закрытием
+  }
+
   // Проверка позиции и подсветка, если меш в центре
   CheckCenterPosition(): void {
     const centerPosition = new Vector3(0, 0.7, 0); // Определяем центр
@@ -289,6 +319,7 @@ private HideInventory(): void {
         this.highlightLayer.addMesh(this.bubbleMesh, Color3.Green());
         console.log("Пузырь в центре!"); // Логируем, когда пузырь в центре
         this.isHighlighted = true; // Устанавливаем флаг подсветки
+        this.CompleteLevel(); // Завершаем процесс
       } else if (!isInCenter && this.isHighlighted) {
         this.highlightLayer.removeMesh(this.bubbleMesh);
         console.log("Пузырь не в центре!"); // Логируем, когда пузырь не в центре
