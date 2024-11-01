@@ -10,6 +10,7 @@ import BasicLevel from './components/Level'; // Импортируйте Level
 import BabylonBook from './components/BabylonBook';
 import BabylonDistance from './components/BabylonDistance';
 import BabylonBeton from './components/BabylonBeton';
+import BabylonNewDistanceScene from './components/BabylonNewDistance';
 
 
 const App: React.FC = () => {
@@ -26,6 +27,7 @@ const App: React.FC = () => {
         <Route path='/book' element={<BabylonBook />} />
         <Route path='/distance' element={<BabylonDistance />} />
         <Route path='/beton' element={<BabylonBeton />} />
+        <Route path='/newdistance' element={<BabylonNewDistanceScene />} />
       </Routes>
     </Router>
   );

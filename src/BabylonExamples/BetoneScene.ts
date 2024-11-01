@@ -12,6 +12,7 @@ import {
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
+import { DialogPage } from "./FunctionComponents/DialogPage";
   
   export class BetoneScene {
     scene: Scene;
@@ -21,6 +22,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
     private guiTexture: AdvancedDynamicTexture;
     private triggerManager: TriggerManager2;
     private guiManager: GUIManager;
+    private dialogPage: DialogPage;
     private zoneTriggered: boolean = false;
     private targetMeshes2: AbstractMesh[];
     private beam2: AbstractMesh;
@@ -35,6 +37,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
       this.guiManager = new GUIManager(this.scene, this.textMessages);
       this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
       this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
+      this.dialogPage = new DialogPage()
   
       this.CreateEnvironment().then(() => {
         this.engine.hideLoadingUI();
@@ -97,6 +100,11 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
           mesh.checkCollisions = true;
         });
 
+        const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+        BrokenMeshes.forEach((mesh) => {
+            mesh.visibility = 0;
+        });
+
         this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
         this.beam2 = this.targetMeshes2[1];
   
@@ -109,10 +117,10 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
     }
 
     BetonTrigger(): void {
-        const fullText1 = "Нажми на кнопку для начала измерения.";
-        const fullText2 = "Переместите мышку в то место шде хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения";
-        const fullText3 = "Отлично, а теперь нажмите на кнопку для премещение на основную карту";
-        this.guiManager.CreateDialogBox(fullText1)
+
+        const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+        this.guiManager.CreateDialogBox([page1]);
+
         const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
         let clickCount = 0;
         let clickCountText: TextBlock | null = null;
@@ -128,8 +136,9 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
                 this.zoneTriggered = true;
                 console.log("Вошли в зону кликов");
                 this.triggerManager.createStartButton('Начать', () => {
-                // Показываем сообщение
-                this.guiManager.CreateDialogBox(fullText2)
+
+                const page2 = this.dialogPage.addText("Переместите мышку в то место шде хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения")
+                this.guiManager.CreateDialogBox([page2]);
         
                 // Активируем взаимодействие с beam2
                 if (this.beam2) {
@@ -155,7 +164,10 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
                   // Активируем режим лазера для второй триггер-зоны
                   this.triggerManager.activateLaserMode2(this.beam2);
                   this.triggerManager.createStartButton('Завершить', () => {
-                    this.guiManager.CreateDialogBox(fullText3)
+
+                    const page3 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+                    this.guiManager.CreateDialogBox([page3]);
+
                     // Показываем сообщение с общим количеством кликов
                     const totalClicksMessage = new TextBlock();
                     totalClicksMessage.text = `Вы кликнули ${clickCount} раз(а)`;

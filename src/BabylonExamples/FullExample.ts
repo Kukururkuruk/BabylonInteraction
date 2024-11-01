@@ -760,4 +760,7 @@ checkAnswer(selectedAnswer: string): boolean {
         } else if (evt.button === 0) {
             console.log("Левый клик. Замеры не проводятся.");
         }
-      }}}
+      }}
+    
+    
+    }

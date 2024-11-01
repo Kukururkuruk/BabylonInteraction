@@ -11,6 +11,7 @@ import {
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { AdvancedDynamicTexture } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
+import { DialogPage } from "./FunctionComponents/DialogPage";
   
   export class DistanceScene {
     scene: Scene;
@@ -20,6 +21,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
     private guiTexture: AdvancedDynamicTexture;
     private triggerManager: TriggerManager2;
     private guiManager: GUIManager;
+    private dialogPage: DialogPage;
     private zoneTriggered: boolean = false;
   
     constructor(canvas: HTMLCanvasElement) {
@@ -30,6 +32,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
       this.scene = this.CreateScene();
       this.guiManager = new GUIManager(this.scene, this.textMessages);
       this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+      this.dialogPage = new DialogPage()
       this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture);
   
       this.CreateEnvironment().then(() => {
@@ -102,11 +105,12 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
     }
 
     DistanceTrigger(): void {
-        const fullText1 =
-              "Нажми на кнопку для начала измерения.";
         const fullText2 = "Перед тобой позиции в которую можно поставить дальнометр, выбери правильную";
         const fullText3 = "Куда нужно направить дальнометр";
-        this.guiManager.CreateDialogBox(fullText1)
+
+        const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+        this.guiManager.CreateDialogBox([page1])
+
         const firstZonePosition = new Vector3(-10.622146207334794, 8.8, -3.62);
         const firstTriggerZone = this.triggerManager.setupZoneTrigger(
             firstZonePosition,
@@ -114,7 +118,10 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
                 if (!this.zoneTriggered) {
                     this.zoneTriggered = true;
                     this.triggerManager.createStartButton('Начать',() => {
-                        this.guiManager.CreateDialogBox(fullText2)
+
+                        const page2 = this.dialogPage.addText("Перед тобой позиции в которую можно поставить дальнометр, выбери правильную")
+                        this.guiManager.CreateDialogBox([page2])
+
                         this.triggerManager.disableCameraMovement();
                         const targetPosition = firstTriggerZone.getInteractionZone().getAbsolutePosition();
                         this.triggerManager.setCameraPositionAndTarget(
@@ -125,7 +132,10 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
                             targetPosition
                         );
                         this.triggerManager.createRadioButtons(() => {
-                            this.guiManager.CreateDialogBox(fullText3)
+
+                            const page3 = this.dialogPage.addText("Куда нужно направить дальнометр")
+                            this.guiManager.CreateDialogBox([page3])
+
                           this.triggerManager.setCameraPositionAndTarget(
                             Math.PI / 2,
                             -1,

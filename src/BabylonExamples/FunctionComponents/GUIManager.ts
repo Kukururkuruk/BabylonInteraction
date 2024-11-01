@@ -6,7 +6,6 @@ import {
   Button,
   Rectangle,
   Image,
-  TextWrapping,
   Grid,
   InputText,
 } from "@babylonjs/gui";
@@ -37,7 +36,7 @@ export class GUIManager {
   private clickSound: Sound;
   dialogVisible: boolean = true;
 
-  constructor(scene: Scene, textMessages: string[]) {
+  constructor(scene: Scene, textMessages?: string[]) {
     this.scene = scene;
     this.textMessages = textMessages;
     this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI(
@@ -85,7 +84,7 @@ export class GUIManager {
 
 
   createRouteButton(ref: string): void {
-    const startButton = Button.CreateSimpleButton("startBtn", "Вернуться на карту");
+    const startButton = Button.CreateSimpleButton("startBtn", "Перейти");
     startButton.width = "150px";
     startButton.height = "40px";
     startButton.color = "white";
@@ -138,6 +137,8 @@ export class GUIManager {
       window.addEventListener("keydown", keydownHandler);
     });
   }
+
+  
 
 
   
@@ -211,357 +212,407 @@ export class GUIManager {
     }
   }
 
-  // CreateDialogBox(fullText: string, onComplete?: () => void): void {
+//     CreateDialogBox(fullText: string, onComplete?: () => void): void {
 
-  //   if (this.currentDialogBox) {
-  //     this.advancedTexture.removeControl(this.currentDialogBox);
-  //   }
-  //   // Флаг для видимости окна диалога
-  //   this.dialogVisible = true;
+//     if (this.currentDialogBox) {
+//       this.advancedTexture.removeControl(this.currentDialogBox);
+//     }
+//     // Флаг для видимости окна диалога
+//     this.dialogVisible = true;
 
-  //   // Создаем контейнер для диалогового окна
-  //   this.dialogContainer = new Rectangle();
-  //   this.dialogContainer.width = "30%";
-  //   this.dialogContainer.height = "67%";
-  //   this.dialogContainer.thickness = 0;
-  //   this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-  //   this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-  //   this.dialogContainer.top = "0%";
-  //   this.dialogContainer.left = "2%";
-  //   this.advancedTexture.addControl(this.dialogContainer);
+//     // Создаем контейнер для диалогового окна
+//     this.dialogContainer = new Rectangle();
+//     this.dialogContainer.width = "30%";
+//     this.dialogContainer.height = "67%";
+//     this.dialogContainer.thickness = 0;
+//     this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+//     this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+//     this.dialogContainer.top = "0%";
+//     this.dialogContainer.left = "2%";
+//     this.advancedTexture.addControl(this.dialogContainer);
 
-  //   this.currentDialogBox = this.dialogContainer;
+//     this.currentDialogBox = this.dialogContainer;
 
-  //   const backgroundRect = new Rectangle();
-  //   backgroundRect.width = "70%";
-  //   backgroundRect.height = "90%";
-  //   backgroundRect.thickness = 0;
-  //   backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
+//     const backgroundRect = new Rectangle();
+//     backgroundRect.width = "70%";
+//     backgroundRect.height = "90%";
+//     backgroundRect.thickness = 0;
+//     backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
     
-  //   // Добавляем фон внутрь контейнера диалогового окна
-  //   this.dialogContainer.addControl(backgroundRect);
+//     // Добавляем фон внутрь контейнера диалогового окна
+//     this.dialogContainer.addControl(backgroundRect);
     
-  //   // Добавляем изображение рамки поверх фона
-  //   const dialogImage = new Image("dialogImage", "/models/frame4.png");
-  //   dialogImage.width = "100%";
-  //   dialogImage.height = "100%";
-  //   this.dialogContainer.addControl(dialogImage);
+//     // Добавляем изображение рамки поверх фона
+//     const dialogImage = new Image("dialogImage", "/models/frame4.png");
+//     dialogImage.width = "100%";
+//     dialogImage.height = "100%";
+//     this.dialogContainer.addControl(dialogImage);
 
-  //   // Добавляем текст с эффектом печатания
-  //   const dialogText = new TextBlock();
-  //   dialogText.text = "";
-  //   dialogText.color = "#212529";
-  //   dialogText.fontSize = "4%"; // Адаптивный размер шрифта
-  //   dialogText.fontFamily = "Segoe UI"
-  //   dialogText.resizeToFit = true;
-  //   dialogText.textWrapping = TextWrapping.WordWrap; // Используем enum
-  //   dialogText.width = '90%'
-  //   dialogText.paddingTop = "2%";
-  //   dialogText.paddingLeft = "15%";
-  //   dialogText.paddingRight = "15%";
-  //   dialogText.paddingBottom = "7%";
-  //   this.dialogContainer.addControl(dialogText);
+//     const page1 = new Rectangle();
+//     page1.width = "100%";
+//     page1.height = "100%";
+//     page1.thickness = 0;
+//     page1.isVisible = false;
 
-  //   let currentIndex = 0;
+//     // Добавляем текст с эффектом печатания
+//     const dialogText = new TextBlock();
+//     dialogText.text = "";
+//     dialogText.color = "#212529";
+//     dialogText.fontSize = "4%"; // Адаптивный размер шрифта
+//     dialogText.fontFamily = "Segoe UI"
+//     dialogText.resizeToFit = true;
+//     dialogText.textWrapping = TextWrapping.WordWrap; // Используем enum
+//     dialogText.width = '90%'
+//     dialogText.paddingTop = "2%";
+//     dialogText.paddingLeft = "15%";
+//     dialogText.paddingRight = "15%";
+//     dialogText.paddingBottom = "7%";
+//     page1.addControl(dialogText);
+//     this.dialogContainer.addControl(page1);
 
-  //   // Функция для анимации печатания текста
-  //   const typingInterval = setInterval(() => {
-  //     dialogText.text += fullText[currentIndex];
-  //     currentIndex++;
-  //     if (currentIndex >= fullText.length) {
-  //       clearInterval(typingInterval);
-  //       if (onComplete) {
-  //         onComplete();
-  //       }
-  //     }
-  //   }, 50); // Скорость печатания (в миллисекундах)
+//     let currentIndex = 0;
+
+//     // Функция для анимации печатания текста
+//     const typingInterval = setInterval(() => {
+//       dialogText.text += fullText[currentIndex];
+//       currentIndex++;
+//       if (currentIndex >= fullText.length) {
+//         clearInterval(typingInterval);
+//         if (onComplete) {
+//           onComplete();
+//         }
+//       }
+//     }, 50); // Скорость печатания (в миллисекундах)
 
 
 
-  //   // Создаем кнопку для скрытия диалогового окна
-  //   const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
-  //   hideButton.width = "150px";
-  //   hideButton.height = "50px";
-  //   hideButton.color = "white";
-  //   hideButton.background = "gray";
-  //   hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-  //   hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-  //   hideButton.top = "-10px";
-  //   this.advancedTexture.addControl(hideButton);
+//     const textBlocks: TextBlock[] = [];
+//     const inputFields: InputText[] = [];
 
-  //   // Анимация появления и исчезновения диалогового окна
-  //   this.dialogAnimation = new Animation(
-  //       "dialogAnimation",
-  //       "left",
-  //       30,
-  //       Animation.ANIMATIONTYPE_FLOAT,
-  //       Animation.ANIMATIONLOOPMODE_CONSTANT
-  //   );
+//     const page2 = new Rectangle();
+//     page2.width = "100%";
+//     page2.height = "100%";
+//     page2.thickness = 0;
+//     page2.isVisible = false;
 
-  //   // Обработка события клика по кнопке
-  //   hideButton.onPointerUpObservable.add(() => {
-  //     this.dialogVisible = !this.dialogVisible;
-  //       this.updateDialogAnimation(this.dialogVisible);
-  //   });
+//     // Создаем Grid внутри контейнера
+//     const grid = new Grid();
+//     grid.width = "60%";
+//     grid.height = "50%";
+//     grid.paddingBottom = '10%';
+//     // grid.background = 'red';
 
-  //   // Запускаем анимацию для первоначального появления
-  //   this.updateDialogAnimation(this.dialogVisible);
-  // }
+//     // Определяем 2 колонки для текст-блоков и полей ввода
+//     grid.addColumnDefinition(1); // Колонка для TextBlock
+//     grid.addColumnDefinition(1); // Колонка для InputText
 
-    CreateDialogBox(fullText: string, onComplete?: () => void): void {
+//     // Определяем 6 строк: первая строка займет 2 колонки
+//     grid.addRowDefinition(1); // Строка 0 (для заголовка)
+//     grid.addRowDefinition(1); // Строка 1
+//     grid.addRowDefinition(1); // Строка 2
+//     grid.addRowDefinition(1); // Строка 3
+//     grid.addRowDefinition(1); // Строка 4
+//     grid.addRowDefinition(1); // Строка 5
 
-    if (this.currentDialogBox) {
-      this.advancedTexture.removeControl(this.currentDialogBox);
-    }
-    // Флаг для видимости окна диалога
-    this.dialogVisible = true;
+//     // Добавляем текстовый блок в первую строку, объединяя его на две колонки
+//     const headerTextBlock = new TextBlock();
+//     headerTextBlock.text = "Конструкции"; // Заголовок
+//     headerTextBlock.color = "black";
+//     headerTextBlock.fontSize = "50%";
+//     headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+//     headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
-    // Создаем контейнер для диалогового окна
-    this.dialogContainer = new Rectangle();
-    this.dialogContainer.width = "30%";
-    this.dialogContainer.height = "67%";
-    this.dialogContainer.thickness = 0;
-    this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    this.dialogContainer.top = "0%";
-    this.dialogContainer.left = "2%";
-    this.advancedTexture.addControl(this.dialogContainer);
+//     // Объединяем ячейки заголовка
+//     grid.addControl(headerTextBlock, 0, 0); // Заголовок в первой ячейке
+//     grid.addControl(headerTextBlock, 0, 1); // Вторую ячейку также заполняем для объединения
+//     const construction = ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"]
+//     // Создаем текстовые блоки и поля ввода
+//     for (let i = 0; i < 5; i++) {
+//         // Создаем текстовый блок
+//         const textBlock = new TextBlock();
+//         textBlock.text = `${construction[i]}`;
+//         textBlock.color = "black";
+//         textBlock.fontSize = "40%";
+//         textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+//         textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
-    this.currentDialogBox = this.dialogContainer;
+//         // Добавляем TextBlock в первую колонку Grid
+//         grid.addControl(textBlock, i + 1, 0); // Начинаем с 1, чтобы пропустить заголовок
+//         textBlocks.push(textBlock);
 
-    const backgroundRect = new Rectangle();
-    backgroundRect.width = "70%";
-    backgroundRect.height = "90%";
-    backgroundRect.thickness = 0;
-    backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
+//         // Создаем поле ввода
+//         const inputField = new InputText();
+//         inputField.width = "90%";
+//         inputField.height = "90%";
+//         inputField.color = "white";
+//         inputField.background = "grey";
+
+//         // Добавляем InputText во вторую колонку Grid
+//         grid.addControl(inputField, i + 1, 1);
+//         inputFields.push(inputField);
+
+//         // Пример использования: при изменении текста
+//         inputField.onBlurObservable.add(() => {
+//             console.log(`Введенное значение в поле ${i + 1}: ${inputField.text}`);
+//         });
+//     }
+
+//     // Устанавливаем rowspan для заголовка, чтобы он занимал обе колонки
+//     headerTextBlock.height = "100%";
+//     headerTextBlock.width = "100%";
     
-    // Добавляем фон внутрь контейнера диалогового окна
-    this.dialogContainer.addControl(backgroundRect);
-    
-    // Добавляем изображение рамки поверх фона
-    const dialogImage = new Image("dialogImage", "/models/frame4.png");
-    dialogImage.width = "100%";
-    dialogImage.height = "100%";
-    this.dialogContainer.addControl(dialogImage);
+//     // Добавляем Grid в контейнер
+//     page2.addControl(grid);
+//     this.dialogContainer.addControl(page2);
 
-    const page1 = new Rectangle();
-    page1.width = "100%";
-    page1.height = "100%";
-    page1.thickness = 0;
-    page1.isVisible = false;
 
-    // Добавляем текст с эффектом печатания
-    const dialogText = new TextBlock();
-    dialogText.text = "";
-    dialogText.color = "#212529";
-    dialogText.fontSize = "4%"; // Адаптивный размер шрифта
-    dialogText.fontFamily = "Segoe UI"
-    dialogText.resizeToFit = true;
-    dialogText.textWrapping = TextWrapping.WordWrap; // Используем enum
-    dialogText.width = '90%'
-    dialogText.paddingTop = "2%";
-    dialogText.paddingLeft = "15%";
-    dialogText.paddingRight = "15%";
-    dialogText.paddingBottom = "7%";
-    page1.addControl(dialogText);
-    this.dialogContainer.addControl(page1);
 
-    let currentIndex = 0;
+//     let currentPageIndex = 0;
+//     const pages = [page1, page2];
 
-    // Функция для анимации печатания текста
-    const typingInterval = setInterval(() => {
-      dialogText.text += fullText[currentIndex];
-      currentIndex++;
-      if (currentIndex >= fullText.length) {
-        clearInterval(typingInterval);
-        if (onComplete) {
-          onComplete();
-        }
+//     const updatePageVisibility = () => {
+//         pages.forEach((page, index) => page.isVisible = index === currentPageIndex);
+//     };
+//     updatePageVisibility();
+
+//     const navigationGrid = new Grid();
+// navigationGrid.width = "30%";
+// navigationGrid.height = "7%";
+// navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+// navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+// navigationGrid.top = "-10%";
+
+// // Определяем 2 колонки для кнопок
+// navigationGrid.addColumnDefinition(1);
+// navigationGrid.addColumnDefinition(1);
+
+// const initializeSound = () => {
+//   if (!this.clickSound) {
+//       this.clickSound = new Sound("clickSound", "/models/Dust_3.wav", this.scene, null, { autoplay: false });
+//       this.clickSound.setVolume(0.3);
+//   }
+// };
+
+// // Создаем кнопки "Previous" и "Next"
+// const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
+// prevPageButton.width = "90%";
+// prevPageButton.height = "90%";
+// prevPageButton.color = "white";
+// prevPageButton.background = "gray";
+// prevPageButton.fontSize = "40%"
+// prevPageButton.onPointerUpObservable.add(() => {
+//   initializeSound();
+//     currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
+//     updatePageVisibility();
+//     this.clickSound.play()
+// });
+
+// const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
+// nextPageButton.width = "90%";
+// nextPageButton.height = "90%";
+// nextPageButton.color = "white";
+// nextPageButton.background = "gray";
+// nextPageButton.fontSize = "40%"
+// nextPageButton.onPointerUpObservable.add(() => {
+//   initializeSound();
+//     currentPageIndex = (currentPageIndex + 1) % pages.length;
+//     updatePageVisibility();
+//     this.clickSound.play()
+// });
+
+// // Добавляем кнопки в соответствующие колонки Grid
+// navigationGrid.addControl(prevPageButton, 0, 0);
+// navigationGrid.addControl(nextPageButton, 0, 1);
+
+// // Добавляем Grid с кнопками в контейнер диалога
+// this.dialogContainer.addControl(navigationGrid);
+
+
+
+//     // Создаем кнопку для скрытия диалогового окна
+//     const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
+//     hideButton.width = "150px";
+//     hideButton.height = "50px";
+//     hideButton.color = "white";
+//     hideButton.background = "gray";
+//     hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+//     hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+//     hideButton.top = "-10px";
+//     this.advancedTexture.addControl(hideButton);
+
+//     // Анимация появления и исчезновения диалогового окна
+//     this.dialogAnimation = new Animation(
+//         "dialogAnimation",
+//         "left",
+//         30,
+//         Animation.ANIMATIONTYPE_FLOAT,
+//         Animation.ANIMATIONLOOPMODE_CONSTANT
+//     );
+
+//     // Обработка события клика по кнопке
+//     hideButton.onPointerUpObservable.add(() => {
+//       this.dialogVisible = !this.dialogVisible;
+//         this.updateDialogAnimation(this.dialogVisible);
+//     });
+
+//     // Запускаем анимацию для первоначального появления
+//     this.updateDialogAnimation(this.dialogVisible);
+//   }
+
+
+
+
+    CreateDialogBox( pages: Rectangle[]): void {
+
+      if (this.currentDialogBox) {
+        this.advancedTexture.removeControl(this.currentDialogBox);
       }
-    }, 50); // Скорость печатания (в миллисекундах)
+      // Флаг для видимости окна диалога
+      this.dialogVisible = true;
 
+      // Создаем контейнер для диалогового окна
+      this.dialogContainer = new Rectangle();
+      this.dialogContainer.width = "30%";
+      this.dialogContainer.height = "67%";
+      this.dialogContainer.thickness = 0;
+      this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      this.dialogContainer.top = "0%";
+      this.dialogContainer.left = "3%";
+      this.advancedTexture.addControl(this.dialogContainer);
 
+      this.currentDialogBox = this.dialogContainer;
 
-    const textBlocks: TextBlock[] = [];
-    const inputFields: InputText[] = [];
+      const backgroundRect = new Rectangle();
+      backgroundRect.width = "70%";
+      backgroundRect.height = "90%";
+      backgroundRect.thickness = 0;
+      backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
+      
+      // Добавляем фон внутрь контейнера диалогового окна
+      this.dialogContainer.addControl(backgroundRect);
+      
+      // Добавляем изображение рамки поверх фона
+      const dialogImage = new Image("dialogImage", "/models/frame4.png");
+      dialogImage.width = "100%";
+      dialogImage.height = "100%";
+      this.dialogContainer.addControl(dialogImage);
 
-    const page2 = new Rectangle();
-    page2.width = "100%";
-    page2.height = "100%";
-    page2.thickness = 0;
-    page2.isVisible = false;
+      
 
-    // Создаем Grid внутри контейнера
-    const grid = new Grid();
-    grid.width = "60%";
-    grid.height = "50%";
-    grid.paddingBottom = '10%';
-    // grid.background = 'red';
-
-    // Определяем 2 колонки для текст-блоков и полей ввода
-    grid.addColumnDefinition(1); // Колонка для TextBlock
-    grid.addColumnDefinition(1); // Колонка для InputText
-
-    // Определяем 6 строк: первая строка займет 2 колонки
-    grid.addRowDefinition(1); // Строка 0 (для заголовка)
-    grid.addRowDefinition(1); // Строка 1
-    grid.addRowDefinition(1); // Строка 2
-    grid.addRowDefinition(1); // Строка 3
-    grid.addRowDefinition(1); // Строка 4
-    grid.addRowDefinition(1); // Строка 5
-
-    // Добавляем текстовый блок в первую строку, объединяя его на две колонки
-    const headerTextBlock = new TextBlock();
-    headerTextBlock.text = "Конструкции"; // Заголовок
-    headerTextBlock.color = "black";
-    headerTextBlock.fontSize = "50%";
-    headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-    headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-    // Объединяем ячейки заголовка
-    grid.addControl(headerTextBlock, 0, 0); // Заголовок в первой ячейке
-    grid.addControl(headerTextBlock, 0, 1); // Вторую ячейку также заполняем для объединения
-    const construction = ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"]
-    // Создаем текстовые блоки и поля ввода
-    for (let i = 0; i < 5; i++) {
-        // Создаем текстовый блок
-        const textBlock = new TextBlock();
-        textBlock.text = `${construction[i]}`;
-        textBlock.color = "black";
-        textBlock.fontSize = "40%";
-        textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-        // Добавляем TextBlock в первую колонку Grid
-        grid.addControl(textBlock, i + 1, 0); // Начинаем с 1, чтобы пропустить заголовок
-        textBlocks.push(textBlock);
-
-        // Создаем поле ввода
-        const inputField = new InputText();
-        inputField.width = "90%";
-        inputField.height = "90%";
-        inputField.color = "white";
-        inputField.background = "grey";
-
-        // Добавляем InputText во вторую колонку Grid
-        grid.addControl(inputField, i + 1, 1);
-        inputFields.push(inputField);
-
-        // Пример использования: при изменении текста
-        inputField.onBlurObservable.add(() => {
-            console.log(`Введенное значение в поле ${i + 1}: ${inputField.text}`);
-        });
-    }
-
-    // Устанавливаем rowspan для заголовка, чтобы он занимал обе колонки
-    headerTextBlock.height = "100%";
-    headerTextBlock.width = "100%";
-    
-    // Добавляем Grid в контейнер
-    page2.addControl(grid);
-    this.dialogContainer.addControl(page2);
-
-
-
-    let currentPageIndex = 0;
-    const pages = [page1, page2];
-
-    const updatePageVisibility = () => {
-        pages.forEach((page, index) => page.isVisible = index === currentPageIndex);
-    };
-    updatePageVisibility();
-
-    const navigationGrid = new Grid();
-navigationGrid.width = "30%";
-navigationGrid.height = "7%";
-navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-navigationGrid.top = "-10%";
-
-// Определяем 2 колонки для кнопок
-navigationGrid.addColumnDefinition(1);
-navigationGrid.addColumnDefinition(1);
-
-const initializeSound = () => {
-  if (!this.clickSound) {
-      this.clickSound = new Sound("clickSound", "/models/Dust_3.wav", this.scene, null, { autoplay: false });
-      this.clickSound.setVolume(0.3);
-  }
-};
-
-// Создаем кнопки "Previous" и "Next"
-const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
-prevPageButton.width = "90%";
-prevPageButton.height = "90%";
-prevPageButton.color = "white";
-prevPageButton.background = "gray";
-prevPageButton.fontSize = "40%"
-prevPageButton.onPointerUpObservable.add(() => {
-  initializeSound();
-    currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
-    updatePageVisibility();
-    this.clickSound.play()
-});
-
-const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
-nextPageButton.width = "90%";
-nextPageButton.height = "90%";
-nextPageButton.color = "white";
-nextPageButton.background = "gray";
-nextPageButton.fontSize = "40%"
-nextPageButton.onPointerUpObservable.add(() => {
-  initializeSound();
-    currentPageIndex = (currentPageIndex + 1) % pages.length;
-    updatePageVisibility();
-    this.clickSound.play()
-});
-
-// Добавляем кнопки в соответствующие колонки Grid
-navigationGrid.addControl(prevPageButton, 0, 0);
-navigationGrid.addControl(nextPageButton, 0, 1);
-
-// Добавляем Grid с кнопками в контейнер диалога
-this.dialogContainer.addControl(navigationGrid);
-
-
-
-    // Создаем кнопку для скрытия диалогового окна
-    const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
-    hideButton.width = "150px";
-    hideButton.height = "50px";
-    hideButton.color = "white";
-    hideButton.background = "gray";
-    hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-    hideButton.top = "-10px";
-    this.advancedTexture.addControl(hideButton);
-
-    // Анимация появления и исчезновения диалогового окна
-    this.dialogAnimation = new Animation(
-        "dialogAnimation",
-        "left",
-        30,
-        Animation.ANIMATIONTYPE_FLOAT,
-        Animation.ANIMATIONLOOPMODE_CONSTANT
-    );
-
-    // Обработка события клика по кнопке
-    hideButton.onPointerUpObservable.add(() => {
-      this.dialogVisible = !this.dialogVisible;
-        this.updateDialogAnimation(this.dialogVisible);
+      pages.forEach((page) => {
+        page.isVisible = false;  // Все страницы скрыты изначально
+        this.dialogContainer.addControl(page);
     });
 
-    // Запускаем анимацию для первоначального появления
-    this.updateDialogAnimation(this.dialogVisible);
-  }
+
+
+      let currentPageIndex = 0;
+
+      const updatePageVisibility = () => {
+          pages.forEach((page, index) => page.isVisible = index === currentPageIndex);
+      };
+      updatePageVisibility();
+
+
+
+      if (pages.length > 1) {  const navigationGrid = new Grid();
+        navigationGrid.width = "30%";
+        navigationGrid.height = "7%";
+        navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        navigationGrid.top = "-10%";
+
+        // Определяем 2 колонки для кнопок
+        navigationGrid.addColumnDefinition(1);
+        navigationGrid.addColumnDefinition(1);
+
+        const initializeSound = () => {
+        if (!this.clickSound) {
+            this.clickSound = new Sound("clickSound", "/models/Dust_3.wav", this.scene, null, { autoplay: false });
+            this.clickSound.setVolume(0.05);
+        }
+        };
+
+        // Создаем кнопки "Previous" и "Next"
+        const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
+        prevPageButton.width = "90%";
+        prevPageButton.height = "90%";
+        prevPageButton.color = "white";
+        prevPageButton.background = "gray";
+        prevPageButton.fontSize = "40%"
+        prevPageButton.onPointerUpObservable.add(() => {
+        initializeSound();
+          currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
+          updatePageVisibility();
+          this.clickSound.play()
+        });
+
+        const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
+        nextPageButton.width = "90%";
+        nextPageButton.height = "90%";
+        nextPageButton.color = "white";
+        nextPageButton.background = "gray";
+        nextPageButton.fontSize = "40%"
+        nextPageButton.onPointerUpObservable.add(() => {
+        initializeSound();
+          currentPageIndex = (currentPageIndex + 1) % pages.length;
+          updatePageVisibility();
+          this.clickSound.play()
+        });
+
+        // Добавляем кнопки в соответствующие колонки Grid
+        navigationGrid.addControl(prevPageButton, 0, 0);
+        navigationGrid.addControl(nextPageButton, 0, 1);
+
+        // Добавляем Grid с кнопками в контейнер диалога
+        this.dialogContainer.addControl(navigationGrid);
+      }
+
+
+
+      // Создаем кнопку для скрытия диалогового окна
+      const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
+      hideButton.width = "150px";
+      hideButton.height = "50px";
+      hideButton.color = "white";
+      hideButton.background = "gray";
+      hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      hideButton.top = "-10px";
+      this.advancedTexture.addControl(hideButton);
+
+      // Анимация появления и исчезновения диалогового окна
+      this.dialogAnimation = new Animation(
+          "dialogAnimation",
+          "left",
+          30,
+          Animation.ANIMATIONTYPE_FLOAT,
+          Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+
+      // Обработка события клика по кнопке
+      hideButton.onPointerUpObservable.add(() => {
+        this.dialogVisible = !this.dialogVisible;
+          this.updateDialogAnimation(this.dialogVisible);
+      });
+
+    }
+
+
+
+
+
+
+
 
   updateDialogAnimation(visible) {
     const keys = [];
     if (visible) {
         keys.push({ frame: 0, value: 500 });
-        keys.push({ frame: 30, value: 55 });
+        keys.push({ frame: 30, value: 40 });
     } else {
-        keys.push({ frame: 0, value: 55 });
+        keys.push({ frame: 0, value: 40 });
         keys.push({ frame: 30, value: 500 });
     }
     this.dialogAnimation.setKeys(keys);
@@ -661,6 +712,20 @@ this.dialogContainer.addControl(navigationGrid);
     // Добавляем контейнер на экран
     this.advancedTexture.addControl(container);
 }
+
+  // Метод для показа сообщения с расстоянием
+  showDistanceMessage(message: string): void {
+    const textBlock = new TextBlock();
+    textBlock.text = message;
+    textBlock.color = "white";
+    textBlock.fontSize = 24;
+    this.advancedTexture.addControl(textBlock);
+    
+    // Удаление сообщения через 5 секунд
+    setTimeout(() => {
+      this.advancedTexture.removeControl(textBlock); // Удаляем текстовый блок
+    }, 3000);
+  }
 
 
 

@@ -13,6 +13,7 @@ import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
+import { DialogPage } from "./FunctionComponents/DialogPage";
 
 export class BookScene {
     scene: Scene;
@@ -21,7 +22,8 @@ export class BookScene {
     camera: FreeCamera;
     private guiTexture: AdvancedDynamicTexture;
     private triggerManager: TriggerManager2;
-    private guiManager: GUIManager; // Используем GUIManager
+    private guiManager: GUIManager;
+    private dialogPage: DialogPage;
     openModal?: (keyword: string) => void;
     private greenHighlightLayer: HighlightLayer;
     private blueHighlightLayer: HighlightLayer;
@@ -49,6 +51,7 @@ export class BookScene {
         this.blueHighlightLayer = new HighlightLayer("blueHL", this.scene);
 
         this.guiManager = new GUIManager(this.scene, this.textMessages);
+        this.dialogPage = new DialogPage();
 
         this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         this.triggerManager = new TriggerManager2(
@@ -58,20 +61,19 @@ export class BookScene {
 
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
-      
-            // После загрузки окружения вызываем CreateDialogBox
-            const fullText1 =
-              "Привет! Здесь ты можешь посмотреть информацию о сооружениях но перед этим пройди обучение по передвижению.";
-            const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты ты можешь узнать про них информацию. Синим подсвечиваются те на которые ты уже кликал. В левом верхнем углу общее количество кликабельных сооружений";
-      
-            this.guiManager.CreateDialogBox(fullText1, async () => {
-              // После завершения печати первого текста вызываем createGui()
-              await this.guiManager.createGui();
-      
-              // Затем отображаем второй текст в диалоговом окне
-              this.guiManager.CreateDialogBox(fullText2);
-            });
-          });
+
+            const page1 = this.dialogPage.addText("Привет! Здесь ты можешь посмотреть информацию о сооружениях но перед этим пройди обучение по передвижению.", async () => {
+                
+                // После завершения печати первого текста вызываем createGui()
+                await this.guiManager.createGui();
+                
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченые объекты ты можешь узнать про них информацию. Синим подсвечиваются те на которые ты уже кликал. В левом верхнем углу общее количество кликабельных сооружений")
+                this.guiManager.CreateDialogBox([page2]);
+              })
+ 
+            this.guiManager.CreateDialogBox([page1]);
+          }
+        );
 
 
         this.CreateController();
@@ -142,9 +144,18 @@ export class BookScene {
                 mesh.checkCollisions = true;
             });
 
-            this.BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-            this.BrokenMeshes.forEach((mesh) => {
-                mesh.visibility = 0; // Полностью видимый
+            const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
+            nonCollizionMeshs.map((item) => {
+                const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+                nonCollizionMesh.forEach((mesh) => {
+                    mesh.visibility = 0.5;
+                    mesh.checkCollisions = false
+                });
+            })
+
+            const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+            BrokenMeshes.forEach((mesh) => {
+                mesh.visibility = 0;
             });
 
             // Определение группированных мешей
