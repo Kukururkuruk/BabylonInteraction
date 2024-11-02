@@ -7,6 +7,11 @@ import BabylonTest from './components/BabylonTest';
 import BabylonQuestion from './components/BabylonQuestion';
 import BabylonFull from './components/BabylonFull'; // Импортируйте FullExample
 import BasicLevel from './components/Level'; // Импортируйте Level
+import BabylonBook from './components/BabylonBook';
+import BabylonDistance from './components/BabylonDistance';
+import BabylonBeton from './components/BabylonBeton';
+import BabylonTotal from './components/BabylonTotal';
+
 
 const App: React.FC = () => {
   return (
@@ -19,6 +24,10 @@ const App: React.FC = () => {
         <Route path="/question" element={<BabylonQuestion />} />
         <Route path="/full" element={<BabylonFull />} />
         <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
+        <Route path='/book' element={<BabylonBook />} />
+        <Route path='/distance' element={<BabylonDistance />} />
+        <Route path='/beton' element={<BabylonBeton />} />
+        <Route path="/total" element={<BabylonTotal />} />
       </Routes>
     </Router>
   );

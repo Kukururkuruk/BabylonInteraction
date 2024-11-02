@@ -23,6 +23,18 @@ const Main: React.FC = () => {
       <button>
         <Link to="/Level">Go to LevelPage</Link>
       </button>
+      <button>
+        <Link to="/book">Go to Book Page</Link>
+      </button>
+      <button>
+        <Link to="/distance">Go to Distance Page</Link>
+      </button>
+      <button>
+        <Link to="/beton">Go to Beton Page</Link>
+      </button>
+      <button>
+        <Link to="/total">Go to Total Page</Link>
+      </button>
     </div>
   );
 };

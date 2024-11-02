@@ -175,6 +175,10 @@ export class FullExample {
 
   async CreateEnvironment(): Promise<void> {
     const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+    if (!mapMeshes.length) {
+      console.error("Не удалось загрузить меши из файла.");
+      return;
+  }
     this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
     this.engine.displayLoadingUI();
     mapMeshes.forEach((mesh) => {
