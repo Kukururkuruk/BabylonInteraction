@@ -13,6 +13,7 @@ import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
+import { DialogPage } from "./FunctionComponents/DialogPage";
 
 export class QuestionScene {
   scene: Scene;
@@ -22,6 +23,7 @@ export class QuestionScene {
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private guiManager: GUIManager; // Используем GUIManager
+  private dialogPage: DialogPage;
   openModal?: (keyword: string) => void;
   private highlightLayer: HighlightLayer;
   private groupNameToBaseName: { [groupName: string]: string } = {};
@@ -51,6 +53,7 @@ export class QuestionScene {
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
 
     this.guiManager = new GUIManager(this.scene, this.textMessages);
+    this.dialogPage = new DialogPage()
 
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggerManager2(
@@ -61,18 +64,18 @@ export class QuestionScene {
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
 
-      // После загрузки окружения вызываем CreateDialogBox
-      const fullText1 =
-      "Привет! Здесь тебя ждет тест по конструкциям. Но прежде пройти обучение.";
-      const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты тебя ждет по нему тест. В левом верхнем углу выведено число найденых конструкций, а также счетчик правильных и не правильных ответов";
 
-      this.guiManager.CreateDialogBox(fullText1, async () => {
+      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Но прежде пройти обучение.", async () => {
+                
         // После завершения печати первого текста вызываем createGui()
         await this.guiManager.createGui();
+        const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченые объекты тебя ждет по нему тест. В левом верхнем углу выведено число найденых конструкций, а также счетчик правильных и не правильных ответов")
 
         // Затем отображаем второй текст в диалоговом окне
-        this.guiManager.CreateDialogBox(fullText2);
-      });
+        this.guiManager.CreateDialogBox([page2]);
+      })
+
+    this.guiManager.CreateDialogBox([page1]);
     });
     this.CreateController();
 
@@ -135,6 +138,20 @@ export class QuestionScene {
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
+
+      const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
+      nonCollizionMeshs.map((item) => {
+          const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+          nonCollizionMesh.forEach((mesh) => {
+              mesh.visibility = 0.5;
+              mesh.checkCollisions = false
+          });
+      })
+
+          const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+          BrokenMeshes.forEach((mesh) => {
+              mesh.visibility = 0;
+          });
 
       // Определение группированных мешей
       const meshGroups = [
