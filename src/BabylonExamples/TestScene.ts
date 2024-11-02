@@ -8,15 +8,11 @@ import {
   Tools,
   FreeCamera,
   AbstractMesh,
-  HighlightLayer,
-  Color3,
-  EquiRectangularCubeTexture,
+
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, TextBlock, TextWrapping } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
-import * as GUI from '@babylonjs/gui/2D';
-import { FullExample } from './FullExample';
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 
@@ -29,12 +25,6 @@ export class TestScene {
   private triggerManager: TriggerManager2;
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
-  private zoneTriggered: boolean = false;
-  private highlightLayer: HighlightLayer;
-  private beam: AbstractMesh;
-  private beam2: AbstractMesh;
-  private targetMeshes: AbstractMesh[];
-  private targetMeshes2: AbstractMesh[];
   private markMeshes: AbstractMesh[] = [];
   private zoneSigns: AbstractMesh[] = [];
 
@@ -43,7 +33,6 @@ export class TestScene {
     this.engine.displayLoadingUI();
   
     this.scene = this.CreateScene();
-    this.highlightLayer = new HighlightLayer("hl1", this.scene);
 
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
@@ -70,7 +59,7 @@ export class TestScene {
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
     const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
-    hemiLight.intensity = 0.5; // Установите желаемую интенсивность
+    // hemiLight.intensity = 0.5; // Установите желаемую интенсивность
 
     const framesPerSecond = 60;
     const gravity = -9.81;
@@ -89,7 +78,7 @@ export class TestScene {
   CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
     camera.attachControl(this.canvas, true);
-    camera.applyGravity = false;
+    camera.applyGravity = true;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     camera.minZ = 0.45;
@@ -128,10 +117,7 @@ export class TestScene {
       WholeMeshes.forEach((mesh) => {
         mesh.visibility = 0; // Полностью невидимый
       });
-
-      this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
-      this.beam2 = this.targetMeshes2[1];
-
+      
       // Загрузка markMeshes
       const assetContainer = await SceneLoader.LoadAssetContainerAsync(
         "./models/",           // rootUrl
@@ -146,12 +132,9 @@ export class TestScene {
         mesh.scaling = new Vector3(0.5, 0.7, 0.5);
       });
   
-      console.log("mark", this.markMeshes);
       console.log("Модели успешно загружены.");
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
-    } finally {
-      // Удаляем вызов this.engine.hideLoadingUI(); отсюда
     }
   }
 

@@ -134,12 +134,15 @@ export class TriggerManager2 {
   
     createStartButton(text: string, onClick: () => void): void {
       const startButton = Button.CreateSimpleButton("Btn", text);
-      startButton.width = "150px";
-      startButton.height = "40px";
+      startButton.width = "11%";
+      startButton.height = "7%";
+      startButton.paddingBottom = "2%"
       startButton.color = "white";
       startButton.cornerRadius = 20;
       startButton.background = "green";
-      startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+
   
       this.guiTexture.addControl(startButton);
   
@@ -948,43 +951,61 @@ export class TriggerManager2 {
 
 
 
-    enableDistanceMeasurement(): void {
-      this.measuringDistance = true;
-      this.firstPoint = null;
-      this.secondPoint = null;
-  
-      // Обработчик кликов
-      this.scene.onPointerDown = (evt, pickResult) => {
-  
-          // Проверяем, был ли клик правой кнопкой мыши
-          if (evt.button === 2) {
-  
-              if (pickResult.hit && pickResult.pickedPoint) {
-                  if (!this.firstPoint) {
-                      // Запоминаем первую точку
-                      this.firstPoint = pickResult.pickedPoint.clone();
-                  } else if (!this.secondPoint) {
-                      // Запоминаем вторую точку
-                      this.secondPoint = pickResult.pickedPoint.clone();
-  
-                      // Вычисляем расстояние
-                      const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
-  
-                      if (this.firstPoint && this.secondPoint) {
-                          // Показываем расстояние через GUI
-                          this.guiManager.showDistanceMessage(`Расстояние: ${distance.toFixed(2)} м`);
-  
-                          // Сброс для нового измерения
-                          this.firstPoint = null;
-                          this.secondPoint = null;
-                      }
-                  }
-              }
-          } else if (evt.button === 0) {
-              console.log("Левый клик. Замеры не проводятся.");
-          }
+  enableDistanceMeasurement(): void {
+    this.measuringDistance = true;
+    this.firstPoint = null;
+    this.secondPoint = null;
+
+    // Обработчик кликов
+    this.scene.onPointerDown = (evt, pickResult) => {
+
+        // Проверяем, был ли клик правой кнопкой мыши
+        if (evt.button === 2) {
+
+            if (pickResult.hit && pickResult.pickedPoint) {
+                if (!this.firstPoint) {
+                    // Запоминаем первую точку
+                    this.firstPoint = pickResult.pickedPoint.clone();
+                } else if (!this.secondPoint) {
+                    // Запоминаем вторую точку
+                    this.secondPoint = pickResult.pickedPoint.clone();
+
+                    // Вычисляем расстояние
+                    const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+
+                    if (this.firstPoint && this.secondPoint) {
+                        // Вектор от первой точки ко второй
+                        const directionVector = this.secondPoint.subtract(this.firstPoint).normalize();
+
+                        // Глобальные оси
+                        const globalX = new Vector3(1, 0, 0);
+                        const globalY = new Vector3(0, 1, 0);
+                        const globalZ = new Vector3(0, 0, 1);
+
+                        // Вычисляем углы относительно глобальных осей
+                        const angleX = Math.acos(Vector3.Dot(directionVector, globalX)) * (180 / Math.PI);
+                        const angleY = Math.acos(Vector3.Dot(directionVector, globalY)) * (180 / Math.PI);
+                        const angleZ = Math.acos(Vector3.Dot(directionVector, globalZ)) * (180 / Math.PI);
+
+                        // Показываем расстояние и углы через GUI
+                        this.guiManager.showDistanceMessage(
+                            `Расстояние: ${distance.toFixed(2)} м\nУгол с осью X: ${angleX.toFixed(2)}°\nУгол с осью Y: ${angleY.toFixed(2)}°\nУгол с осью Z: ${angleZ.toFixed(2)}°`
+                        );
+
+                        // Сброс для нового измерения
+                        this.firstPoint = null;
+                        this.secondPoint = null;
+                    }
+                }
+            }
+        } else if (evt.button === 0) {
+            console.log("Левый клик. Замеры не проводятся.");
         }
-      }
+    }
+}
+
+
+
 
     disableDistanceMeasurement(): void {
         this.measuringDistance = false;
