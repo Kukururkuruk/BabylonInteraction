@@ -18,6 +18,9 @@ import {
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Image as GuiImage, Button, Control, TextBlock } from "@babylonjs/gui";
 import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
+import { DialogPage } from "./FunctionComponents/DialogPage";
+import { GUIManager } from "./FunctionComponents/GUIManager";
 
 export class TotalStation {
   scene: Scene;
@@ -34,6 +37,9 @@ export class TotalStation {
   private points: AbstractMesh[] = [];
   // Счетчик нажатых точек
   private pointsPressedCount: number = 0;
+  private dialogPage: DialogPage;
+  private triggerManager2: TriggerManager2;
+  private guiManager: GUIManager;
   
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -44,6 +50,9 @@ export class TotalStation {
     this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
+    this.guiManager = new GUIManager(this.scene, this.textMessages);
+    this.dialogPage = new DialogPage();
 
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -52,6 +61,7 @@ export class TotalStation {
     });
 
     this.CreateController();
+    this.BetonTrigger();
 
     // Добавляем обработчики событий для управления клавиатурой
     this.AddKeyboardControls();
@@ -113,8 +123,20 @@ export class TotalStation {
     this.camera.keysRight.push(68); // D
   }
 
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+      console.log("Модели карты успешно загружены:", map);
+    } catch (error) {
+      console.error("Ошибка при загрузке окружения:", error);
+    }
+  }
   // Запрос на backend для получения пути к карте
-async CreateEnvironment(): Promise<void> {
+/*async CreateEnvironment(): Promise<void> {
   try {
     // Запрос на backend для получения пути к карте
     const response = await fetch('http://127.0.0.1:5000/api/map');
@@ -143,7 +165,7 @@ async CreateEnvironment(): Promise<void> {
   } catch (error) {
     console.error("Ошибка при загрузке окружения:", error);
   }
-}
+}*/
 
   CreateArrowsUI(): void {
     const moveSpeed = 0.01;
@@ -196,7 +218,7 @@ async CreateEnvironment(): Promise<void> {
     this.inventoryImage.left = "0px"; // Максимально правое положение
     this.guiTexture.addControl(this.inventoryImage);
 }
-  this.inventoryImage.isVisible = true;
+  this.inventoryImage.isVisible = false;
   this.inventoryVisible = true;
   this.updatePointsCountDisplay(); // Обновляем отображение количества нажатых точек
 }
@@ -282,7 +304,7 @@ async CreateEnvironment(): Promise<void> {
         
         // Установите значения top и left в пределах планшета
         this.pointsCountText.top = "0px"; // Отступ от верхней границы инвентаря
-        this.pointsCountText.left = "390px"; // Отступ от левой границы инвентаря
+        this.pointsCountText.left = "0px"; // Отступ от левой границы инвентаря
   
         // Добавляем текст на графический интерфейс
         this.guiTexture.addControl(this.pointsCountText);
@@ -293,6 +315,33 @@ async CreateEnvironment(): Promise<void> {
       this.pointsCountText.isVisible = true; // Убедитесь, что текст виден
     }
   }
+
+  BetonTrigger(): void {
+    const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+    this.guiManager.CreateDialogBox([page1])
+
+            this.triggerManager2.createStartButton('Начать', () => {
+            // Показываем сообщение
+            const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений (кликните по всем точкам, должно получиться 9 штук, проверьте правильно ли вы посчитали количество нажав на клавишу 'i'. После успешного прохождения завершите задание нажав на кнопку 'Завершить' ")
+            const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+            this.guiManager.CreateDialogBox([page2, page3])
+
+              // Активируем режим лазера для второй триггер-зоны
+              //this.triggerManager2.distanceMode();
+              //this.triggerManager2.enableDistanceMeasurement()
+              this.triggerManager2.createStartButton('Завершить', () => {
+                const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+                this.guiManager.CreateDialogBox([page4])
+                this.triggerManager2.disableDistanceMeasurement()
+
+                //this.triggerManager2.exitDisLaserMode2();
+                this.guiManager.createRouteButton('/test')
+            })
+
+            
+            })
+
+}
   
   
   

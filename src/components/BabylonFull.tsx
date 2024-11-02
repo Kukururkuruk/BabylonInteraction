@@ -1,12 +1,15 @@
-import React, { useEffect, useRef } from 'react';
-import { Level as LevelScene } from '../BabylonExamples/BasicLevel'; // Импортируем класс сцены и переименовываем его
+import React, { useEffect, useRef, useState } from 'react';
+import { FullExample } from '../BabylonExamples/FullExample';
+import DesktopModal from './DesktopModal';
 
-const Level: React.FC = () => {
+const BabylonExamples: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
 
   useEffect(() => {
     if (canvasRef.current) {
-      new LevelScene(canvasRef.current); // Просто создаем сцену без присваивания
+      const example = new FullExample(canvasRef.current);
+      example.onOpenModal = () => setIsDesktopModalOpen(true);
     }
   }, []);
 
@@ -14,8 +17,12 @@ const Level: React.FC = () => {
     <div>
       <h3>Babylon Tutor</h3>
       <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+      <DesktopModal
+        isOpen={isDesktopModalOpen}
+        onClose={() => setIsDesktopModalOpen(false)}
+      />
     </div>
   );
 };
 
-export default Level; // Экспортируем компонент по умолчанию
+export default BabylonExamples;
