@@ -13,5 +13,11 @@ def get_data():
     print("Запрос на получение данных получен")  # Логируем запрос
     return jsonify({"key": "value"})
 
+@app.route('/api/map', methods=['GET'])
+def get_map():
+    # Путь к карте, доступный на сервере
+    return jsonify({'map_url': 'http://127.0.0.1:5000/models/Map_1.gltf'})
+
+
 if __name__ == '__main__':
     app.run(debug=True)

@@ -12,6 +12,7 @@ import {
   ExecuteCodeAction,
   Color3,
   AbstractMesh,
+  PBRMaterial,
   MeshBuilder,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
@@ -37,7 +38,6 @@ export class TotalStation {
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
-    this.engine.displayLoadingUI();
 
     this.scene = this.CreateScene();
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
@@ -81,7 +81,8 @@ export class TotalStation {
 
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    const hemisphericLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+    hemisphericLight.intensity = 1; // Увеличиваем яркость света
 
     const framesPerSecond = 60;
     const gravity = -9.81;
@@ -112,17 +113,37 @@ export class TotalStation {
     this.camera.keysRight.push(68); // D
   }
 
-  async CreateEnvironment(): Promise<void> {
-    try {
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-      map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-      });
-      console.log("Модели карты успешно загружены:", map);
-    } catch (error) {
-      console.error("Ошибка при загрузке окружения:", error);
+  // Запрос на backend для получения пути к карте
+async CreateEnvironment(): Promise<void> {
+  try {
+    // Запрос на backend для получения пути к карте
+    const response = await fetch('http://127.0.0.1:5000/api/map');
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
+    const data = await response.json();
+    const mapUrl = data.map_url; // Извлечение пути к карте из ответа backend
+
+    // Загружаем карту по полученному пути
+    const { meshes: map } = await SceneLoader.ImportMeshAsync("", "/models/", "Map_1.gltf", this.scene);
+    
+    // Устанавливаем видимость и коллизии для всех мешей
+    map.forEach((mesh) => {
+      mesh.checkCollisions = true;
+      mesh.visibility = 1; // Делаем меши видимыми (можете изменить на 0, если хотите их скрыть)
+    });
+
+    // Убедитесь, что меши правильно загружены и отображаются перед заморозкой
+    console.log("Карта загружена успешно:", map);
+
+    // Замораживаем активные меши после завершения всех настроек
+    //this.scene.freezeActiveMeshes();
+    console.log("Активные меши заморожены.");
+
+  } catch (error) {
+    console.error("Ошибка при загрузке окружения:", error);
   }
+}
 
   CreateArrowsUI(): void {
     const moveSpeed = 0.01;
@@ -240,6 +261,8 @@ export class TotalStation {
       console.log(`Точка создана на позиции: ${pos}`); // Лог для отладки
       
     });
+
+    
   }
 
   private updatePointsCountDisplay(): void { 
