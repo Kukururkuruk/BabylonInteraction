@@ -268,6 +268,7 @@ export class QuestionScene {
           if (groupMeshes.length > 0) {
             groupMeshes.forEach((mesh) => {
               this.highlightLayer.addMesh(mesh, Color3.Green());
+              this.highlightLayer.outerGlow = false;
               (mesh as any).isActive = true;
             });
 
@@ -294,6 +295,7 @@ export class QuestionScene {
 
           if (mesh) {
             this.highlightLayer.addMesh(mesh, Color3.Green());
+            this.highlightLayer.outerGlow = false;
             (mesh as any).isActive = true;
 
             this.triggerManager.setupModalInteraction(mesh, () => {

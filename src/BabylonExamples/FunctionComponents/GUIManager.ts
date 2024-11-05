@@ -103,15 +103,32 @@ export class GUIManager {
   
   createGui(): Promise<void> {
     return new Promise((resolve) => {
+
+      const WASDContainer = new Rectangle();
+      WASDContainer.width = "28%";
+      WASDContainer.height = "67%";
+      WASDContainer.thickness = 0;
+      WASDContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      WASDContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      WASDContainer.top = "20%";
+      WASDContainer.left = "2%";
+      this.advancedTexture.addControl(WASDContainer);
+
       // Создаем TextBlock для отображения счетчика кликов
       this.textBlock = new TextBlock();
       this.textBlock.text = this.textMessages[this.currentTextIndex];
-      this.textBlock.color = "white";
-      this.textBlock.fontSize = 24;
-      this.textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      this.textBlock.color = "#212529";
+      this.textBlock.fontSize = "4%";
+      this.textBlock.fontFamily = "Segoe UI";
+      this.textBlock.width = '90%';
+      this.textBlock.paddingTop = "2%";
+      this.textBlock.paddingLeft = "15%";
+      this.textBlock.paddingRight = "15%";
+      this.textBlock.paddingBottom = "7%";
+      this.textBlock.textWrapping = GUI.TextWrapping.WordWrap;
       this.textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
       this.textBlock.isPointerBlocker = false;
-      this.advancedTexture.addControl(this.textBlock);
+      WASDContainer.addControl(this.textBlock);
 
 
       // Добавляем обработчик событий для клавиатуры

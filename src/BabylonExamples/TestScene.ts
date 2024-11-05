@@ -106,6 +106,11 @@ export class TestScene {
               });
           })
 
+              // const dialogImage = new Image("dialogImage", "/models/VignetteCircleSight_4K.png");
+              // dialogImage.width = "100%";
+              // dialogImage.height = "100%";
+              // this.guiTexture.addControl(dialogImage);
+
       // Находим сломаные меши
       const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
       const WholeMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
@@ -121,7 +126,7 @@ export class TestScene {
       // Загрузка markMeshes
       const assetContainer = await SceneLoader.LoadAssetContainerAsync(
         "./models/",           // rootUrl
-        "exclamation_point.glb", // sceneFilename
+        "Sign_anim.glb", // sceneFilename
         this.scene              // scene
       );
 
@@ -129,7 +134,8 @@ export class TestScene {
   
       // Масштабируем шаблонный меш
       this.markMeshes.forEach((mesh) => {
-        mesh.scaling = new Vector3(0.5, 0.7, 0.5);
+        mesh.scaling = new Vector3(1.2, 1.2, 1.2);
+        // mesh.visibility = 0.5;
       });
   
       console.log("Модели успешно загружены.");
@@ -189,7 +195,7 @@ export class TestScene {
         const firstZonePosition = new Vector3(-10.622146207334794, 8.8, -3.62);
         const firstZoneSign = markMeshTemplate.clone("firstZoneSign");
         firstZoneSign.position = firstZonePosition.clone();
-        firstZoneSign.position.y = 6; 
+        firstZoneSign.position.y = 9; 
         firstZoneSign.isVisible = true;
 
         this.scene.addMesh(firstZoneSign);
@@ -214,7 +220,7 @@ export class TestScene {
         const secondZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
         const secondZoneSign = markMeshTemplate.clone("secondZoneSign");
         secondZoneSign.position = secondZonePosition.clone();
-        secondZoneSign.position.y = -1;
+        secondZoneSign.position.y = 2;
         secondZoneSign.isVisible = true;
 
         this.scene.addMesh(secondZoneSign);
@@ -239,7 +245,7 @@ export class TestScene {
         const thirdZonePosition = new Vector3(12.46, 2.0, 4.79);
         const thirdZoneSign = markMeshTemplate.clone("thirdZoneSign");
         thirdZoneSign.position = thirdZonePosition.clone();
-        thirdZoneSign.position.y = -1;
+        thirdZoneSign.position.y = 2;
         thirdZoneSign.isVisible = true;
 
         this.scene.addMesh(thirdZoneSign);
@@ -264,7 +270,7 @@ export class TestScene {
         const fourthZonePosition = new Vector3(41.14320937858243, 2.670984252631138, -0.04211929133677441);
         const fourthZoneSign = markMeshTemplate.clone("fourthZoneSign");
         fourthZoneSign.position = fourthZonePosition.clone();
-        fourthZoneSign.position.y = -1;
+        fourthZoneSign.position.y = 2;
         fourthZoneSign.isVisible = true;
 
         this.scene.addMesh(fourthZoneSign);
@@ -289,7 +295,7 @@ export class TestScene {
         const fifthZonePosition = new Vector3(-14.60972728503516, 2.672766933441162, -0.2746599608322637);
         const fifthZoneSign = markMeshTemplate.clone("fifthZoneSign");
         fifthZoneSign.position = fifthZonePosition.clone();
-        fifthZoneSign.position.y = -1;
+        fifthZoneSign.position.y = 2;
         fifthZoneSign.isVisible = true;
 
         this.scene.addMesh(fifthZoneSign);
@@ -314,7 +320,7 @@ export class TestScene {
         const sixthZonePosition = new Vector3(11.72647800945137, 9.42517840874411, -4.931777454799131);
         const sixthZoneSign = markMeshTemplate.clone("sixthZoneSign");
         sixthZoneSign.position = sixthZonePosition.clone();
-        sixthZoneSign.position.y = 6;
+        sixthZoneSign.position.y = 9;
         sixthZoneSign.isVisible = true;
 
         this.scene.addMesh(sixthZoneSign);

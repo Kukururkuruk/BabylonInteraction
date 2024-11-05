@@ -8,6 +8,7 @@ import {
     FreeCamera,
     HighlightLayer,
     Color3,
+    FreeCameraMouseInput,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
@@ -29,10 +30,10 @@ export class BookScene {
     private blueHighlightLayer: HighlightLayer;
     private groupNameToBaseName: { [groupName: string]: string } = {};
     textMessages: string[] = [
-        "Чтобы идти вперед нажмите на W",
-        "Чтобы идти назад нажмите на S",
-        "Чтобы идти влево нажмите на A",
-        "Чтобы идти вправо нажмите на D",
+        "Чтобы идти вперед нажмите на 'W'",
+        "Чтобы идти назад нажмите на 'S'",
+        "Чтобы идти влево нажмите на 'A'",
+        "Чтобы идти вправо нажмите на 'D'",
         "А теперь осмотритесь по комнате",
       ];
 
@@ -67,7 +68,7 @@ export class BookScene {
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
-                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченые объекты ты можешь узнать про них информацию. Синим подсвечиваются те на которые ты уже кликал. В левом верхнем углу общее количество кликабельных сооружений")
+                const page2 = this.dialogPage.addText("aqweqweqweqweqwe qweq qe wqe qwe q qwe qwe qwe w w qweqw eq qweqwe qw eqw eqqwe wewe qwe wqweq we w w qwe qw eqweqw q q q q q q q q qweqwweqwe qwe wq qsssssssssssssdasdasd sd asd asd sdsd a sdsdasdasdasd asd asd asd asdsdsd asd asd asd sdsdsdsd as a asdds asd asd asd    Нажимая правой кнопкой мыши на подсвеченные объекты, ты можешь узнать про них информацию.\nСиним подсвечиваются те, на которые ты уже кликал.\nВ левом верхнем углу общее количество кликабельных сооружений.")
                 this.guiManager.CreateDialogBox([page2]);
               })
  
@@ -112,18 +113,29 @@ export class BookScene {
         // Установка начальной позиции камеры для лучшей видимости
         this.camera = new FreeCamera("camera", new Vector3(15, 3, 0), this.scene);
         this.camera.attachControl(this.canvas, true);
-
-        this.camera.applyGravity = true;
+    
+        // Настройки камеры
+        this.camera.applyGravity = false;
         this.camera.checkCollisions = true;
         this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
         this.camera.minZ = 0.45;
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
-        this.camera.rotation.y = -Math.PI/2
+        this.camera.rotation.y = -Math.PI / 2;
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
         this.camera.keysRight.push(68); // D
+    
+        // Отключаем стандартное управление камерой при использовании мыши
+        this.camera.inputs.removeByType("FreeCameraMouseInput");
+    
+        // Создаем кастомный ввод для управления камерой по левому клику
+        const customMouseInput = new FreeCameraMouseInput();
+        customMouseInput.buttons = [0]; // Только левая кнопка мыши (0 - левая, 1 - средняя, 2 - правая)
+    
+        // Добавляем кастомный ввод к камере
+        this.camera.inputs.add(customMouseInput);
     }
 
     async CreateEnvironment(): Promise<void> {
@@ -136,7 +148,6 @@ export class BookScene {
                 "Map_1.gltf",
                 this.scene
             );
-            console.log(map);
             
 
             // Включаем коллизии для всех мешей
@@ -170,7 +181,7 @@ export class BookScene {
                 },
                 {
                     groupName: "Retaining_wall_Block_LP_L_5",
-                    baseName: "SM_0_Retaining_wall_Block_LP_L_5",
+                    baseName: "SM_0_Retaining_wall_Block_LP_L",
                 },
                 // Добавьте дополнительные группы по необходимости
             ];
@@ -222,7 +233,7 @@ export class BookScene {
                 //Просто дорога сверху
                 "SM_0_Road_1_R",
                 //Бетонка по середине НьюДжерси
-                "SM_ConcreteFence_LP",
+                "SM_ConcreteFence_LP.002",
                 //Плита переходная
                 "SM_0_TransitionPlate8M_LP_L_primitive0",
                 // Добавьте дополнительные одиночные меши по необходимости
@@ -241,13 +252,16 @@ export class BookScene {
                     const groupMeshes = map.filter(
                         (mesh) =>
                             mesh.name === group.baseName ||
-                            mesh.name.startsWith(`${group.baseName}.`)
+                            mesh.name.startsWith(`${group.baseName}`)
                     );
+                    console.log(groupMeshes);
+                    
 
                     if (groupMeshes.length > 0) {
                         // Подсвечиваем все меши группы зеленым
                         groupMeshes.forEach((mesh) => {
                             this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                            this.greenHighlightLayer.outerGlow = false;
                             (mesh as any).isClicked = false;
                         });
 
@@ -262,6 +276,7 @@ export class BookScene {
                                     groupMeshes.forEach((m) => {
                                         this.greenHighlightLayer.removeMesh(m);
                                         this.blueHighlightLayer.addMesh(m, Color3.Blue());
+                                        this.blueHighlightLayer.outerGlow = false;
                                         (m as any).isClicked = true;
                                     });
                                 }
@@ -280,6 +295,7 @@ export class BookScene {
 
                     if (mesh) {
                         this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                        this.greenHighlightLayer.outerGlow = false;
                         (mesh as any).isClicked = false;
 
                         this.triggerManager.setupModalInteraction(mesh, () => {
@@ -288,6 +304,7 @@ export class BookScene {
                                 this.updateCounter();
                                 this.greenHighlightLayer.removeMesh(mesh);
                                 this.blueHighlightLayer.addMesh(mesh, Color3.Blue());
+                                this.blueHighlightLayer.outerGlow = false;
                                 (mesh as any).isClicked = true;
                             }
                             if (this.openModal) {

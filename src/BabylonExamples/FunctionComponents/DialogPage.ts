@@ -91,3 +91,57 @@ export class DialogPage {
         return grid
     }
 }
+
+// Это работает, в addText мы ретерним не текст а контейнер, вот почему
+// import { Rectangle, TextBlock, Control, ScrollViewer } from "@babylonjs/gui";
+
+// export class DialogPage {
+//     public pageContainer: ScrollViewer;
+
+//     constructor() {
+//         this.pageContainer = new ScrollViewer();
+//         this.pageContainer.width = "100%";
+//         this.pageContainer.height = "100%";
+//         this.pageContainer.thickness = 0;
+//         this.pageContainer.background = "#B9BFBF"; // Полупрозрачный фон для проверки видимости
+//         this.pageContainer.color = "black"; // Цвет границы
+//         this.pageContainer.barSize = 15; // Размер полос прокрутки
+//         this.pageContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+//         this.pageContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+//     }
+
+//     // Метод для добавления текста в ScrollViewer
+//     addText(content: string, onComplete?: () => void): ScrollViewer {
+//         const dialogText = new TextBlock();
+//         dialogText.text = "";
+//         dialogText.color = "#212529";
+//         dialogText.fontSize = "4%";
+//         dialogText.fontFamily = "Segoe UI";
+//         dialogText.resizeToFit = true;
+//         dialogText.textWrapping = TextWrapping.WordWrap;
+//         dialogText.paddingTop = "2%";
+//         dialogText.paddingLeft = "5%";
+//         dialogText.paddingRight = "5%";
+//         dialogText.paddingBottom = "7%";
+
+//         // Добавляем TextBlock в ScrollViewer
+//         this.pageContainer.addControl(dialogText);
+
+//         let currentIndex = 0;
+
+//         // Функция для анимации печатания текста
+//         const typingInterval = setInterval(() => {
+//             dialogText.text += content[currentIndex];
+//             currentIndex++;
+//             if (currentIndex >= content.length) {
+//                 clearInterval(typingInterval);
+//                 if (onComplete) {
+//                     onComplete();
+//                 }
+//             }
+//         }, 50); // Скорость печатания (в миллисекундах)
+
+//         return this.pageContainer; // Возвращаем ScrollViewer с текстом
+//     }
+// }
+
