@@ -36,10 +36,15 @@ export class TotalStation {
   // Хранение точек
   private points: AbstractMesh[] = [];
   // Счетчик нажатых точек
-  private pointsPressedCount: number = 0;
+  private pointsPressedCount = 0;
   private dialogPage: DialogPage;
   private triggerManager2: TriggerManager2;
   private guiManager: GUIManager;
+  private totalPoints: number = 9; // Задаем количество точек, которые нужно нажать
+  private highlightedPoints: Mesh[] = []; // Список для хранения подсвеченных точек
+  private taskCompleted: boolean = false;
+  //private isRequestInProgress = false; // Флаг для отслеживания состояния запроса
+  private isDataSent: boolean = false;
   
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -53,7 +58,8 @@ export class TotalStation {
     this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
     this.guiManager = new GUIManager(this.scene, this.textMessages);
     this.dialogPage = new DialogPage();
-
+    
+    //this.sendPointsData(this.pointsPressedCount);
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
       this.fetchData(); // Вызовите fetchData после загрузки окружения
@@ -75,15 +81,31 @@ export class TotalStation {
     });
   }
 
+
+
+
+
+
+
+
+  
   // Метод для получения данных
   async fetchData() {
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/data'); // Убедитесь, что адрес правильный
+      const response = await fetch('http://127.0.0.1:5000/api/data');
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
       const data = await response.json();
-      console.log(data); // Добавьте лог для проверки полученных данных
+      console.log('Полученные данные:', data);
+      
+      // Сбрасываем счетчик на клиенте на 0
+      this.pointsPressedCount = 0;  // Инициализируем его в 0
+      
+      // Дополнительно, если данные содержат другие значения, которые вы хотите использовать
+      if (data.pointsPressedCount !== undefined) {
+        this.pointsPressedCount = data.pointsPressedCount;
+      }
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
     }
@@ -126,15 +148,20 @@ export class TotalStation {
 
   async CreateEnvironment(): Promise<void> {
     try {
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-      map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-      });
-      console.log("Модели карты успешно загружены:", map);
+        // Продолжаем работу по загрузке окружения
+        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+        map.forEach((mesh) => {
+            mesh.checkCollisions = true;
+        });
+        console.log("Модели карты успешно загружены:", map);
+        
+        // Теперь отправляем данные на сервер после загрузки карты
+        //await this.sendPointsData(this.pointsPressedCount);
+        
     } catch (error) {
-      console.error("Ошибка при загрузке окружения:", error);
+        console.error("Ошибка при загрузке окружения или отправке данных:", error);
     }
-  }
+}
   // Запрос на backend для получения пути к карте
 /*async CreateEnvironment(): Promise<void> {
   try {
@@ -166,6 +193,92 @@ export class TotalStation {
     console.error("Ошибка при загрузке окружения:", error);
   }
 }*/
+
+
+/*async sendPointsData(pointsPressedCount: number): Promise<void> {
+  try {
+    console.log(`Отправка данных: ${pointsPressedCount}`);
+    const response = await fetch('http://127.0.0.1:5000/api/user/points', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pointsPressedCount })
+    });
+
+    const data = await response.json();
+    console.log("Ответ от сервера:", data);
+  } catch (error) {
+    console.error("Ошибка при отправке данных:", error);
+  }
+}*/
+
+createUserPoint(user: { name: string; x: number; y: number; z: number }): void {
+  const sphere = MeshBuilder.CreateSphere(user.name, { diameter: 1 }, this.scene);
+  sphere.position.set(user.x, user.y, user.z);
+
+  // Добавление события клика по точке
+  sphere.actionManager = new ActionManager(this.scene);
+  sphere.actionManager.registerAction(new ExecuteCodeAction(
+      ActionManager.OnPickTrigger, 
+      () => this.handlePointClick(sphere) // Передаём сферу как параметр
+  ));
+}
+
+handlePointClick(point: Mesh): void {
+  if (!this.highlightedPoints.includes(point)) {
+    this.highlightLayer.addMesh(point, Color3.Yellow());
+    this.highlightedPoints.push(point);
+    this.pointsPressedCount++;
+    console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
+    
+    /*if (!this.taskCompleted) {
+      this.sendPointsData(this.pointsPressedCount);
+    }*/
+
+    this.updatePointsCountDisplay();
+
+    if (this.pointsPressedCount === this.totalPoints && !this.taskCompleted) {
+      this.taskCompleted = true;
+      this.completeTask();
+    }
+  }
+}
+
+completeTask(): void {
+  const pointsText = `Нажатые точки: ${this.pointsPressedCount}`;
+  console.log(pointsText);
+
+  this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
+  this.guiManager.CreateDialogBox([page4]);
+  this.triggerManager2.disableDistanceMeasurement();
+  this.guiManager.createRouteButton('/test');
+
+  //this.sendDataToServer(this.pointsPressedCount);
+  console.log("Задача выполнена");
+}
+
+// Этот метод теперь будет вызываться только после того, как все точки были нажаты.
+/*sendDataToServer(pointsPressedCount: number): void {
+  if (this.isRequestInProgress) return; // Проверка на состояние запроса
+  
+  this.isRequestInProgress = true; // Устанавливаем флаг в активное состояние
+  
+  console.log(`Отправка данных на сервер: ${pointsPressedCount}`);
+  fetch('http://127.0.0.1:5000/api/user/points', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pointsPressedCount })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Ответ от сервера:', data);
+    this.pointsPressedCount = data.pointsPressedCount;  // Обновление локального счётчика
+  })
+  .catch(error => console.error('Ошибка отправки данных:', error))
+  .finally(() => {
+    this.isRequestInProgress = false; // Снимаем блокировку после завершения запроса
+  });
+}*/
+
 
   CreateArrowsUI(): void {
     const moveSpeed = 0.01;
@@ -221,6 +334,7 @@ export class TotalStation {
   this.inventoryImage.isVisible = false;
   this.inventoryVisible = true;
   this.updatePointsCountDisplay(); // Обновляем отображение количества нажатых точек
+  
 }
   
 
@@ -262,21 +376,36 @@ export class TotalStation {
       point.position = pos;
       point.isVisible = true; // Убедитесь, что точки видимы
       point.isPickable = true;
+      // Отладка создания точки
+      console.log(`Точка создана на позиции: ${pos}`);
+
+       // Проверка наличия `highlightLayer` и добавление, если он отсутствует
+       if (!this.highlightLayer) {
+        this.highlightLayer = new HighlightLayer("highlightLayer", this.scene);
+        console.log("HighlightLayer создан.");
+    }
 
       // Добавляем действие при клике на точку
       point.actionManager = new ActionManager(this.scene);
       // Регистрация действия
       point.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+         // Отладочный вывод при клике
+        console.log(`Точка нажата: ${point.name}, позиция: ${point.position}`);
         // Если точка подсвечена, убираем подсветку
         if (this.highlightLayer.hasMesh(point)) {
           this.highlightLayer.removeMesh(point);
           this.pointsPressedCount--; // Уменьшаем счетчик при снятии подсветки
+          console.log(`Точка удалена из подсветки. Текущий счётчик: ${this.pointsPressedCount}`);
         } else {
           // Если точка не подсвечена, добавляем подсветку
           this.highlightLayer.addMesh(point, Color3.Yellow());
           this.pointsPressedCount++; // Увеличиваем счетчик при добавлении подсветки
+          console.log(`Точка добавлена в подсветку. Текущий счётчик: ${this.pointsPressedCount}`);
         }
         this.updatePointsCountDisplay(); // Обновляем отображение счетчика
+
+        // Отправляем обновленное значение на сервер
+        //this.sendDataToServer(this.pointsPressedCount);
       }));
 
       this.points.push(point);
@@ -288,10 +417,16 @@ export class TotalStation {
   }
 
   private updatePointsCountDisplay(): void { 
+
+    if (this.pointsCountText !== null) {
+      this.pointsCountText.text = `Точки нажаты: ${this.pointsPressedCount}`;
+  }
+
     // Проверяем, виден ли инвентарь, прежде чем обновлять отображение нажатых точек
     if (this.inventoryVisible) {
       // Создаем текст для отображения количества нажатых точек
       const pointsText = `Нажатые точки: ${this.pointsPressedCount}`;
+      console.log(pointsText); // Выводим текущий счётчик в консоль для отладкиш
       
       if (!this.pointsCountText) {
         this.pointsCountText = new TextBlock("pointsCount", pointsText);
@@ -316,31 +451,59 @@ export class TotalStation {
     }
   }
 
+  sendFinalCountToServer(pointsPressedCount: number): void {
+    console.log('Пытаемся отправить данные на сервер:', pointsPressedCount);
+  
+    if (this.isDataSent) {
+      console.log('Данные уже были отправлены, пропускаем запрос');
+      return;
+    }
+  
+    this.isDataSent = true;
+    console.log('Отправка окончательного значения точек на сервер:', pointsPressedCount);
+  
+    fetch('http://127.0.0.1:5000/api/user/points', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pointsPressedCount })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Ответ от сервера с итоговым значением:', data);
+    })
+    .catch(error => console.error('Ошибка отправки данных:', error))
+    .finally(() => {
+      this.isDataSent = false;  // Сброс флага после выполнения запроса
+    });
+  }
+  
   BetonTrigger(): void {
-    const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-    this.guiManager.CreateDialogBox([page1])
+  const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+  this.guiManager.CreateDialogBox([page1])
 
-            this.triggerManager2.createStartButton('Начать', () => {
-            // Показываем сообщение
-            const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений (кликните по всем точкам, должно получиться 9 штук, проверьте правильно ли вы посчитали количество нажав на клавишу 'i'. После успешного прохождения завершите задание нажав на кнопку 'Завершить' ")
-            const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
-            this.guiManager.CreateDialogBox([page2, page3])
+  this.triggerManager2.createStartButton('Начать', () => {
+    const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений...")
+    const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+    this.guiManager.CreateDialogBox([page2, page3])
 
-              // Активируем режим лазера для второй триггер-зоны
-              //this.triggerManager2.distanceMode();
-              //this.triggerManager2.enableDistanceMeasurement()
-              this.triggerManager2.createStartButton('Завершить', () => {
-                const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-                this.guiManager.CreateDialogBox([page4])
-                this.triggerManager2.disableDistanceMeasurement()
+    // Проверка, чтобы обработчик не был привязан дважды
+    let finishButtonDisabled = false;  // Флаг для блокировки кнопки
 
-                //this.triggerManager2.exitDisLaserMode2();
-                this.guiManager.createRouteButton('/test')
-            })
+    this.triggerManager2.createStartButton('Завершить', () => {
+      if (finishButtonDisabled) {
+        console.log('Кнопка "Завершить" уже нажата, пропускаем действие');
+        return;  // Если кнопка уже была нажата, не выполняем действия
+      }
 
-            
-            })
-
+      finishButtonDisabled = true;  // Блокируем кнопку
+      console.log('Кнопка "Завершить" нажата');
+      this.sendFinalCountToServer(this.pointsPressedCount);  // Отправка данных
+      const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту")
+      this.guiManager.CreateDialogBox([page4])
+      this.triggerManager2.disableDistanceMeasurement()  // Отключение измерений
+      this.guiManager.createRouteButton('/test')  // Перенаправление
+    });
+  });
 }
   
   
