@@ -1,34 +1,55 @@
-import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping } from "@babylonjs/gui";
+import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping, ScrollViewer, Button } from "@babylonjs/gui";
 
 export class DialogPage {
     public pageContainer: Rectangle;
+    public scrollViewer: ScrollViewer
 
     constructor() {
         this.pageContainer = new Rectangle();
-        this.pageContainer.width = "100%";
-        this.pageContainer.height = "100%";
+        this.pageContainer.width = "55%";
+        this.pageContainer.height = "85%";
+        this.pageContainer.paddingRight = "-4%"
+        // this.pageContainer.background = 'white'
         this.pageContainer.thickness = 0;
+        
+        // Создаем ScrollViewer и добавляем его в pageContainer
+        this.scrollViewer = new ScrollViewer();
+        this.scrollViewer.width = "100%";
+        this.scrollViewer.height = "100%";
+        this.scrollViewer.paddingTop = "10%"
+
+        this.scrollViewer.barSize = 7
+        // this.scrollViewer.background = 'white'
+        this.scrollViewer.thickness = 0;
+        this.pageContainer.addControl(this.scrollViewer);
     }
 
     // Метод для добавления текста на страницу
     addText(content: string, onComplete?: () => void): TextBlock {
+
+        // if (this.currentPageBox) {
+        //     this.advancedTexture.removeControl(this.currentPageBox);
+        //   }
+        this.scrollViewer.clearControls();
+
         const dialogText = new TextBlock();
         dialogText.text = "";
         dialogText.color = "#212529";
-        dialogText.fontSize = "4%";
+        dialogText.fontSize = "5%";
         dialogText.fontFamily = "Segoe UI";
         dialogText.resizeToFit = true;
         dialogText.textWrapping = TextWrapping.WordWrap;
         dialogText.width = "90%";
-        dialogText.paddingTop = "2%";
-        dialogText.paddingLeft = "15%";
-        dialogText.paddingRight = "15%";
-        dialogText.paddingBottom = "7%";
-    
-        this.pageContainer.addControl(dialogText);
-    
+        // dialogText.paddingTop = "10%";
+        // dialogText.paddingLeft = "15%";
+        // dialogText.paddingRight = "15%";
+        // dialogText.paddingBottom = "7%";
+
+        // Добавляем dialogText в ScrollViewer
+        this.scrollViewer.addControl(dialogText);
+
         let currentIndex = 0;
-    
+
         // Функция для анимации печатания текста
         const typingInterval = setInterval(() => {
             dialogText.text += content[currentIndex];
@@ -39,9 +60,9 @@ export class DialogPage {
                     onComplete();
                 }
             }
-        }, 50); // Скорость печатания (в миллисекундах)
-    
-        return dialogText; // Возвращаем созданный элемент
+        }, 50);
+
+        return this.pageContainer;
     }
     
 
@@ -86,6 +107,93 @@ export class DialogPage {
             grid.addControl(inputField, i + 1, 1);
         });
 
+        this.pageContainer.addControl(grid);
+
+        return grid
+    }
+
+    createStartPage(ref: string): void {
+        // Создаем отдельный контейнер для этой страницы
+        const innerContainer = new Rectangle();
+        innerContainer.width = "55%";
+        innerContainer.height = "85%";
+        innerContainer.thickness = 0;
+
+        // Создаем текстовое сообщение
+        const messageText = new TextBlock();
+        messageText.text = "Если готовы начать тестирование нажмите на кнопку";
+        messageText.color = "#212529";
+        messageText.fontSize = "5%";
+        messageText.fontFamily = "Segoe UI";
+        messageText.textWrapping = TextWrapping.WordWrap;
+        messageText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        messageText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        // Добавляем текст в контейнер
+        innerContainer.addControl(messageText);
+
+        // Создаем кнопку
+        const startButton = Button.CreateSimpleButton("startBtn", "Перейти");
+        startButton.width = "150px";
+        startButton.height = "50px";
+        startButton.color = "white";
+        startButton.background = "gray";
+        startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        startButton.top = "-75px";
+
+        // Добавляем кнопку в контейнер
+        innerContainer.addControl(startButton);
+
+        // Обработка нажатия на кнопку
+        startButton.onPointerUpObservable.add(() => {
+            window.location.href = ref;
+        });
+
+        // Добавляем контейнер со всеми элементами в ScrollViewer
+        this.pageContainer.addControl(innerContainer);
+
+        return innerContainer
+    }
+
+    createTextGridPage(header: string, items: string[]): void {
+        // Очищаем любые предыдущие элементы
+        // this.scrollViewer.clearControls();
+
+        // Создаем новый Grid
+        const grid = new Grid();
+        grid.width = "55%";
+        grid.height = "50%";
+        grid.paddingBottom = "10%";
+
+        // Определяем одну колонку и три строки
+        grid.addColumnDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+        grid.addRowDefinition(1);
+
+        // Создаем и добавляем заголовок
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = header;
+        headerTextBlock.color = "black";
+        headerTextBlock.fontSize = "50%";
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        grid.addControl(headerTextBlock, 0, 0);
+
+        // Добавляем строки текста в каждую строку
+        items.forEach((item, i) => {
+            const textBlock = new TextBlock();
+            textBlock.text = item;
+            textBlock.color = "black";
+            textBlock.fontSize = "35%";
+            textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+            grid.addControl(textBlock, i + 1, 0);
+        });
+
+        // Добавляем grid в scrollViewer
         this.pageContainer.addControl(grid);
 
         return grid

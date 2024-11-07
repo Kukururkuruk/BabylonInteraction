@@ -12,6 +12,7 @@ import BabylonDistance from './components/BabylonDistance';
 import BabylonBeton from './components/BabylonBeton';
 import BabylonTotal from './components/BabylonTotal';
 import BabylonNewDistanceScene from './components/BabylonNewDistance';
+import RelMain from './components/RelMainPage';
 
 
 const App: React.FC = () => {
@@ -19,6 +20,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/" element={<Main />} />
+        <Route path="/relmain" element={<RelMain />} />
         <Route path="/base" element={<Base />} />
         <Route path="/tutor" element={<Tutor />} />
         <Route path="/test" element={<BabylonTest />} />

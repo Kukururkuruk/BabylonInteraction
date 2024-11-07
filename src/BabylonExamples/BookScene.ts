@@ -68,11 +68,12 @@ export class BookScene {
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
-                const page2 = this.dialogPage.addText("aqweqweqweqweqwe qweq qe wqe qwe q qwe qwe qwe w w qweqw eq qweqwe qw eqw eqqwe wewe qwe wqweq we w w qwe qw eqweqw q q q q q q q q qweqwweqwe qwe wq qsssssssssssssdasdasd sd asd asd sdsd a sdsdasdasdasd asd asd asd asdsdsd asd asd asd sdsdsdsd as a asdds asd asd asd    Нажимая правой кнопкой мыши на подсвеченные объекты, ты можешь узнать про них информацию.\nСиним подсвечиваются те, на которые ты уже кликал.\nВ левом верхнем углу общее количество кликабельных сооружений.")
-                this.guiManager.CreateDialogBox([page2]);
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, ты можешь узнать про них информацию.\nСиним подсвечиваются те, на которые ты уже кликал.\nВ левом верхнем углу общее количество кликабельных сооружений.")
+                const page3 = this.dialogPage.createStartPage("/question")
+                this.guiManager.CreateDialogBox([page2, page3], this.counterText);
               })
  
-            this.guiManager.CreateDialogBox([page1]);
+            this.guiManager.CreateDialogBox([page1], this.counterText);
           }
         );
 
@@ -111,7 +112,7 @@ export class BookScene {
 
     CreateController(): void {
         // Установка начальной позиции камеры для лучшей видимости
-        this.camera = new FreeCamera("camera", new Vector3(15, 3, 0), this.scene);
+        this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
         this.camera.attachControl(this.canvas, true);
     
         // Настройки камеры
@@ -148,6 +149,57 @@ export class BookScene {
                 "Map_1.gltf",
                 this.scene
             );
+
+            const { meshes: sign } = await SceneLoader.ImportMeshAsync(
+                "",
+                "./models/",
+                "MapPointerSimplev001.glb",
+                this.scene
+            );
+
+            // Создаём объект для группы мешей Sign
+            const group = {
+                meshes: sign,      // Здесь массив всех частей одного меша
+                isClicked: false   // Флаг, был ли произведен клик на всей группе
+            };
+
+            // Проходимся по каждой части меша
+            group.meshes.forEach((mesh) => {
+                console.log(mesh);
+                
+                mesh.checkCollisions = true;
+                mesh.position = new Vector3(20, 1, 0);
+                mesh.scaling = new Vector3(3, 3, 3);
+                mesh.rotation.z = Math.PI / 2;
+
+                this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                this.greenHighlightLayer.outerGlow = false;
+
+                this.triggerManager.setupModalInteraction(mesh, () => {
+                    // Проверяем, был ли уже произведен клик на этой группе
+                    if (!group.isClicked) {
+                        // Увеличиваем счётчик только при первом клике на группу
+                        this.clickedMeshes++;
+                        this.updateCounter();
+                        
+                        // Меняем цвет всех мешей группы на синий
+                        group.meshes.forEach(part => {
+                            this.greenHighlightLayer.removeMesh(part);
+                            this.blueHighlightLayer.addMesh(part, Color3.Blue());
+                            this.blueHighlightLayer.outerGlow = false;
+                        });
+
+                        // Устанавливаем флаг клика для группы
+                        group.isClicked = true;
+                    }
+
+                    if (this.openModal) {
+                        const keyword = "BRIDGE";
+                        this.openModal(keyword);
+                    }
+                });
+            });
+
             
 
             // Включаем коллизии для всех мешей
@@ -202,40 +254,40 @@ export class BookScene {
                 "SM_0_MonolithicRack_L_Support",
                 // Лестница
                 "SM_0_Stairs",
-                // Барьерное ограждение что
-                "SM_0_FencePostBridge_base_.002",
                 // Барьерное ограждение зачем
                 "SM_0_FencePost_Road.002",
                 // Барьерное ограждение тип
                 "SM_0_FencePostBridge_base_.004",
-                // Барьер стойка
-                "SM_FenctRack_LP",
-                // Барьер балка
-                "SM_FenceWave_LP_1",
-                // Барьер соединение
-                "SM_FenceConsole_LP",
                 // Шов что
                 "SM_0_connectingShaft_1",
-                // Шов тип
-                "SM_0_connectingShaft_2",
                 // Дорожное полотно
                 "SM_0_Road_Down.001",
-                // Насыпь
-                "SM_0_Landscape_2.002",
                 // Асфальт на мосту
                 "SM_0_BridgeAsfalt",
-                // Кирпич
-                "SM_0_Retaining_wall_Block_LP_R_5",
                 // Подферменник
                 "SM_0_Stand_R",
-                // Ограждение на дороге
-                "SM_0_FencePost_Road.001",
                 //Просто дорога сверху
                 "SM_0_Road_1_R",
                 //Бетонка по середине НьюДжерси
                 "SM_ConcreteFence_LP.002",
                 //Плита переходная
                 "SM_0_TransitionPlate8M_LP_L_primitive0",
+                //Плита над балками
+                "SM_0_PlotMonolithic",
+                // Фонари
+                "SM_0_SupportLight_LP_Down_L",
+                // Водосточный монолит
+                "SM_0_Landscape_Gravel_LP",
+                // Подвесной лоток
+                "SM_HalfPipe_LP",
+                //Лоток верхняя часть
+                "SM_ConcreteTray_UP",
+                //Откосной лоток
+                "SM_ConcreteTelescopicTray",
+                //Водосточная система
+                "SM_PipeWater_LP",
+                //Дождеприемник
+                "SM_GridDrainageSmall_LP",
                 // Добавьте дополнительные одиночные меши по необходимости
             ];
 
@@ -269,6 +321,8 @@ export class BookScene {
                         groupMeshes.forEach((mesh) => {
                             this.triggerManager.setupModalInteraction(mesh, () => {
                                 if (!(mesh as any).isClicked) {
+                                    console.log(mesh);
+                                    
                                     // Увеличиваем счетчик только при первом клике на группу
                                     this.clickedMeshes++;
                                     this.updateCounter();
@@ -300,6 +354,7 @@ export class BookScene {
 
                         this.triggerManager.setupModalInteraction(mesh, () => {
                             if (!(mesh as any).isClicked) {
+                                console.log(mesh);
                                 this.clickedMeshes++;
                                 this.updateCounter();
                                 this.greenHighlightLayer.removeMesh(mesh);
@@ -335,13 +390,13 @@ export class BookScene {
     private CreateGUI(): void {
         // Создаем текст для отображения счетчика кликов
         this.counterText = new TextBlock();
-        this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
-        this.counterText.color = "white";
-        this.counterText.fontSize = 24;
-        this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.color = "#212529";
+        this.counterText.fontSize = "2%";
+        this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.counterText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this.counterText.paddingLeft = "20px";
-        this.counterText.paddingTop = "20px";
+        this.counterText.paddingRight = "6%";
+        this.counterText.paddingTop = "6%";
         this.guiTexture.addControl(this.counterText);
 
         console.log("Счетчик инициализирован:", this.counterText.text);
@@ -349,7 +404,7 @@ export class BookScene {
 
     // Метод для обновления счетчика кликов
     private updateCounter(): void {
-        this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
     }
 
 }

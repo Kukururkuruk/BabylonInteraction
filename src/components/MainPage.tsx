@@ -6,37 +6,37 @@ const Main: React.FC = () => {
     <div>
       <h1>Main Page</h1>
       <button>
-        <Link to="/base">Go to Base Page</Link>
+        <Link to="/base">Суоро удалим</Link>
       </button>
       <button>
-        <Link to="/tutor">Go to Tutor Page</Link>
+        <Link to="/tutor">Линейка</Link>
       </button>
       <button>
-        <Link to="/test">Go to Test Page</Link>
+        <Link to="/test">Выбор инструмента</Link>
       </button>
       <button>
-        <Link to="/question">Go to Question Page</Link>
+        <Link to="/question">Тест терминологии</Link>
       </button>
       <button>
         <Link to="/full">Go to Fullexample Page</Link>
       </button>
       <button>
-        <Link to="/Level">Go to LevelPage</Link>
+        <Link to="/Level">Уровень пузырька</Link>
       </button>
       <button>
-        <Link to="/book">Go to Book Page</Link>
+        <Link to="/book">Терминология</Link>
       </button>
       <button>
-        <Link to="/distance">Go to Distance Page</Link>
+        <Link to="/distance">Дальнометр обучение</Link>
       </button>
       <button>
-        <Link to="/beton">Go to Beton Page</Link>
+        <Link to="/beton">Бетонометр</Link>
       </button>
       <button>
         <Link to="/total">Go to Total Page</Link>
       </button>
       <button>
-        <Link to="/newdistance">Go to New distance Page</Link>
+        <Link to="/newdistance">Дальнометр тест</Link>
       </button>
     </div>
   );

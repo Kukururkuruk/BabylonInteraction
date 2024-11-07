@@ -28,9 +28,11 @@ export class GUIManager {
   private scene: Scene;
   public advancedTexture: AdvancedDynamicTexture;
   private textBlock: TextBlock;
+  private WASDContainer: Rectangle
   private textMessages: string[] | null = null;
   private currentTextIndex: number = 0;
   private dialogAnimation: Animation;
+  private nondialogAnimation: Animation;
   private dialogContainer: Rectangle;
   private currentDialogBox: Rectangle | null = null;
   private clickSound: Sound;
@@ -104,31 +106,32 @@ export class GUIManager {
   createGui(): Promise<void> {
     return new Promise((resolve) => {
 
-      const WASDContainer = new Rectangle();
-      WASDContainer.width = "28%";
-      WASDContainer.height = "67%";
-      WASDContainer.thickness = 0;
-      WASDContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      WASDContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      WASDContainer.top = "20%";
-      WASDContainer.left = "2%";
-      this.advancedTexture.addControl(WASDContainer);
+      this.WASDContainer = new Rectangle();
+      this.WASDContainer.width = "20%";
+      this.WASDContainer.height = "20%";
+      this.WASDContainer.thickness = 0;
+      this.WASDContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      this.WASDContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      this.WASDContainer.top = "40%";
+      this.WASDContainer.paddingRight = "2%";
+      // this.WASDContainer.background = 'red'
+      this.advancedTexture.addControl(this.WASDContainer);
 
       // Создаем TextBlock для отображения счетчика кликов
       this.textBlock = new TextBlock();
       this.textBlock.text = this.textMessages[this.currentTextIndex];
       this.textBlock.color = "#212529";
-      this.textBlock.fontSize = "4%";
+      // this.textBlock.fontSize = "4%";
       this.textBlock.fontFamily = "Segoe UI";
-      this.textBlock.width = '90%';
-      this.textBlock.paddingTop = "2%";
-      this.textBlock.paddingLeft = "15%";
-      this.textBlock.paddingRight = "15%";
-      this.textBlock.paddingBottom = "7%";
+      this.textBlock.width = '80%';
+      // this.textBlock.paddingTop = "2%";
+      this.textBlock.paddingLeft = "-11%";
+      // this.textBlock.paddingRight = "15%";
+      // this.textBlock.paddingBottom = "7%";
       this.textBlock.textWrapping = GUI.TextWrapping.WordWrap;
       this.textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
       this.textBlock.isPointerBlocker = false;
-      WASDContainer.addControl(this.textBlock);
+      this.WASDContainer.addControl(this.textBlock);
 
 
       // Добавляем обработчик событий для клавиатуры
@@ -479,7 +482,7 @@ export class GUIManager {
 
 
 
-    CreateDialogBox( pages: Rectangle[]): void {
+    CreateDialogBox( pages: Rectangle[], target?): void {
 
       if (this.currentDialogBox) {
         this.advancedTexture.removeControl(this.currentDialogBox);
@@ -589,7 +592,7 @@ export class GUIManager {
 
 
       // Создаем кнопку для скрытия диалогового окна
-      const hideButton = Button.CreateSimpleButton("hideButton", "Hide Dialog");
+      const hideButton = Button.CreateSimpleButton("hideButton", "Скрыть планшет");
       hideButton.width = "150px";
       hideButton.height = "50px";
       hideButton.color = "white";
@@ -611,30 +614,57 @@ export class GUIManager {
       // Обработка события клика по кнопке
       hideButton.onPointerUpObservable.add(() => {
         this.dialogVisible = !this.dialogVisible;
-          this.updateDialogAnimation(this.dialogVisible);
+          this.updateDialogAnimation(this.dialogVisible, this.dialogContainer);
+          if (this.WASDContainer) {
+            this.updateNonDialogAnimation(this.dialogVisible, this.WASDContainer);
+          }
+          if (target) {
+            this.updateNonDialogAnimation(this.dialogVisible, target);
+          }
+          
       });
 
     }
 
 
+    updateNonDialogAnimation(visible, targetObject) {
+      this.nondialogAnimation = new Animation(
+        "nondialogAnimation",
+        "left",
+        30,
+        Animation.ANIMATIONTYPE_FLOAT,
+        Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
 
-
-
-
-
-
-  updateDialogAnimation(visible) {
-    const keys = [];
-    if (visible) {
-        keys.push({ frame: 0, value: 500 });
-        keys.push({ frame: 30, value: 40 });
-    } else {
-        keys.push({ frame: 0, value: 40 });
-        keys.push({ frame: 30, value: 500 });
-    }
-    this.dialogAnimation.setKeys(keys);
-    this.scene.beginDirectAnimation(this.dialogContainer, [this.dialogAnimation], 0, 30, false);
+      const keys = [];
+      if (visible) {
+          keys.push({ frame: 0, value: 450 });
+          keys.push({ frame: 30, value: 0 });
+      } else {
+          keys.push({ frame: 0, value: 0 });
+          keys.push({ frame: 30, value: 450 });
+      }
+      this.nondialogAnimation.setKeys(keys);
+      this.scene.beginDirectAnimation(targetObject, [this.nondialogAnimation], 0, 30, false);
   }
+
+
+
+
+
+    updateDialogAnimation(visible, targetObject) {
+      const keys = [];
+      if (visible) {
+          keys.push({ frame: 0, value: 500 });
+          keys.push({ frame: 30, value: 50 });
+      } else {
+          keys.push({ frame: 0, value: 50 });
+          keys.push({ frame: 30, value: 500 });
+      }
+      this.dialogAnimation.setKeys(keys);
+      this.scene.beginDirectAnimation(targetObject, [this.dialogAnimation], 0, 30, false);
+  }
+  
 
   createTextInputDialog(): void {
     const textBlocks: TextBlock[] = [];
