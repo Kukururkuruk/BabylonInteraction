@@ -15,6 +15,7 @@ import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
 import { DialogPage } from "./FunctionComponents/DialogPage";
+import eventEmitter from "../../EventEmitter";
 
 export class QuestionScene {
   scene: Scene;
@@ -66,7 +67,7 @@ export class QuestionScene {
       this.engine.hideLoadingUI();
 
 
-      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страгичке планшета.")
+      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страничке планшета.")
       const page2 = this.dialogPage.createTextGridPage("Удачи!", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
       this.guiManager.CreateDialogBox([page1, page2]);
     });
@@ -383,14 +384,14 @@ export class QuestionScene {
   // Метод для обновления счетчика кликов
   private updateCounter(): void {
     this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+    eventEmitter.emit("updateAnswers", this.counterText.text);
   }
 
   // Публичный метод для обновления счетчика правильных ответов
   public incrementCorrectAnswers(): void {
     this.correctAnswers++;
-    console.log("Before updating text:", this.correctAnswersText.text);
     this.correctAnswersText.text = `Правильные ответы: ${this.correctAnswers}`;
-    console.log("After updating text:", this.correctAnswersText.text);
+    eventEmitter.emit("updateCorrectAnswers", this.correctAnswersText.text);
     this.scene.render();
   }
 
@@ -398,6 +399,7 @@ export class QuestionScene {
   public incrementIncorrectAnswers(): void {
     this.incorrectAnswers++;
     this.incorrectAnswersText.text = `Неправильные ответы: ${this.incorrectAnswers}`;
+    eventEmitter.emit("updateIncorrectAnswers", this.incorrectAnswersText.text);
     this.scene.render();
   }
 

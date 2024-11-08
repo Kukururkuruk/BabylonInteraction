@@ -63,7 +63,7 @@ export class BookScene {
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
 
-            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтоюы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтобы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
                 
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
@@ -390,7 +390,7 @@ export class BookScene {
     private CreateGUI(): void {
         // Создаем текст для отображения счетчика кликов
         this.counterText = new TextBlock();
-        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
         this.counterText.color = "#212529";
         this.counterText.fontSize = "2%";
         this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;

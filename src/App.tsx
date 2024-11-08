@@ -19,8 +19,8 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Main />} />
-        <Route path="/relmain" element={<RelMain />} />
+        <Route path="/main" element={<Main />} />
+        <Route path="/" element={<RelMain />} />
         <Route path="/base" element={<Base />} />
         <Route path="/tutor" element={<Tutor />} />
         <Route path="/test" element={<BabylonTest />} />
