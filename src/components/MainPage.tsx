@@ -6,7 +6,7 @@ const Main: React.FC = () => {
     <div>
       <h1>Main Page</h1>
       <button>
-        <Link to="/base">Суоро удалим</Link>
+        <Link to="/base">Скоро удалим</Link>
       </button>
       <button>
         <Link to="/tutor">Линейка</Link>
