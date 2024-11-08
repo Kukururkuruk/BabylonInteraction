@@ -1,20 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
-import { BookScene } from "../BabylonExamples/BookScene";
+import { BookScene2 } from "../BabylonExamples/BookScene2";
 import ModalWindow from "./ModalWindow";
 import meshDataBook from "../assets/mashDataBook.json";
 
-const BabylonBook: React.FC = () => {
+const BabylonBook2: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentKeyword, setCurrentKeyword] = useState<string | null>(null);
     const [currentTitle, setCurrentTitle] = useState<string>("");
     const [currentDescription, setCurrentDescription] = useState<string>("");
 
-    const exampleRef = useRef<BookScene | null>(null);
+    const exampleRef = useRef<BookScene2 | null>(null);
 
     useEffect(() => {
         if (canvasRef.current && !exampleRef.current) {
-            const example = new BookScene(canvasRef.current);
+            const example = new BookScene2(canvasRef.current);
             example.openModal = (keyword: string) => {
                 const meshInfo = meshDataBook.find((item) => item.keyword === keyword);
                 if (meshInfo) {
@@ -80,9 +80,7 @@ const BabylonBook: React.FC = () => {
     );
 };
 
-export default BabylonBook;
-
-
+export default BabylonBook2;
 
 
 

@@ -17,6 +17,7 @@ import {
   PointerInfo,
   PointerEventTypes,
   Space,
+  Matrix,
 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
@@ -956,53 +957,112 @@ export class TriggerManager2 {
     this.firstPoint = null;
     this.secondPoint = null;
 
+    let sphere = null; // Сфера, которая будет отображаться
+
+    // Создаем текстовый блок для отображения углов после первого клика
+    if (!this.angleText) {
+        this.angleText = new TextBlock();
+        this.angleText.text = "";
+        this.angleText.color = "white";
+        this.angleText.fontSize = 24;
+        this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        this.angleText.top = "10px";
+        this.angleText.left = "10px";
+        this.angleText.isHitTestVisible = false;
+        this.guiTexture.addControl(this.angleText);
+    }
+
     // Обработчик кликов
     this.scene.onPointerDown = (evt, pickResult) => {
-
         // Проверяем, был ли клик правой кнопкой мыши
         if (evt.button === 2) {
-
             if (pickResult.hit && pickResult.pickedPoint) {
                 if (!this.firstPoint) {
                     // Запоминаем первую точку
                     this.firstPoint = pickResult.pickedPoint.clone();
+
+                    // Создаем сферу в месте первого клика
+                    if (sphere) {
+                        sphere.dispose(); // Убираем предыдущую сферу, если она была
+                    }
+                    sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.2 }, this.scene);
+                    sphere.position = this.firstPoint; // Помещаем сферу в первую точку
+                    const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
+                    sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Зеленый цвет
+                    sphereMaterial.emissiveColor = new Color3(1, 0, 0); // Добавляем свечение, чтобы шарик выделялся
+                    sphere.material = sphereMaterial;
+
                 } else if (!this.secondPoint) {
-                    // Запоминаем вторую точку
+                    // Запоминаем вторую точку и завершаем измерение
                     this.secondPoint = pickResult.pickedPoint.clone();
 
                     // Вычисляем расстояние
                     const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
 
-                    if (this.firstPoint && this.secondPoint) {
-                        // Вектор от первой точки ко второй
-                        const directionVector = this.secondPoint.subtract(this.firstPoint).normalize();
+                    // Вектор от первой точки ко второй
+                    const directionVector = this.secondPoint.subtract(this.firstPoint).normalize();
 
-                        // Глобальные оси
-                        const globalX = new Vector3(1, 0, 0);
-                        const globalY = new Vector3(0, 1, 0);
-                        const globalZ = new Vector3(0, 0, 1);
+                    // Глобальные оси
+                    const globalX = new Vector3(1, 0, 0);
+                    const globalY = new Vector3(0, 1, 0);
+                    const globalZ = new Vector3(0, 0, 1);
 
-                        // Вычисляем углы относительно глобальных осей
-                        const angleX = Math.acos(Vector3.Dot(directionVector, globalX)) * (180 / Math.PI);
-                        const angleY = Math.acos(Vector3.Dot(directionVector, globalY)) * (180 / Math.PI);
-                        const angleZ = Math.acos(Vector3.Dot(directionVector, globalZ)) * (180 / Math.PI);
+                    // Вычисляем углы относительно глобальных осей
+                    const angleX = Math.acos(Vector3.Dot(directionVector, globalX)) * (180 / Math.PI);
+                    const angleY = Math.acos(Vector3.Dot(directionVector, globalY)) * (180 / Math.PI);
+                    const angleZ = Math.acos(Vector3.Dot(directionVector, globalZ)) * (180 / Math.PI);
 
-                        // Показываем расстояние и углы через GUI
-                        this.guiManager.showDistanceMessage(
-                            `Расстояние: ${distance.toFixed(2)} м\nУгол с осью X: ${angleX.toFixed(2)}°\nУгол с осью Y: ${angleY.toFixed(2)}°\nУгол с осью Z: ${angleZ.toFixed(2)}°`
-                        );
+                    // Показываем расстояние и углы через GUI
+                    this.guiManager.showDistanceMessage(
+                        `Расстояние: ${distance.toFixed(2)} м\nУгол с осью X: ${angleX.toFixed(2)}°\nУгол с осью Y: ${angleY.toFixed(2)}°\nУгол с осью Z: ${angleZ.toFixed(2)}°`
+                    );
 
-                        // Сброс для нового измерения
-                        this.firstPoint = null;
-                        this.secondPoint = null;
+                    // Сброс для нового измерения
+                    this.firstPoint = null;
+                    this.secondPoint = null;
+
+                    // Убираем сферу и текст угла после второго клика
+                    if (sphere) {
+                        sphere.dispose();
+                        sphere = null;
                     }
+                    this.angleText.isVisible = false;
                 }
             }
         } else if (evt.button === 0) {
             console.log("Левый клик. Замеры не проводятся.");
         }
-    }
+    };
+
+    // Добавляем обновление угла перед каждым кадром, если была установлена первая точка
+    this.scene.registerBeforeRender(() => {
+        if (this.firstPoint && !this.secondPoint) {
+            const pointerRay = this.scene.createPickingRay(this.scene.pointerX, this.scene.pointerY, Matrix.Identity(), this.scene.activeCamera);
+            const pickResult = this.scene.pickWithRay(pointerRay);
+
+            if (pickResult.hit && pickResult.pickedPoint) {
+                const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+
+                // Глобальные оси
+                const globalX = new Vector3(1, 0, 0);
+                const globalY = new Vector3(0, 1, 0);
+                const globalZ = new Vector3(0, 0, 1);
+
+                // Вычисляем углы относительно осей X и Y и Z
+                const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+                const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+                const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+
+                // Обновляем текст углов
+                this.angleText.text = `Угол X: ${angleX.toFixed(2)}°, Угол Y: ${angleY.toFixed(2)}°, Угол Z: ${angleZ.toFixed(2)}°`;
+                this.angleText.isVisible = true;
+            }
+        }
+    });
 }
+
+
 
 
 

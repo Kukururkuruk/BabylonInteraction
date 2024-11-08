@@ -13,6 +13,7 @@ import BabylonBeton from './components/BabylonBeton';
 import BabylonTotal from './components/BabylonTotal';
 import BabylonNewDistanceScene from './components/BabylonNewDistance';
 import RelMain from './components/RelMainPage';
+import BabylonBook2 from './components/BabylonBook2';
 
 
 const App: React.FC = () => {
@@ -24,10 +25,11 @@ const App: React.FC = () => {
         <Route path="/base" element={<Base />} />
         <Route path="/tutor" element={<Tutor />} />
         <Route path="/test" element={<BabylonTest />} />
-        <Route path="/question" element={<BabylonQuestion />} />
+        <Route path="/тестирование" element={<BabylonQuestion />} />
         <Route path="/full" element={<BabylonFull />} />
         <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
-        <Route path='/book' element={<BabylonBook />} />
+        <Route path='/терминология' element={<BabylonBook />} />
+        <Route path='/терминтест' element={<BabylonBook2 />} />
         <Route path='/distance' element={<BabylonDistance />} />
         <Route path='/beton' element={<BabylonBeton />} />
         <Route path="/total" element={<BabylonTotal />} />

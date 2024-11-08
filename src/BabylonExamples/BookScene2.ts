@@ -16,7 +16,7 @@ import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
 import { DialogPage } from "./FunctionComponents/DialogPage";
 
-export class BookScene {
+export class BookScene2 {
     scene: Scene;
     engine: Engine;
     canvas: HTMLCanvasElement;
@@ -138,6 +138,11 @@ export class BookScene {
         // Добавляем кастомный ввод к камере
         this.camera.inputs.add(customMouseInput);
     }
+
+
+
+
+
 
     async CreateEnvironment(): Promise<void> {
         try {
@@ -386,6 +391,11 @@ export class BookScene {
         }
     }
 
+
+
+
+    
+
     // Метод для создания GUI
     private CreateGUI(): void {
         // Создаем текст для отображения счетчика кликов
@@ -410,15 +420,6 @@ export class BookScene {
 }
 
 
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   
   

@@ -6,10 +6,13 @@ const RelMain: React.FC = () => {
     <div>
       <h1>Выбор странички</h1>
        <button>
-        <Link to="/book">Терминология</Link>
+        <Link to="/терминология">Терминология</Link>
       </button>
       <button>
-        <Link to="/question">Тест терминологии</Link>
+        <Link to="/терминтест">Терминология-производительность</Link>
+      </button>
+      <button>
+        <Link to="/тестирование">Тест терминологии</Link>
       </button>
     </div>
   );
