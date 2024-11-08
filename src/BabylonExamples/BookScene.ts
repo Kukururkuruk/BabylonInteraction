@@ -63,12 +63,12 @@ export class BookScene {
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
 
-            const page1 = this.dialogPage.addText("Привет! Здесь ты можешь посмотреть информацию о сооружениях но перед этим пройди обучение по передвижению.", async () => {
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтоюы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
                 
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
-                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, ты можешь узнать про них информацию.\nСиним подсвечиваются те, на которые ты уже кликал.\nВ левом верхнем углу общее количество кликабельных сооружений.")
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
                 const page3 = this.dialogPage.createStartPage("/question")
                 this.guiManager.CreateDialogBox([page2, page3], this.counterText);
               })
@@ -116,7 +116,7 @@ export class BookScene {
         this.camera.attachControl(this.canvas, true);
     
         // Настройки камеры
-        this.camera.applyGravity = false;
+        this.camera.applyGravity = true;
         this.camera.checkCollisions = true;
         this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
         this.camera.minZ = 0.45;

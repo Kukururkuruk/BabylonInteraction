@@ -35,7 +35,7 @@ export class DialogPage {
         const dialogText = new TextBlock();
         dialogText.text = "";
         dialogText.color = "#212529";
-        dialogText.fontSize = "5%";
+        dialogText.fontSize = "4.5%";
         dialogText.fontFamily = "Segoe UI";
         dialogText.resizeToFit = true;
         dialogText.textWrapping = TextWrapping.WordWrap;

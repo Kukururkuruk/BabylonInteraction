@@ -8,6 +8,7 @@ import {
   FreeCamera,
   HighlightLayer,
   Color3,
+  FreeCameraMouseInput,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
@@ -65,8 +66,8 @@ export class QuestionScene {
       this.engine.hideLoadingUI();
 
 
-      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Но прежде пройти обучение.")
-      const page2 = this.dialogPage.createTextGridPage("Блаблабла", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
+      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страгичке планшета.")
+      const page2 = this.dialogPage.createTextGridPage("Удачи!", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
       this.guiManager.CreateDialogBox([page1, page2]);
     });
     this.CreateController();
@@ -100,20 +101,32 @@ export class QuestionScene {
 
   CreateController(): void {
     // Установка начальной позиции камеры для лучшей видимости
-    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
     this.camera.attachControl(this.canvas, true);
 
+    // Настройки камеры
     this.camera.applyGravity = true;
     this.camera.checkCollisions = true;
     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     this.camera.minZ = 0.45;
     this.camera.speed = 0.55;
     this.camera.angularSensibility = 4000;
+    this.camera.rotation.y = -Math.PI / 2;
     this.camera.keysUp.push(87); // W
     this.camera.keysLeft.push(65); // A
     this.camera.keysDown.push(83); // S
     this.camera.keysRight.push(68); // D
-  }
+
+    // Отключаем стандартное управление камерой при использовании мыши
+    this.camera.inputs.removeByType("FreeCameraMouseInput");
+
+    // Создаем кастомный ввод для управления камерой по левому клику
+    const customMouseInput = new FreeCameraMouseInput();
+    customMouseInput.buttons = [0]; // Только левая кнопка мыши (0 - левая, 1 - средняя, 2 - правая)
+
+    // Добавляем кастомный ввод к камере
+    this.camera.inputs.add(customMouseInput);
+}
 
   async CreateEnvironment(): Promise<void> {
     try {
