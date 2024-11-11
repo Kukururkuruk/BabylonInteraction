@@ -45,6 +45,9 @@ export class BookScene2 {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.engine = new Engine(this.canvas, true);
+
+        this.playLoadingVideo()
+
         this.engine.displayLoadingUI();
 
         this.scene = this.CreateScene();
@@ -84,6 +87,7 @@ export class BookScene2 {
             this.scene.render();
         });
     }
+
 
     CreateScene(): Scene {
         const scene = new Scene(this.engine);
@@ -416,6 +420,35 @@ export class BookScene2 {
     private updateCounter(): void {
         this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
     }
+
+    async playLoadingVideo(): Promise<void> {
+        // Создаем HTMLVideoElement
+        const video = document.createElement("video");
+        video.src = "/models/film_1var_1.mp4";
+        video.autoplay = true;
+        video.muted = false;
+        video.loop = false; // Остановить после одного воспроизведения
+        video.style.position = "absolute";
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.top = "0";
+        video.style.left = "0";
+        video.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
+        video.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
+        video.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
+        
+        // Добавляем видео на страницу
+        document.body.appendChild(video);
+    
+        // Ждем окончания видео
+        return new Promise((resolve) => {
+            video.onended = () => {
+                video.remove(); // Убираем видео из DOM
+                resolve(); // Возвращаем управление после завершения
+            };
+        });
+    }
+
 
 }
 

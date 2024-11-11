@@ -174,7 +174,7 @@ export class QuestionScene {
         // Третья группа
         {
           groupName: "Retaining_wall_Block_LP_L_5",
-          baseName: "SM_0_Retaining_wall_Block_LP_L_5",
+          baseName: "SM_0_Retaining_wall_Block_LP_L",
         },
         // Добавьте дополнительные группы по необходимости
       ];
@@ -268,7 +268,7 @@ export class QuestionScene {
           const groupMeshes = map.filter(
             (mesh) =>
               mesh.name === group.baseName ||
-              mesh.name.startsWith(`${group.baseName}.`)
+              mesh.name.startsWith(`${group.baseName}`)
           );
 
           if (groupMeshes.length > 0) {

@@ -123,7 +123,7 @@ export class GUIManager {
       this.textBlock.color = "#212529";
       // this.textBlock.fontSize = "4%";
       this.textBlock.fontFamily = "Segoe UI";
-      this.textBlock.width = '80%';
+      this.textBlock.width = '70%';
       // this.textBlock.paddingTop = "2%";
       this.textBlock.paddingLeft = "-11%";
       // this.textBlock.paddingRight = "15%";

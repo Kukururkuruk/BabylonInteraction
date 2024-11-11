@@ -989,7 +989,7 @@ export class TriggerManager2 {
                     sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.2 }, this.scene);
                     sphere.position = this.firstPoint; // Помещаем сферу в первую точку
                     const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
-                    sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Зеленый цвет
+                    sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
                     sphereMaterial.emissiveColor = new Color3(1, 0, 0); // Добавляем свечение, чтобы шарик выделялся
                     sphere.material = sphereMaterial;
 
