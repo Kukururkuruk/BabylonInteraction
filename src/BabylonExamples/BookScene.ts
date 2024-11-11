@@ -413,7 +413,7 @@ export class BookScene {
     async playLoadingVideo(): Promise<void> {
         // Создаем HTMLVideoElement
         const video = document.createElement("video");
-        video.src = "/models/film_1var_1.mp4";
+        video.src = "/models/film_1var_1_2K.mp4";
         video.autoplay = true;
         video.muted = false;
         video.loop = false; // Остановить после одного воспроизведения

@@ -1000,22 +1000,22 @@ export class TriggerManager2 {
                     // Вычисляем расстояние
                     const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
 
-                    // Вектор от первой точки ко второй
-                    const directionVector = this.secondPoint.subtract(this.firstPoint).normalize();
+                    // // Вектор от первой точки ко второй
+                    // const directionVector = this.secondPoint.subtract(this.firstPoint).normalize();
 
-                    // Глобальные оси
-                    const globalX = new Vector3(1, 0, 0);
-                    const globalY = new Vector3(0, 1, 0);
-                    const globalZ = new Vector3(0, 0, 1);
+                    // // Глобальные оси
+                    // const globalX = new Vector3(1, 0, 0);
+                    // const globalY = new Vector3(0, 1, 0);
+                    // const globalZ = new Vector3(0, 0, 1);
 
-                    // Вычисляем углы относительно глобальных осей
-                    const angleX = Math.acos(Vector3.Dot(directionVector, globalX)) * (180 / Math.PI);
-                    const angleY = Math.acos(Vector3.Dot(directionVector, globalY)) * (180 / Math.PI);
-                    const angleZ = Math.acos(Vector3.Dot(directionVector, globalZ)) * (180 / Math.PI);
+                    // // Вычисляем углы относительно глобальных осей
+                    // const angleX = Math.acos(Vector3.Dot(directionVector, globalX)) * (180 / Math.PI);
+                    // const angleY = Math.acos(Vector3.Dot(directionVector, globalY)) * (180 / Math.PI);
+                    // const angleZ = Math.acos(Vector3.Dot(directionVector, globalZ)) * (180 / Math.PI);
 
                     // Показываем расстояние и углы через GUI
                     this.guiManager.showDistanceMessage(
-                        `Расстояние: ${distance.toFixed(2)} м\nУгол с осью X: ${angleX.toFixed(2)}°\nУгол с осью Y: ${angleY.toFixed(2)}°\nУгол с осью Z: ${angleZ.toFixed(2)}°`
+                        `Расстояние: ${distance.toFixed(2)} м}°`
                     );
 
                     // Сброс для нового измерения

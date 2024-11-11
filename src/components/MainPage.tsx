@@ -15,7 +15,7 @@ const Main: React.FC = () => {
         <Link to="/test">Выбор инструмента</Link>
       </button>
       <button>
-        <Link to="/question">Тест терминологии</Link>
+        <Link to="/тестирование">Тест терминологии</Link>
       </button>
       <button>
         <Link to="/full">Go to Fullexample Page</Link>
@@ -24,7 +24,7 @@ const Main: React.FC = () => {
         <Link to="/Level">Уровень пузырька</Link>
       </button>
       <button>
-        <Link to="/book">Терминология</Link>
+        <Link to="/терминология">Терминология</Link>
       </button>
       <button>
         <Link to="/distance">Дальнометр обучение</Link>
