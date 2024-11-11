@@ -18,7 +18,7 @@ const Main: React.FC = () => {
         <Link to="/Линейка">Линейка</Link>
       </button>
       <button>
-        <Link to="/full">Go to Fullexample Page</Link>
+        <Link to="/full">Штангенциркуль</Link>
       </button>
       <button>
         <Link to="/УровеньПузырька">Уровень пузырька</Link>
