@@ -465,7 +465,7 @@ export class TriggerManager2 {
                 const page1 = this.dialogPage.addText("Отлично, теперь переходи к следующему заданию.")
                 this.guiManager.CreateDialogBox([page1])
 
-                this.guiManager.createRouteButton('/test')
+                this.guiManager.createRouteButton('/ВыборИнструмента')
                 camera.fov = 0.8
             } else if (this.currentIntersectedSphere === 2 || this.currentIntersectedSphere === 3) {
                 // Пересечение с второй или третьей сферой
@@ -1015,7 +1015,7 @@ export class TriggerManager2 {
 
                     // Показываем расстояние и углы через GUI
                     this.guiManager.showDistanceMessage(
-                        `Расстояние: ${distance.toFixed(2)} м}°`
+                        `Расстояние: ${distance.toFixed(2)} м`
                     );
 
                     // Сброс для нового измерения

@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Main from './components/MainPage';
-import Base from './components/Base';
 import Tutor from './components/Tutor';
 import BabylonTest from './components/BabylonTest';
 import BabylonQuestion from './components/BabylonQuestion';
@@ -12,28 +11,23 @@ import BabylonDistance from './components/BabylonDistance';
 import BabylonBeton from './components/BabylonBeton';
 import BabylonTotal from './components/BabylonTotal';
 import BabylonNewDistanceScene from './components/BabylonNewDistance';
-import RelMain from './components/RelMainPage';
-import BabylonBook2 from './components/BabylonBook2';
 
 
 const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/main" element={<Main />} />
-        <Route path="/" element={<RelMain />} />
-        <Route path="/base" element={<Base />} />
-        <Route path="/tutor" element={<Tutor />} />
-        <Route path="/test" element={<BabylonTest />} />
+        <Route path="/" element={<Main />} />
+        <Route path="/Линейка" element={<Tutor />} />
+        <Route path="/ВыборИнструмента" element={<BabylonTest />} />
         <Route path="/тестирование" element={<BabylonQuestion />} />
         <Route path="/full" element={<BabylonFull />} />
-        <Route path="/level" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
+        <Route path="/УровеньПузырька" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
         <Route path='/терминология' element={<BabylonBook />} />
-        <Route path='/терминтест' element={<BabylonBook2 />} />
-        <Route path='/distance' element={<BabylonDistance />} />
-        <Route path='/beton' element={<BabylonBeton />} />
+        <Route path='/ДальнометрОбучение' element={<BabylonDistance />} />
+        <Route path='/Бетонометр' element={<BabylonBeton />} />
         <Route path="/total" element={<BabylonTotal />} />
-        <Route path='/newdistance' element={<BabylonNewDistanceScene />} />
+        <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
       </Routes>
     </Router>
   );
