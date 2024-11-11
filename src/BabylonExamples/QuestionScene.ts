@@ -50,7 +50,13 @@ export class QuestionScene {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
 
-    this.playLoadingVideo()
+    this.playLoadingVideo().then(() => {
+      
+
+      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страничке планшета.")
+      const page2 = this.dialogPage.createTextGridPage("Удачи!", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
+      this.guiManager.CreateDialogBox([page1, page2]);
+    })
 
     this.engine.displayLoadingUI();
 
@@ -69,10 +75,6 @@ export class QuestionScene {
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
 
-
-      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страничке планшета.")
-      const page2 = this.dialogPage.createTextGridPage("Удачи!", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
-      this.guiManager.CreateDialogBox([page1, page2]);
     });
     this.CreateController();
 
