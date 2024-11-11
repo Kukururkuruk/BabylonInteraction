@@ -13,17 +13,23 @@ import {
   HighlightLayer,
   StandardMaterial,
   Color3,
+  PBRMaterial,
   MeshBuilder,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import * as CANNON from 'cannon-es'; 
 import { CannonJSPlugin } from '@babylonjs/core/Physics/Plugins/cannonJSPlugin';
 import { PhysicsImpostor } from '@babylonjs/core/Physics/physicsImpostor'; 
-import { GUIManager } from '../components/GUIManager'; 
+import { GUIManager as GUIManagerComponent } from '../components/GUIManager'; 
+import { GUIManager as GUIManagerFunction } from "./FunctionComponents/GUIManager"; 
 import { TriggersManager } from './FunctionComponents/TriggerManager3'; 
 import { RayHelper } from "@babylonjs/core/Debug/rayHelper";
 import { StackPanel, Rectangle, AdvancedDynamicTexture, TextBlock, Button, Control } from "@babylonjs/gui";
 import { HDRCubeTexture } from "@babylonjs/core/Materials/Textures/hdrCubeTexture";
+import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
+import { DialogPage } from "./FunctionComponents/DialogPage";
+
+
 
 // Определение интерфейса для взаимодействующих объектов
 export interface MeshItem {
@@ -47,7 +53,7 @@ export class FullExample {
   guiTexture: AdvancedDynamicTexture;
   scene: Scene;
   engine: Engine;
-  guiManager: GUIManager;
+  guiManager: GUIManagerComponent; // Обновлено на GUIManagerComponent
   triggerManager: TriggersManager;
   textMessages: string[] = [];
   targetMeshes: AbstractMesh[] = [];
@@ -60,9 +66,12 @@ export class FullExample {
   measuringDistance: boolean = false;
   points: AbstractMesh[] = [];
   advancedTexture: AdvancedDynamicTexture | null = null;
-  MainCamera: FreeCamera | null = null;  // Добавлено объявление MainCamera
+  MainCamera!: FreeCamera;  // Объявление без допуска значения null
   questionTexture: AdvancedDynamicTexture | null = null; // Для второго интерфейса
   highlightLayer: HighlightLayer;
+  private dialogPage!: DialogPage;
+  private triggerManager2!: TriggerManager2;
+  private guiManager2!: GUIManagerFunction;
 
 
   
@@ -71,20 +80,25 @@ export class FullExample {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
     this.engine.displayLoadingUI();
-
     this.scene = this.CreateScene();
+
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
     this.setupCamera();
     this.setupLighting();
+
+    // Инициализация основных компонентов
+    this.initializeComponents();
      // Создаем HighlightLayer
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
     this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение, если нужно
     this.highlightLayer.outerGlow = true; // Включаем внешнее свечение, если нужно
     // Инициализация GUIManager и TriggersManager
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    this.guiManager = new GUIManager(this.scene, []);
+    this.guiManager = new GUIManagerComponent(this.scene, []);
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
-    
-    this.CreateHandModel(); // Загружаем модель
+
+    //this.CreateHandModel(); // Загружаем модель
     // Создание окружения и скрытие индикатора загрузки
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -98,6 +112,20 @@ export class FullExample {
       this.scene.render();
     });
   }
+
+  private initializeComponents(): void {
+    // Убедитесь, что guiTexture, MainCamera и другие зависимости готовы
+    this.dialogPage = new DialogPage();
+    console.log("DialogPage initialized");
+
+    this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.MainCamera);
+    console.log("TriggerManager2 initialized");
+
+    this.guiManager2 = new GUIManagerFunction(this.scene, []);
+    console.log("GUIManagerFunction initialized");
+    this.BetonTrigger();
+
+}
 
   start() {
     console.log("Метод start вызван.");
@@ -122,8 +150,10 @@ export class FullExample {
     scene.createDefaultSkybox(hdrTexture, true, 1000);
     scene.environmentIntensity = 0.5;
 
+  
     return scene;
   }
+  
   private setupCamera(): void {
     this.MainCamera = new FreeCamera("MainCamera", new Vector3(13.7, 6.3, 5.0), this.scene);
     // Установка цели камеры чуть выше и правее
@@ -141,7 +171,7 @@ export class FullExample {
     light.intensity = 0.7;
   }
 
-  async CreateHandModel(): Promise<void> {
+  /*async CreateHandModel(): Promise<void> {
     console.log("Загрузка модели штангенциркуля начата...");
     try {
         const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "calipers.stl", this.scene);
@@ -168,48 +198,133 @@ export class FullExample {
     } catch (error) {
         console.error("Ошибка при загрузке модели штангенциркуля:", error);
     }
+}*/
+
+
+
+
+async CreateEnvironment(): Promise<void> {
+  try {
+    const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+    map.forEach((mesh) => {
+      mesh.checkCollisions = true;
+    });
+
+    
+
+    // Создаем черный материал
+    const blackMaterial = new PBRMaterial("blackMaterial", this.scene);
+    blackMaterial.albedoColor = new Color3(0, 0, 0); // черный цвет
+    blackMaterial.roughness = 0.5; // значение шероховатости без текстуры
+
+    // Устанавливаем коллизии и видимость для мешей
+    map.forEach((mesh) => {
+      mesh.checkCollisions = true;
+
+      // Применяем черный материал и устанавливаем видимость
+      if (
+        mesh.name.startsWith("SM_0_Retaining_wall") || 
+        mesh.name.startsWith("SM_0_FencePostBridge") || 
+        mesh.name.startsWith("SM_ConcreteFence") || 
+        mesh.name.startsWith("SM_0_SupportLight")
+      ) {
+        mesh.material = blackMaterial;
+        mesh.visibility = 0; // делаем меш невидимым
+      } else {
+        mesh.visibility = 1; // делаем другие меши видимыми
+      }
+    });
+
+    // Обрабатываем другие меши
+    this.setupTargetMeshes(map);
+    this.setupBrokenMeshes(map);
+    this.setupWholeMeshes(map);
+    this.highlightSpecificMeshes();
+
+    // Убедитесь, что меши правильно загружены и отображаются перед заморозкой
+    console.log("Карта загружена успешно:", map);
+
+    // Замораживаем активные меши после завершения всех настроек
+    // this.scene.freezeActiveMeshes();
+    console.log("Активные меши заморожены.");
+
+  } catch (error) {
+    console.error("Ошибка при загрузке окружения:", error);
+  }
+}
+
+// Метод для заморозки или скрытия мешей
+/*private handleFreezeMeshes(mapMeshes: AbstractMesh[]): void {
+  const freezeMeshNames = ["SM_0_FencePostBridge", "SM_ConcreteFence", "SM_0_SupportLight", "SM_0_Retaining_wall"];
+  mapMeshes
+      .filter(mesh => freezeMeshNames.includes(mesh.name))
+      .forEach(mesh => {
+          mesh.dispose(); // Удаляем меши из сцены
+      });
+      this.scene.meshes.forEach(mesh => {
+        console.log("Меш в сцене:", mesh.name);
+    });
+}*/
+
+
+BetonTrigger(): void {
+  const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+  this.guiManager2.CreateDialogBox([page1])
+
+          this.triggerManager2.createStartButton('Начать', () => {
+          // Показываем сообщение
+          const page2 = this.dialogPage.addText("Нажмите на сломаное мостовое перекрытия и выберите что вы хотите измерить")
+          const page3 = this.dialogPage.addText("При выборе линейки замерьте длину дефекта мостового перекрытия, при выборе штангенциркуля замерьте диаметр арматуры")
+          const page4 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+          this.guiManager2.CreateDialogBox([page2, page3, page4])
+
+            // Активируем режим лазера для второй триггер-зоны
+            //this.triggerManager2.distanceMode();
+            //this.triggerManager2.enableDistanceMeasurement()
+            this.triggerManager2.createStartButton('Завершить', () => {
+              const page5 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+              this.guiManager2.CreateDialogBox([page5])
+              this.triggerManager2.disableDistanceMeasurement()
+
+              //this.triggerManager2.exitDisLaserMode2();
+              this.guiManager2.createRouteButton('/test')
+          })
+
+          
+          })
+
 }
 
 
-
-
-  async CreateEnvironment(): Promise<void> {
-    const { meshes: mapMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-    if (!mapMeshes.length) {
-      console.error("Не удалось загрузить меши из файла.");
-      return;
-  }
-    this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs"));
-    this.engine.displayLoadingUI();
-    mapMeshes.forEach((mesh) => {
-      mesh.checkCollisions = true;
-      
-    });
-
-    this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("box"));
-
-    this.targetMeshes.forEach(mesh => {
+// Метод для настройки целевых мешей с триггерами
+private setupTargetMeshes(mapMeshes: AbstractMesh[]): void {
+  this.targetMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("stairs") || mesh.name.toLowerCase().includes("box"));
+  
+  this.targetMeshes.forEach(mesh => {
       mesh.checkCollisions = true;
       this.createRayAboveMesh(mesh);
-      this.guiManager.createButtonAboveMesh(mesh);
-
-      const interactionObject = new InteractionObject(mesh); // Создаем объект взаимодействия
+      //this.guiManager.createButtonAboveMesh(mesh);
+      
+      const interactionObject = new InteractionObject(mesh);
       this.triggerManager.setupProximityTrigger(mesh, () => {
-        console.log("Камера вошла в зону триггера лестницы:", mesh.name);
-        this.scene.activeCamera = this.MainCamera; // Используйте MainCamera
+          console.log("Камера вошла в зону триггера лестницы:", mesh.name);
+          this.scene.activeCamera = this.MainCamera;
       });
-
+      
       this.triggerManager.enableClickInteraction(interactionObject.getMesh());
       this.triggerManager.setupClickTrigger(mesh, () => {
-        console.log("Лестница была кликнута:", mesh.name);
+          console.log("Лестница была кликнута:", mesh.name);
       });
-    });
-    // Работа с мешами типа "broken"
-  const brokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-  brokenMeshes.forEach((mesh) => {
+  });
+}
+
+// Метод для настройки мешей типа "broken" с точками и действиями
+private setupBrokenMeshes(mapMeshes: AbstractMesh[]): void {
+  const brokenMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("broken"));
+  brokenMeshes.forEach(mesh => {
       mesh.checkCollisions = true;
       mesh.isPickable = true;
-      mesh.isVisible = true; // Делаем видимым
+      mesh.isVisible = true;
       mesh.setEnabled(true);
       mesh.actionManager = new ActionManager(this.scene);
       mesh.actionManager.registerAction(
@@ -217,80 +332,20 @@ export class FullExample {
               console.log("Broken меш кликнут:", mesh.name, "Координаты:", mesh.position);
               this.interactionObject = mesh;
               this.scene.activeCamera = this.MainCamera;
-              this.showPointsAndQuestions(mesh); // Показать точки и вопросы
+              this.showPointsAndQuestions(mesh);
           })
       );
-
-
-
-// Координаты точек
-const pointsPositions = [
-  new Vector3(12.46, 6.3, 4.79),   // Первая точка
-  new Vector3(12.46, 6.3, 5.21),   // Вторая точка
-  new Vector3(12.46, 6.11, 4.72),  // Третья точка
-  new Vector3(12.46, 0.7, 4.72)    // Четвертая точка
-  
-];
-
-
-// Создаем точки и применяем одинаковый материал
-pointsPositions.forEach((position, index) => {
-  // Задаем разные размеры для первой, второй и третьей точки
-  const diameter = index === 3 ? 0.05 : 0.01; // Увеличиваем диаметр третьей точки
-
-  const point = MeshBuilder.CreateSphere("point" + index, { diameter: diameter }, this.scene);
-  
-  // Устанавливаем фиксированное положение точки
-  // Используем mesh.position и добавляем координаты для создания точек выше меша
-  point.position = mesh.position.add(new Vector3(position.x, position.y , position.z)); 
-
-  // Увеличиваем y для размещения точек выше меша
-  //point.position.y += 1; // Поднимаем точки над мешом на 1 единицу
-
-  // Отладочные сообщения
-  console.log(`Точка создана на позиции: ${point.position.x}, ${point.position.y}, ${point.position.z}`);
-
-  // Настраиваем материал для точки
-  const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
-  pointMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет для лучшей видимости
-  point.material = pointMaterial;
-
-
-  // Убедитесь, что точки изначально скрыты
-  this.points.forEach(point => {
-  point.isVisible = false; // Принудительно скрываем все точки
+      this.createPointsAboveMesh(mesh);
   });
+}
 
-  // Делаем точку кликабельной
-  point.isPickable = true;
-  pointMaterial.wireframe = true; // Использование каркасного материала для проверки видимости
-  point.actionManager = new ActionManager(this.scene);
-  point.actionManager.registerAction(
-      new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-          console.log("Точка кликнута:", point.name);
-          // Здесь можно добавить дополнительную логику для точки
-      })
-  );
-  // Сохраняем точку в массив
-  this.points.push(point);
-
-  
-});
-
-
-
-
-
-
-
-  });
-
-  // Работа с мешами типа "whole"
-  const wholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
-  wholeMeshes.forEach((mesh) => {
+// Метод для настройки мешей типа "whole"
+private setupWholeMeshes(mapMeshes: AbstractMesh[]): void {
+  const wholeMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("whole"));
+  wholeMeshes.forEach(mesh => {
       mesh.checkCollisions = true;
       mesh.isPickable = true;
-      mesh.visibility = 0; // Делаем невидимым
+      mesh.visibility = 0;
       mesh.setEnabled(true);
       mesh.actionManager = new ActionManager(this.scene);
       mesh.actionManager.registerAction(
@@ -298,92 +353,61 @@ pointsPositions.forEach((position, index) => {
               console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
               this.interactionObject = mesh;
               this.scene.activeCamera = this.MainCamera;
-              this.showPointsAndQuestions(mesh); // Показать точки и вопросы
+              this.showPointsAndQuestions(mesh);
           })
       );
-      
   });
-//
-// Определите массив с именами мешей
-const meshNames: string[] = [
-  "SM_0_SpanStructureBeam_1_Armature_R",
-  "SM_0_SpanStructureBeam_1_Cable_R",
-  "SM_0_SpanStructureBeam_2_Armature_L",
-  "SM_0_SpanStructureBeam_2_Cable_L",
-  // Добавьте сюда другие имена мешей, если необходимо
-];
-
-// Пример мешей (добавьте ваши меши сюда)
-const meshesToHighlight: Mesh[] = [
-  this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R"),
-  this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Cable_R"),
-  this.scene.getMeshByName("SM_0_SpanStructureBeam_2_Armature_L"),
-  this.scene.getMeshByName("SM_0_SpanStructureBeam_2_Cable_L"),
-].filter(mesh => mesh !== null) as Mesh[]; // Убедитесь, что меши не null
-
-// Добавляем меши в HighlightLayer
-meshesToHighlight.forEach(mesh => {
-  this.highlightLayer.addMesh(mesh, Color3.FromHexString("#88FF88")); // Ярко-зеленый цвет
-  this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
-  this.highlightLayer.outerGlow = false; // Включаем внешнее свечение, если нужно
-});
-
-
-// Логируем все меши в сцене для проверки
-function logAllMeshesInScene(scene: Scene) {
-  const allMeshes = scene.meshes.map(mesh => mesh.name);
-  console.log("Все меши в сцене:", allMeshes);
 }
 
-// Функция для получения мешей по именам
-function getMeshesByNames(scene: Scene, names: string[]): Mesh[] {
-  console.log("Ищем меши с именами:", names); // Логируем массив имен
-  const foundMeshes = names.map(name => scene.getMeshByName(name)).filter(mesh => mesh !== null) as Mesh[];
+// Метод для создания точек над мешом
+private createPointsAboveMesh(mesh: AbstractMesh): void {
+  const pointsPositions = [
+      new Vector3(12.46, 6.3, 4.79),
+      new Vector3(12.46, 6.3, 5.21),
+      new Vector3(12.46, 6.11, 4.72),
+      new Vector3(12.46, 0.7, 4.72)
+  ];
 
-  console.log("Найденные меши:", foundMeshes); // Логируем найденные меши
-  return foundMeshes;
+  pointsPositions.forEach((position, index) => {
+      const diameter = index === 3 ? 0.05 : 0.01;
+      const point = MeshBuilder.CreateSphere("point" + index, { diameter: diameter }, this.scene);
+      point.position = mesh.position.add(position);
+      
+      const pointMaterial = new StandardMaterial("pointMaterial" + index, this.scene);
+      pointMaterial.emissiveColor = new Color3(0, 1, 0);
+      point.material = pointMaterial;
+      point.isPickable = true;
+
+      point.actionManager = new ActionManager(this.scene);
+      point.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              console.log("Точка кликнута:", point.name);
+          })
+      );
+      this.points.push(point);
+  });
 }
 
-// Логируем все меши перед поиском
-logAllMeshesInScene(this.scene);
+// Метод для выделения определенных мешей
+private highlightSpecificMeshes(): void {
+  const meshNames = [
+      "SM_0_SpanStructureBeam_1_Armature_R",
+      "SM_0_SpanStructureBeam_1_Cable_R",
+      "SM_0_SpanStructureBeam_2_Armature_L",
+      "SM_0_SpanStructureBeam_2_Cable_L"
+  ];
 
-// Использование функции для получения мешей из сцены
-const meshes: Mesh[] = getMeshesByNames(this.scene, meshNames);
+  const meshesToHighlight = meshNames
+      .map(name => this.scene.getMeshByName(name))
+      .filter(mesh => mesh !== null) as Mesh[];
 
-// Проверяем, были ли найдены меши
-if (meshes.length === 0) {
-  console.warn("Не найдено ни одного меша."); // Логируем предупреждение, если меши не найдены
-} else {
-  console.log("Загруженные меши:", meshes); // Логируем загруженные меши
+  meshesToHighlight.forEach(mesh => {
+      this.highlightLayer.addMesh(mesh, Color3.FromHexString("#88FF88"));
+      this.highlightLayer.innerGlow = false;
+      this.highlightLayer.outerGlow = false;
+  });
 }
 
-// Работа с полученными мешами
-meshes.forEach((mesh) => {
-  console.log("Обрабатываем меш:", mesh.name); // Логируем имя меша
-  console.log("Позиция меша:", mesh.position); // Логируем позицию меша
-  console.log("Размеры меша:", mesh.getBoundingInfo().boundingBox.extendSize); // Логируем размеры меша
-
-  mesh.checkCollisions = true; // Включаем коллизии
-  mesh.isPickable = true; // Делаем меши выбираемыми
-  mesh.isVisible = true; // Делаем видимыми
-  mesh.setEnabled(true); // Включаем меши
-
-  // Создаем менеджер действий для меша
-  mesh.actionManager = new ActionManager(this.scene);
-  mesh.actionManager.registerAction(
-    new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-      console.log("Меш кликнут:", mesh.name, "Координаты:", mesh.position); // Логируем информацию о клике
-      this.interactionObject = mesh; // Устанавливаем выбранный меш для взаимодействия
-      this.scene.activeCamera = this.MainCamera; // Устанавливаем активную камеру
-      this.showPointsAndQuestions(mesh); // Показать точки и вопросы
-    })
-  );
-});
-
-// Скрываем загрузочный интерфейс
-this.engine.hideLoadingUI();
-  
-  }
 //
   // Метод для отображения точек и интерфейса вопросов
   showPointsAndQuestions(mesh: AbstractMesh): void {
@@ -712,6 +736,8 @@ checkAnswer(selectedAnswer: string): boolean {
     
   }
 
+  
+
 
 
   enableDistanceMeasurement(): void {
@@ -764,4 +790,7 @@ checkAnswer(selectedAnswer: string): boolean {
         } else if (evt.button === 0) {
             console.log("Левый клик. Замеры не проводятся.");
         }
-      }}}
+      }}
+    
+    
+    }

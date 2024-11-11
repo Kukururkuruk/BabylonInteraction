@@ -8,11 +8,13 @@ import {
     FreeCamera,
     HighlightLayer,
     Color3,
+    FreeCameraMouseInput,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
+import { DialogPage } from "./FunctionComponents/DialogPage";
 
 export class BookScene {
     scene: Scene;
@@ -21,16 +23,17 @@ export class BookScene {
     camera: FreeCamera;
     private guiTexture: AdvancedDynamicTexture;
     private triggerManager: TriggerManager2;
-    private guiManager: GUIManager; // Используем GUIManager
+    private guiManager: GUIManager;
+    private dialogPage: DialogPage;
     openModal?: (keyword: string) => void;
     private greenHighlightLayer: HighlightLayer;
     private blueHighlightLayer: HighlightLayer;
     private groupNameToBaseName: { [groupName: string]: string } = {};
     textMessages: string[] = [
-        "Чтобы идти вперед нажмите на W",
-        "Чтобы идти назад нажмите на S",
-        "Чтобы идти влево нажмите на A",
-        "Чтобы идти вправо нажмите на D",
+        "Чтобы идти вперед нажмите на 'W'",
+        "Чтобы идти назад нажмите на 'S'",
+        "Чтобы идти влево нажмите на 'A'",
+        "Чтобы идти вправо нажмите на 'D'",
         "А теперь осмотритесь по комнате",
       ];
 
@@ -49,6 +52,7 @@ export class BookScene {
         this.blueHighlightLayer = new HighlightLayer("blueHL", this.scene);
 
         this.guiManager = new GUIManager(this.scene, this.textMessages);
+        this.dialogPage = new DialogPage();
 
         this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
         this.triggerManager = new TriggerManager2(
@@ -58,20 +62,20 @@ export class BookScene {
 
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
-      
-            // После загрузки окружения вызываем CreateDialogBox
-            const fullText1 =
-              "Привет! Здесь ты можешь посмотреть информацию о сооружениях но перед этим пройди обучение по передвижению.";
-            const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты ты можешь узнать про них информацию. Синим подсвечиваются те на которые ты уже кликал. В левом верхнем углу общее количество кликабельных сооружений";
-      
-            this.guiManager.CreateDialogBox(fullText1, async () => {
-              // После завершения печати первого текста вызываем createGui()
-              await this.guiManager.createGui();
-      
-              // Затем отображаем второй текст в диалоговом окне
-              this.guiManager.CreateDialogBox(fullText2);
-            });
-          });
+
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтоюы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
+                
+                // После завершения печати первого текста вызываем createGui()
+                await this.guiManager.createGui();
+                
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
+                const page3 = this.dialogPage.createStartPage("/question")
+                this.guiManager.CreateDialogBox([page2, page3], this.counterText);
+              })
+ 
+            this.guiManager.CreateDialogBox([page1], this.counterText);
+          }
+        );
 
 
         this.CreateController();
@@ -108,20 +112,31 @@ export class BookScene {
 
     CreateController(): void {
         // Установка начальной позиции камеры для лучшей видимости
-        this.camera = new FreeCamera("camera", new Vector3(15, 3, 0), this.scene);
+        this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
         this.camera.attachControl(this.canvas, true);
-
+    
+        // Настройки камеры
         this.camera.applyGravity = true;
         this.camera.checkCollisions = true;
         this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
         this.camera.minZ = 0.45;
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
-        this.camera.rotation.y = -Math.PI/2
+        this.camera.rotation.y = -Math.PI / 2;
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
         this.camera.keysRight.push(68); // D
+    
+        // Отключаем стандартное управление камерой при использовании мыши
+        this.camera.inputs.removeByType("FreeCameraMouseInput");
+    
+        // Создаем кастомный ввод для управления камерой по левому клику
+        const customMouseInput = new FreeCameraMouseInput();
+        customMouseInput.buttons = [0]; // Только левая кнопка мыши (0 - левая, 1 - средняя, 2 - правая)
+    
+        // Добавляем кастомный ввод к камере
+        this.camera.inputs.add(customMouseInput);
     }
 
     async CreateEnvironment(): Promise<void> {
@@ -134,7 +149,57 @@ export class BookScene {
                 "Map_1.gltf",
                 this.scene
             );
-            console.log(map);
+
+            const { meshes: sign } = await SceneLoader.ImportMeshAsync(
+                "",
+                "./models/",
+                "MapPointerSimplev001.glb",
+                this.scene
+            );
+
+            // Создаём объект для группы мешей Sign
+            const group = {
+                meshes: sign,      // Здесь массив всех частей одного меша
+                isClicked: false   // Флаг, был ли произведен клик на всей группе
+            };
+
+            // Проходимся по каждой части меша
+            group.meshes.forEach((mesh) => {
+                console.log(mesh);
+                
+                mesh.checkCollisions = true;
+                mesh.position = new Vector3(20, 1, 0);
+                mesh.scaling = new Vector3(3, 3, 3);
+                mesh.rotation.z = Math.PI / 2;
+
+                this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                this.greenHighlightLayer.outerGlow = false;
+
+                this.triggerManager.setupModalInteraction(mesh, () => {
+                    // Проверяем, был ли уже произведен клик на этой группе
+                    if (!group.isClicked) {
+                        // Увеличиваем счётчик только при первом клике на группу
+                        this.clickedMeshes++;
+                        this.updateCounter();
+                        
+                        // Меняем цвет всех мешей группы на синий
+                        group.meshes.forEach(part => {
+                            this.greenHighlightLayer.removeMesh(part);
+                            this.blueHighlightLayer.addMesh(part, Color3.Blue());
+                            this.blueHighlightLayer.outerGlow = false;
+                        });
+
+                        // Устанавливаем флаг клика для группы
+                        group.isClicked = true;
+                    }
+
+                    if (this.openModal) {
+                        const keyword = "BRIDGE";
+                        this.openModal(keyword);
+                    }
+                });
+            });
+
             
 
             // Включаем коллизии для всех мешей
@@ -142,9 +207,18 @@ export class BookScene {
                 mesh.checkCollisions = true;
             });
 
-            this.BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-            this.BrokenMeshes.forEach((mesh) => {
-                mesh.visibility = 0; // Полностью видимый
+            const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
+            nonCollizionMeshs.map((item) => {
+                const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+                nonCollizionMesh.forEach((mesh) => {
+                    mesh.visibility = 0.5;
+                    mesh.checkCollisions = false
+                });
+            })
+
+            const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+            BrokenMeshes.forEach((mesh) => {
+                mesh.visibility = 0;
             });
 
             // Определение группированных мешей
@@ -159,7 +233,7 @@ export class BookScene {
                 },
                 {
                     groupName: "Retaining_wall_Block_LP_L_5",
-                    baseName: "SM_0_Retaining_wall_Block_LP_L_5",
+                    baseName: "SM_0_Retaining_wall_Block_LP_L",
                 },
                 // Добавьте дополнительные группы по необходимости
             ];
@@ -180,40 +254,40 @@ export class BookScene {
                 "SM_0_MonolithicRack_L_Support",
                 // Лестница
                 "SM_0_Stairs",
-                // Барьерное ограждение что
-                "SM_0_FencePostBridge_base_.002",
                 // Барьерное ограждение зачем
                 "SM_0_FencePost_Road.002",
                 // Барьерное ограждение тип
                 "SM_0_FencePostBridge_base_.004",
-                // Барьер стойка
-                "SM_FenctRack_LP",
-                // Барьер балка
-                "SM_FenceWave_LP_1",
-                // Барьер соединение
-                "SM_FenceConsole_LP",
                 // Шов что
                 "SM_0_connectingShaft_1",
-                // Шов тип
-                "SM_0_connectingShaft_2",
                 // Дорожное полотно
                 "SM_0_Road_Down.001",
-                // Насыпь
-                "SM_0_Landscape_2.002",
                 // Асфальт на мосту
                 "SM_0_BridgeAsfalt",
-                // Кирпич
-                "SM_0_Retaining_wall_Block_LP_R_5",
                 // Подферменник
                 "SM_0_Stand_R",
-                // Ограждение на дороге
-                "SM_0_FencePost_Road.001",
                 //Просто дорога сверху
                 "SM_0_Road_1_R",
                 //Бетонка по середине НьюДжерси
-                "SM_ConcreteFence_LP",
+                "SM_ConcreteFence_LP.002",
                 //Плита переходная
                 "SM_0_TransitionPlate8M_LP_L_primitive0",
+                //Плита над балками
+                "SM_0_PlotMonolithic",
+                // Фонари
+                "SM_0_SupportLight_LP_Down_L",
+                // Водосточный монолит
+                "SM_0_Landscape_Gravel_LP",
+                // Подвесной лоток
+                "SM_HalfPipe_LP",
+                //Лоток верхняя часть
+                "SM_ConcreteTray_UP",
+                //Откосной лоток
+                "SM_ConcreteTelescopicTray",
+                //Водосточная система
+                "SM_PipeWater_LP",
+                //Дождеприемник
+                "SM_GridDrainageSmall_LP",
                 // Добавьте дополнительные одиночные меши по необходимости
             ];
 
@@ -230,13 +304,16 @@ export class BookScene {
                     const groupMeshes = map.filter(
                         (mesh) =>
                             mesh.name === group.baseName ||
-                            mesh.name.startsWith(`${group.baseName}.`)
+                            mesh.name.startsWith(`${group.baseName}`)
                     );
+                    console.log(groupMeshes);
+                    
 
                     if (groupMeshes.length > 0) {
                         // Подсвечиваем все меши группы зеленым
                         groupMeshes.forEach((mesh) => {
                             this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                            this.greenHighlightLayer.outerGlow = false;
                             (mesh as any).isClicked = false;
                         });
 
@@ -244,6 +321,8 @@ export class BookScene {
                         groupMeshes.forEach((mesh) => {
                             this.triggerManager.setupModalInteraction(mesh, () => {
                                 if (!(mesh as any).isClicked) {
+                                    console.log(mesh);
+                                    
                                     // Увеличиваем счетчик только при первом клике на группу
                                     this.clickedMeshes++;
                                     this.updateCounter();
@@ -251,6 +330,7 @@ export class BookScene {
                                     groupMeshes.forEach((m) => {
                                         this.greenHighlightLayer.removeMesh(m);
                                         this.blueHighlightLayer.addMesh(m, Color3.Blue());
+                                        this.blueHighlightLayer.outerGlow = false;
                                         (m as any).isClicked = true;
                                     });
                                 }
@@ -269,14 +349,17 @@ export class BookScene {
 
                     if (mesh) {
                         this.greenHighlightLayer.addMesh(mesh, Color3.Green());
+                        this.greenHighlightLayer.outerGlow = false;
                         (mesh as any).isClicked = false;
 
                         this.triggerManager.setupModalInteraction(mesh, () => {
                             if (!(mesh as any).isClicked) {
+                                console.log(mesh);
                                 this.clickedMeshes++;
                                 this.updateCounter();
                                 this.greenHighlightLayer.removeMesh(mesh);
                                 this.blueHighlightLayer.addMesh(mesh, Color3.Blue());
+                                this.blueHighlightLayer.outerGlow = false;
                                 (mesh as any).isClicked = true;
                             }
                             if (this.openModal) {
@@ -307,13 +390,13 @@ export class BookScene {
     private CreateGUI(): void {
         // Создаем текст для отображения счетчика кликов
         this.counterText = new TextBlock();
-        this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
-        this.counterText.color = "white";
-        this.counterText.fontSize = 24;
-        this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.color = "#212529";
+        this.counterText.fontSize = "2%";
+        this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.counterText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this.counterText.paddingLeft = "20px";
-        this.counterText.paddingTop = "20px";
+        this.counterText.paddingRight = "6%";
+        this.counterText.paddingTop = "6%";
         this.guiTexture.addControl(this.counterText);
 
         console.log("Счетчик инициализирован:", this.counterText.text);
@@ -321,7 +404,7 @@ export class BookScene {
 
     // Метод для обновления счетчика кликов
     private updateCounter(): void {
-        this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
     }
 
 }

@@ -16,6 +16,9 @@ import {
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Image as GuiImage, Button, Control } from "@babylonjs/gui";
 import { TriggersManager } from "./FunctionComponents/TriggerManager3";
+import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
+import { DialogPage } from "./FunctionComponents/DialogPage";
+import { GUIManager } from "./FunctionComponents/GUIManager";
 
 export class Level {
   scene: Scene;
@@ -32,6 +35,10 @@ export class Level {
   isHighlighted: boolean = false; // Флаг для отслеживания состояния подсветки
   private inventoryVisible: boolean = false; // Флаг для отслеживания состояния инвентаря
   private inventoryImage: Control | null = null; // Используйте Control для GUI
+  private dialogPage: DialogPage;
+  private triggerManager2: TriggerManager2;
+  private guiManager: GUIManager;
+  private arrowButtons: Control[] = [];
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -44,6 +51,9 @@ export class Level {
     this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
+    this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
+    this.guiManager = new GUIManager(this.scene, this.textMessages);
+    this.dialogPage = new DialogPage();
     
 
     this.bubblePosition = new Vector3(0, 0.5, 0); // Инициализация позиции меша
@@ -54,6 +64,7 @@ export class Level {
     });
 
     this.CreateController();
+    this.BetonTrigger();
 
     // Добавляем обработчики событий для управления клавиатурой
     this.AddKeyboardControls();
@@ -121,8 +132,16 @@ export class Level {
 
 
   
-
   async CreateEnvironment(): Promise<void> {
+    try {
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+      map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+
+      
+      // Запрос на backend для получения пути к карте
+  /*async CreateEnvironment(): Promise<void> {
     try {
       const response = await fetch('http://127.0.0.1:5000/api/data');
         if (!response.ok) {
@@ -134,7 +153,7 @@ export class Level {
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
-      console.log("Модели карты успешно загружены:", map);
+      console.log("Модели карты успешно загружены:", map);*/
 
       const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
       meshes.forEach((mesh) => {
@@ -212,6 +231,9 @@ const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375
         button.left = `${position[0]}px`;
         button.top = `${position[1]}px`;
         this.guiTexture.addControl(button);
+
+         // Сохраняем кнопку в массив
+        this.arrowButtons.push(button);
     };
 
     // Добавьте стрелки (уже есть)
@@ -293,15 +315,26 @@ private HideInventory(): void {
     endMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     endMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
     this.guiTexture.addControl(endMessage);
+
+    // Убираем стрелочные кнопки
+    this.arrowButtons.forEach(button => {
+      this.guiTexture.removeControl(button); // Удаляем каждую кнопку
+  });
+  this.arrowButtons = []; // Очищаем массив после удаления
   
-    // Остановить цикл рендеринга
-    this.engine.stopRenderLoop();
-  
-    // Закрыть приложение (если необходимо)
-    setTimeout(() => {
+     // Убираем сообщение через 2 секунды
+     setTimeout(() => {
+      this.guiTexture.removeControl(endMessage); // Удаляем кнопку с сообщением
+  }, 2000); // Подождать 2 секунды перед удалением
+
+  // Остановить цикл рендеринга (если необходимо)
+  // this.engine.stopRenderLoop();
+
+  // Закрыть приложение (если необходимо)
+  setTimeout(() => {
       window.close(); // Это работает только для окон, открытых скриптами
-    }, 2000); // Подождать 2 секунды перед закрытием
-  }
+  }, 4000); // Подождать 4 секунды перед закрытием, чтобы сообщение успело отобразиться
+}
 
   // Проверка позиции и подсветка, если меш в центре
   CheckCenterPosition(): void {
@@ -327,4 +360,33 @@ private HideInventory(): void {
       }
     }
   }
+
+  BetonTrigger(): void {
+    const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+    this.guiManager.CreateDialogBox([page1])
+
+            this.triggerManager2.createStartButton('Начать', () => {
+            // Показываем сообщение
+            const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений (кликните по всем точкам, должно получиться 9 штук, проверьте правильно ли вы посчитали количество нажав на клавишу 'i'. После успешного прохождения завершите задание нажав на кнопку 'Завершить' ")
+            const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+            this.guiManager.CreateDialogBox([page2, page3])
+
+              // Активируем режим лазера для второй триггер-зоны
+            //this.triggerManager2.distanceMode();
+              //this.triggerManager2.enableDistanceMeasurement()
+              this.triggerManager2.createStartButton('Завершить', () => {
+                const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+                this.guiManager.CreateDialogBox([page4])
+                this.triggerManager2.disableDistanceMeasurement()
+
+                //this.triggerManager2.exitDisLaserMode2();
+                this.guiManager.createRouteButton('/test')
+            })
+
+            
+            })
+
+}
+
+
 }

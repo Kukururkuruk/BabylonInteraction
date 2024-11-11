@@ -8,11 +8,13 @@ import {
   FreeCamera,
   HighlightLayer,
   Color3,
+  FreeCameraMouseInput,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
+import { DialogPage } from "./FunctionComponents/DialogPage";
 
 export class QuestionScene {
   scene: Scene;
@@ -22,6 +24,7 @@ export class QuestionScene {
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private guiManager: GUIManager; // Используем GUIManager
+  private dialogPage: DialogPage;
   openModal?: (keyword: string) => void;
   private highlightLayer: HighlightLayer;
   private groupNameToBaseName: { [groupName: string]: string } = {};
@@ -51,6 +54,7 @@ export class QuestionScene {
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
 
     this.guiManager = new GUIManager(this.scene, this.textMessages);
+    this.dialogPage = new DialogPage()
 
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggerManager2(
@@ -61,18 +65,10 @@ export class QuestionScene {
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
 
-      // После загрузки окружения вызываем CreateDialogBox
-      const fullText1 =
-      "Привет! Здесь тебя ждет тест по конструкциям. Но прежде пройти обучение.";
-      const fullText2 = "Нажимая правой кнопкой мыши на подсвеченые объекты тебя ждет по нему тест. В левом верхнем углу выведено число найденых конструкций, а также счетчик правильных и не правильных ответов";
 
-      this.guiManager.CreateDialogBox(fullText1, async () => {
-        // После завершения печати первого текста вызываем createGui()
-        await this.guiManager.createGui();
-
-        // Затем отображаем второй текст в диалоговом окне
-        this.guiManager.CreateDialogBox(fullText2);
-      });
+      const page1 = this.dialogPage.addText("Привет! Здесь тебя ждет тест по конструкциям. Внимательно осмотри мост и найди подсвеченные конструкции. Нажимая на них правой кнопкой мыши высведится окнов котором тебе нужно будет выбрать правильный ответ. Количество правильных и не правильных ответов, а также найденные сооружения ты можешь посмотреть на следующей страгичке планшета.")
+      const page2 = this.dialogPage.createTextGridPage("Удачи!", [this.counterText.text, this.correctAnswersText.text, this.incorrectAnswersText.text])
+      this.guiManager.CreateDialogBox([page1, page2]);
     });
     this.CreateController();
 
@@ -105,20 +101,32 @@ export class QuestionScene {
 
   CreateController(): void {
     // Установка начальной позиции камеры для лучшей видимости
-    this.camera = new FreeCamera("camera", new Vector3(0, 5, -10), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
     this.camera.attachControl(this.canvas, true);
 
+    // Настройки камеры
     this.camera.applyGravity = true;
     this.camera.checkCollisions = true;
     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     this.camera.minZ = 0.45;
     this.camera.speed = 0.55;
     this.camera.angularSensibility = 4000;
+    this.camera.rotation.y = -Math.PI / 2;
     this.camera.keysUp.push(87); // W
     this.camera.keysLeft.push(65); // A
     this.camera.keysDown.push(83); // S
     this.camera.keysRight.push(68); // D
-  }
+
+    // Отключаем стандартное управление камерой при использовании мыши
+    this.camera.inputs.removeByType("FreeCameraMouseInput");
+
+    // Создаем кастомный ввод для управления камерой по левому клику
+    const customMouseInput = new FreeCameraMouseInput();
+    customMouseInput.buttons = [0]; // Только левая кнопка мыши (0 - левая, 1 - средняя, 2 - правая)
+
+    // Добавляем кастомный ввод к камере
+    this.camera.inputs.add(customMouseInput);
+}
 
   async CreateEnvironment(): Promise<void> {
     try {
@@ -135,6 +143,20 @@ export class QuestionScene {
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
+
+      const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
+      nonCollizionMeshs.map((item) => {
+          const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+          nonCollizionMesh.forEach((mesh) => {
+              mesh.visibility = 0.5;
+              mesh.checkCollisions = false
+          });
+      })
+
+          const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+          BrokenMeshes.forEach((mesh) => {
+              mesh.visibility = 0;
+          });
 
       // Определение группированных мешей
       const meshGroups = [
@@ -251,6 +273,7 @@ export class QuestionScene {
           if (groupMeshes.length > 0) {
             groupMeshes.forEach((mesh) => {
               this.highlightLayer.addMesh(mesh, Color3.Green());
+              this.highlightLayer.outerGlow = false;
               (mesh as any).isActive = true;
             });
 
@@ -277,6 +300,7 @@ export class QuestionScene {
 
           if (mesh) {
             this.highlightLayer.addMesh(mesh, Color3.Green());
+            this.highlightLayer.outerGlow = false;
             (mesh as any).isActive = true;
 
             this.triggerManager.setupModalInteraction(mesh, () => {
@@ -308,7 +332,7 @@ export class QuestionScene {
   private CreateGUI(): void {
     // Создаем текст для отображения счетчика кликов
     this.counterText = new TextBlock();
-    this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
+    this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
     this.counterText.color = "white";
     this.counterText.fontSize = 24;
     this.counterText.textHorizontalAlignment =
@@ -316,6 +340,7 @@ export class QuestionScene {
     this.counterText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
     this.counterText.paddingLeft = "20px";
     this.counterText.paddingTop = "20px";
+    this.counterText.isVisible = false;
     this.guiTexture.addControl(this.counterText);
 
     // Создаем текст для отображения счетчика правильных ответов
@@ -329,6 +354,7 @@ export class QuestionScene {
       Control.VERTICAL_ALIGNMENT_TOP;
     this.correctAnswersText.paddingRight = "20px";
     this.correctAnswersText.paddingTop = "20px";
+    this.correctAnswersText.isVisible = false;
     this.guiTexture.addControl(this.correctAnswersText);
 
     // Создаем текст для отображения счетчика неправильных ответов
@@ -341,6 +367,7 @@ export class QuestionScene {
     this.incorrectAnswersText.textVerticalAlignment =
       Control.VERTICAL_ALIGNMENT_TOP;
     this.incorrectAnswersText.paddingTop = "50px";
+    this.incorrectAnswersText.isVisible = false;
     this.guiTexture.addControl(this.incorrectAnswersText);
 
     console.log(
@@ -355,7 +382,7 @@ export class QuestionScene {
 
   // Метод для обновления счетчика кликов
   private updateCounter(): void {
-    this.counterText.text = `${this.clickedMeshes} из ${this.totalMeshes}`;
+    this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
   }
 
   // Публичный метод для обновления счетчика правильных ответов
