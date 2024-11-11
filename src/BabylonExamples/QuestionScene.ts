@@ -145,6 +145,8 @@ export class QuestionScene {
         this.scene
       );
 
+      this.guiManager.createBorderBox()
+
       // Включаем коллизии для всех мешей
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
@@ -446,30 +448,31 @@ export class QuestionScene {
     this.updateCounter();
   }
 
-  async playLoadingVideo(): Promise<void> {
-    // Создаем HTMLVideoElement
-    const video = document.createElement("video");
-    video.src = "/models/film_1var_1_2K.mp4";
-    video.autoplay = true;
-    video.muted = false;
-    video.loop = false; // Остановить после одного воспроизведения
-    video.style.position = "absolute";
-    video.style.width = "100%";
-    video.style.height = "100%";
-    video.style.top = "0";
-    video.style.left = "0";
-    video.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
-    video.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
-    video.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
-    
-    // Добавляем видео на страницу
-    document.body.appendChild(video);
+  async playLoadingVideo() {
+    const videoElement = document.createElement("video");
+    videoElement.src = "/models/film_1var_1_2K.mp4?v=" + new Date().getTime(); // Уникальный URL
+    videoElement.autoplay = false;
+    videoElement.muted = true;
+    videoElement.loop = false;
+    videoElement.preload = "auto";
+    videoElement.style.position = "absolute";
+    videoElement.style.top = "0";
+    videoElement.style.left = "0";
+    videoElement.style.width = "100%";
+    videoElement.style.height = "100%";
+    videoElement.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
+    videoElement.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
+    videoElement.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
+    document.body.appendChild(videoElement);
 
-    // Ждем окончания видео
-    return new Promise((resolve) => {
-        video.onended = () => {
-            video.remove(); // Убираем видео из DOM
-            resolve(); // Возвращаем управление после завершения
+    // Ждем, пока данные загрузятся, и начинаем воспроизведение
+    return new Promise<void>((resolve) => {
+        videoElement.addEventListener("loadeddata", () => {
+            videoElement.play();
+        });
+        videoElement.onended = () => {
+            videoElement.remove();
+            resolve();
         };
     });
 }

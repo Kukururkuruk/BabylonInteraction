@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, MeshBuilder, Scene, Sound, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, Animation, Mesh, MeshBuilder, Scene, Sound, Vector3 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
   TextBlock,
@@ -772,6 +772,25 @@ export class GUIManager {
     setTimeout(() => {
       this.advancedTexture.removeControl(textBlock); // Удаляем текстовый блок
     }, 3000);
+  }
+
+  createBorderBox(): void {
+    const boundaryBoxSize = 130; // Увеличенная ширина
+    const boundaryBoxHeight = 50; // Высота стенки
+    
+    const boundaryBox = MeshBuilder.CreateBox("boundaryBox", { 
+      width: boundaryBoxSize, 
+      height: boundaryBoxHeight, 
+      depth: boundaryBoxSize, 
+      sideOrientation: Mesh.BACKSIDE
+    }, this.scene);
+    
+    // Устанавливаем положение куба, чтобы центр находился на уровне пола
+    boundaryBox.position.y = boundaryBoxHeight / 2;
+    boundaryBox.checkCollisions = true;
+    
+    // Делаем куб невидимым, чтобы он не отвлекал от сцены
+    boundaryBox.isVisible = false;
   }
 
 
