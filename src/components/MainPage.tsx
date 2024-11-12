@@ -33,7 +33,7 @@ const Main: React.FC = () => {
         <Link to="/Бетонометр">Бетонометр</Link>
       </button>
       <button>
-        <Link to="/total">Go to Total Page</Link>
+        <Link to="/total">Тахеометр</Link>
       </button>
     </div>
   );
