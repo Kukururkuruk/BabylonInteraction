@@ -75,7 +75,8 @@ export class BookScene {
                 
                 const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
                 const page3 = this.dialogPage.createStartPage("/тестирование")
-                this.guiManager.CreateDialogBox([page2, page3], this.counterText);
+                const page4 = this.dialogPage.cluePage("Управление:\nW - движение вперед\nA - движение влево\nS - движение назад\nD - движение вправо\nДля обзора зажмите левую кнопку мыши и двигайте в нужную сторону")
+                this.guiManager.CreateDialogBox([page2, page3, page4], this.counterText);
               })
  
             this.guiManager.CreateDialogBox([page1], this.counterText);

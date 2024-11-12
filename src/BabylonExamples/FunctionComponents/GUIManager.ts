@@ -536,14 +536,18 @@ export class GUIManager {
 
 
 
-      if (pages.length > 1) {  const navigationGrid = new Grid();
-        navigationGrid.width = "30%";
+      if (pages.length > 1) {  
+        const navigationGrid = new Grid();
+        navigationGrid.width = "40%";
         navigationGrid.height = "7%";
+        navigationGrid.top = "-10%";
+        navigationGrid.left = "6%"
         navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        navigationGrid.top = "-10%";
+        
 
-        // Определяем 2 колонки для кнопок
+        // Определяем 3 колонки для кнопок
+        navigationGrid.addColumnDefinition(1);
         navigationGrid.addColumnDefinition(1);
         navigationGrid.addColumnDefinition(1);
 
@@ -553,6 +557,13 @@ export class GUIManager {
             this.clickSound.setVolume(0.05);
         }
         };
+
+        const numberPage = new TextBlock();
+        numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
+        numberPage.color = "#212529";
+        numberPage.fontSize = "35%";
+        numberPage.fontFamily = "Segoe UI";
+        numberPage.resizeToFit = true;
 
         // Создаем кнопки "Previous" и "Next"
         const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
@@ -566,6 +577,7 @@ export class GUIManager {
           currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
           updatePageVisibility();
           this.clickSound.play()
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
         });
 
         const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
@@ -579,11 +591,13 @@ export class GUIManager {
           currentPageIndex = (currentPageIndex + 1) % pages.length;
           updatePageVisibility();
           this.clickSound.play()
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
         });
 
         // Добавляем кнопки в соответствующие колонки Grid
         navigationGrid.addControl(prevPageButton, 0, 0);
         navigationGrid.addControl(nextPageButton, 0, 1);
+        navigationGrid.addControl(numberPage, 0, 2);
 
         // Добавляем Grid с кнопками в контейнер диалога
         this.dialogContainer.addControl(navigationGrid);
@@ -614,6 +628,11 @@ export class GUIManager {
       // Обработка события клика по кнопке
       hideButton.onPointerUpObservable.add(() => {
         this.dialogVisible = !this.dialogVisible;
+        if (this.dialogVisible) {
+          hideButton.textBlock.text = "Скрыть планшет"
+        } else {
+          hideButton.textBlock.text = "Вернуть планшет"
+        }
           this.updateDialogAnimation(this.dialogVisible, this.dialogContainer);
           if (this.WASDContainer) {
             this.updateNonDialogAnimation(this.dialogVisible, this.WASDContainer);

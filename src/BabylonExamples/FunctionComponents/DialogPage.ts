@@ -66,6 +66,29 @@ export class DialogPage {
 
         return this.pageContainer;
     }
+
+    cluePage(content: string): TextBlock {
+
+        const pagcont = new Rectangle();
+        pagcont.width = "55%";
+        pagcont.height = "85%";
+        pagcont.paddingRight = "-2%"
+        // this.pageContainer.background = 'white'
+        pagcont.thickness = 0;
+
+        const dialogText = new TextBlock();
+        dialogText.text = content;
+        dialogText.color = "#212529";
+        dialogText.fontSize = "4.5%";
+        dialogText.fontFamily = "Segoe UI";
+        dialogText.resizeToFit = true;
+        dialogText.textWrapping = TextWrapping.WordWrap;
+        dialogText.width = "90%";
+
+        pagcont.addControl(dialogText);
+
+        return pagcont;
+    }
     
 
     // Метод для добавления сетки с текстовыми блоками и полями ввода
