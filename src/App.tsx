@@ -21,12 +21,12 @@ const App: React.FC = () => {
         <Route path="/Линейка" element={<Tutor />} />
         <Route path="/ВыборИнструмента" element={<BabylonTest />} />
         <Route path="/тестирование" element={<BabylonQuestion />} />
-        <Route path="/full" element={<BabylonFull />} />
+        <Route path="/Штангенциркуль" element={<BabylonFull />} />
         <Route path="/УровеньПузырька" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
         <Route path='/терминология' element={<BabylonBook />} />
         <Route path='/ДальнометрОбучение' element={<BabylonDistance />} />
         <Route path='/Бетонометр' element={<BabylonBeton />} />
-        <Route path="/total" element={<BabylonTotal />} />
+        <Route path="/Тахеометр" element={<BabylonTotal />} />
         <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
       </Routes>
     </Router>
