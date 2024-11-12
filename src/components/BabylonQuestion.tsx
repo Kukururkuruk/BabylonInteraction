@@ -48,7 +48,7 @@ const BabylonQuestion: React.FC = () => {
     <div id="app">
       <canvas
         ref={canvasRef}
-        style={{ width: "90%", height: "90%" }}
+        style={{ width: "95%", height: "95%" }}
       ></canvas>
       <ModalWindow isOpen={isModalOpen} onClose={handleCloseModal}>
         {currentKeyword && (

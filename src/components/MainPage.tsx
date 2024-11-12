@@ -4,39 +4,40 @@ import { Link } from 'react-router-dom';
 const Main: React.FC = () => {
   return (
     <div>
-      <h1>Main Page</h1>
+      <h1>Выбор проекта</h1>
       <button>
-        <Link to="/base">Скоро удалим</Link>
+        <Link to="/терминология">Терминология</Link>
       </button>
       <button>
-        <Link to="/tutor">Линейка</Link>
+        <Link to="/тестирование">Тест терминологии</Link>
       </button>
       <button>
-        <Link to="/test">Выбор инструмента</Link>
+        <Link to="/ВыборИнструмента">Выбор инструмента</Link>
       </button>
       <button>
-        <Link to="/question">Тест терминологии</Link>
+        <Link to="/Линейка">Линейка</Link>
       </button>
       <button>
-        <Link to="/full">Go to Fullexample Page</Link>
+        <Link to="/Штангенциркуль">Штангенциркуль</Link>
       </button>
       <button>
-        <Link to="/Level">Уровень пузырька</Link>
+        <Link to="/УровеньПузырька">Уровень пузырька</Link>
       </button>
       <button>
-        <Link to="/book">Терминология</Link>
+        <Link to="/ДальнометрОбучение">Дальнометр обучение</Link>
       </button>
       <button>
-        <Link to="/distance">Дальнометр обучение</Link>
+        <Link to="/ДальнометрТест">Дальнометр тест</Link>
       </button>
       <button>
-        <Link to="/beton">Бетонометр</Link>
+        <Link to="/Бетонометр">Бетонометр</Link>
       </button>
       <button>
-        <Link to="/total">Go to Total Page</Link>
-      </button>
-      <button>
-        <Link to="/newdistance">Дальнометр тест</Link>
+<<<<<<< HEAD
+        <Link to="/total">Тахеометр</Link>
+=======
+        <Link to="/Тахеометр">Тахеометр</Link>
+>>>>>>> af0696230753710709349d56b5353fa0d8871cf3
       </button>
     </div>
   );

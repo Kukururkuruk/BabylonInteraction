@@ -63,7 +63,7 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
       scene.collisionsEnabled = true;
   
-      const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
+      const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
   
       scene.environmentTexture = hdrTexture;
       scene.createDefaultSkybox(hdrTexture, true);
@@ -197,7 +197,7 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
             
                     // Деактивируем режим лазера для второй триггер-зоны
                     this.triggerManager.exitLaserMode2();
-                    this.guiManager.createRouteButton('/test')
+                    this.guiManager.createRouteButton('/ВыборИнструмента')
                 })
                 }
                 

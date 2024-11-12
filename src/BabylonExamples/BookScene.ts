@@ -45,6 +45,9 @@ export class BookScene {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.engine = new Engine(this.canvas, true);
+
+        this.playLoadingVideo()
+
         this.engine.displayLoadingUI();
 
         this.scene = this.CreateScene();
@@ -63,13 +66,13 @@ export class BookScene {
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
 
-            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтоюы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтобы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
                 
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
                 const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
-                const page3 = this.dialogPage.createStartPage("/question")
+                const page3 = this.dialogPage.createStartPage("/тестирование")
                 this.guiManager.CreateDialogBox([page2, page3], this.counterText);
               })
  
@@ -167,7 +170,7 @@ export class BookScene {
             group.meshes.forEach((mesh) => {
                 console.log(mesh);
                 
-                mesh.checkCollisions = true;
+                mesh.checkCollisions = false;
                 mesh.position = new Vector3(20, 1, 0);
                 mesh.scaling = new Vector3(3, 3, 3);
                 mesh.rotation.z = Math.PI / 2;
@@ -390,7 +393,7 @@ export class BookScene {
     private CreateGUI(): void {
         // Создаем текст для отображения счетчика кликов
         this.counterText = new TextBlock();
-        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
         this.counterText.color = "#212529";
         this.counterText.fontSize = "2%";
         this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
@@ -404,7 +407,35 @@ export class BookScene {
 
     // Метод для обновления счетчика кликов
     private updateCounter(): void {
-        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes}`;
+        this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
+    }
+
+    async playLoadingVideo(): Promise<void> {
+        // Создаем HTMLVideoElement
+        const video = document.createElement("video");
+        video.src = "/models/film_1var_1_2K.mp4";
+        video.autoplay = true;
+        video.muted = false;
+        video.loop = false; // Остановить после одного воспроизведения
+        video.style.position = "absolute";
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.top = "0";
+        video.style.left = "0";
+        video.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
+        video.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
+        video.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
+        
+        // Добавляем видео на страницу
+        document.body.appendChild(video);
+    
+        // Ждем окончания видео
+        return new Promise((resolve) => {
+            video.onended = () => {
+                video.remove(); // Убираем видео из DOM
+                resolve(); // Возвращаем управление после завершения
+            };
+        });
     }
 
 }

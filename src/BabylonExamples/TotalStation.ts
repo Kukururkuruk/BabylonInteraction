@@ -152,12 +152,15 @@ export class TotalStation {
         const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
         map.forEach((mesh) => {
             mesh.checkCollisions = true;
+            // Замораживаем активные меши после завершения всех настроек
+        //this.scene.freezeActiveMeshes();
         });
         console.log("Модели карты успешно загружены:", map);
         
         // Теперь отправляем данные на сервер после загрузки карты
         //await this.sendPointsData(this.pointsPressedCount);
-        
+        // Замораживаем активные меши после завершения всех настроек
+        //this.scene.freezeActiveMeshes();
     } catch (error) {
         console.error("Ошибка при загрузке окружения или отправке данных:", error);
     }

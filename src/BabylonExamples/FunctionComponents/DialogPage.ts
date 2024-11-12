@@ -1,4 +1,5 @@
 import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping, ScrollViewer, Button } from "@babylonjs/gui";
+import eventEmitter from "../../../EventEmitter"
 
 export class DialogPage {
     public pageContainer: Rectangle;
@@ -17,6 +18,7 @@ export class DialogPage {
         this.scrollViewer.width = "100%";
         this.scrollViewer.height = "100%";
         this.scrollViewer.paddingTop = "10%"
+        this.scrollViewer.paddingBottom = "5%"
 
         this.scrollViewer.barSize = 7
         // this.scrollViewer.background = 'white'
@@ -157,22 +159,19 @@ export class DialogPage {
     }
 
     createTextGridPage(header: string, items: string[]): void {
-        // Очищаем любые предыдущие элементы
-        // this.scrollViewer.clearControls();
-
         // Создаем новый Grid
         const grid = new Grid();
         grid.width = "55%";
         grid.height = "50%";
         grid.paddingBottom = "10%";
-
+    
         // Определяем одну колонку и три строки
         grid.addColumnDefinition(1);
+        grid.addRowDefinition(1); // Первая строка для заголовка
         grid.addRowDefinition(1);
         grid.addRowDefinition(1);
         grid.addRowDefinition(1);
-        grid.addRowDefinition(1);
-
+    
         // Создаем и добавляем заголовок
         const headerTextBlock = new TextBlock();
         headerTextBlock.text = header;
@@ -181,8 +180,8 @@ export class DialogPage {
         headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
         grid.addControl(headerTextBlock, 0, 0);
-
-        // Добавляем строки текста в каждую строку
+    
+        // Добавляем строки текста в каждую строку и подписываем их на события
         items.forEach((item, i) => {
             const textBlock = new TextBlock();
             textBlock.text = item;
@@ -191,8 +190,23 @@ export class DialogPage {
             textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
             textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
             grid.addControl(textBlock, i + 1, 0);
+    
+            // Подписка на обновления для каждой строки, исходя из порядка
+            if (i === 0) {
+                eventEmitter.on("updateAnswers", (newText: string) => {
+                    textBlock.text = newText;
+                });
+            } else if (i === 1) {
+                eventEmitter.on("updateCorrectAnswers", (newText: string) => {
+                    textBlock.text = newText;
+                });
+            } else if (i === 2) {
+                eventEmitter.on("updateIncorrectAnswers", (newText: string) => {
+                    textBlock.text = newText;
+                });
+            }
         });
-
+    
         // Добавляем grid в scrollViewer
         this.pageContainer.addControl(grid);
 

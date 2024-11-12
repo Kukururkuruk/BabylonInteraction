@@ -15,8 +15,8 @@ const BabylonExamples: React.FC = () => {
 
   return (
     <div>
-      <h3>Babylon Tutor</h3>
-      <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+      <h3></h3>
+      <canvas ref={canvasRef} style={{ width: '100%', height: '90%' }}></canvas>
       <DesktopModal
         isOpen={isDesktopModalOpen}
         onClose={() => setIsDesktopModalOpen(false)}

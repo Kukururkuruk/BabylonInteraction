@@ -48,7 +48,7 @@ export class Level {
     this.scene = this.CreateScene();
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
     this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
-    this.highlightLayer.innerGlow = false; // Включаем внутреннее свечение, если нужно
+    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение, если нужно
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.triggerManager = new TriggersManager(this.scene, this.canvas, this.guiTexture);
     this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
@@ -122,7 +122,7 @@ export class Level {
     this.camera.checkCollisions = true;
     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     this.camera.minZ = 0.45;
-    this.camera.speed = 0.55;
+    this.camera.speed = 0.35;
     this.camera.angularSensibility = 4000;
     this.camera.keysUp.push(87); // W
     this.camera.keysLeft.push(65); // A
@@ -155,11 +155,33 @@ export class Level {
       });
       console.log("Модели карты успешно загружены:", map);*/
 
+
+
+      const rotationPercent = 25; // Угол в процентах (например, 25%)
+      const rotationDegrees = rotationPercent * -15; // Переводим проценты в градусы
+      const rotationRadians = rotationDegrees * (Math.PI / 180); // Переводим градусы в радианы
+
+      // Загрузка меша Glass.glb
+      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
+      glassMeshes.forEach((mesh) => {
+        const glassMesh = mesh as Mesh;
+        this.glassMesh = glassMesh;
+        glassMesh.isPickable = false;
+        glassMesh.position = new Vector3(0, 0.7, 0);
+        glassMesh.scaling = new Vector3(0.7, 0.7, 0.7);
+        // Поворот меша на `rotationPercent` процентов по оси X
+        glassMesh.rotation = new Vector3(rotationRadians, 0, 0);
+      });
+
+      console.log("Меш Glass.glb загружен и установлен.");
+
+      // Загрузка меша Bubble.glb
       const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
       meshes.forEach((mesh) => {
+        mesh.parent = this.glassMesh; // Устанавливаем Glass.glb в качестве родителя для Bubble.glb
+        mesh.rotation = new Vector3(0, Math.PI, 0); // Поворот по оси Y
         mesh.isPickable = true;
-        mesh.position = new Vector3(0, 0.7, 0);
-        mesh.rotation.y = Math.PI;
+        mesh.position = new Vector3(0, 0.5, 0);
         mesh.scaling = new Vector3(0.7, 0.7, 0.7);
         mesh.actionManager = new ActionManager(this.scene);
         mesh.actionManager.registerAction(
@@ -169,23 +191,13 @@ export class Level {
           })
         );
       });
+
       console.log("Меш Bubble.glb загружен и обработан.");
 
-      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
-      glassMeshes.forEach((mesh) => {
-        const glassMesh = mesh as Mesh;
-        this.glassMesh = glassMesh;
-        glassMesh.isPickable = false;
-        glassMesh.position = new Vector3(0, 0.7, 0);
-        glassMesh.scaling = new Vector3(0.7, 0.7, 0.7);
-      });
-
-      console.log("Меш Glass.glb загружен и установлен.");
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
   }
-
   CreateBubbleMesh(mesh: AbstractMesh): void {
     if (this.isBubbleCreated) {
       console.log("Меш уже создан, пропускаем создание");
@@ -199,8 +211,10 @@ export class Level {
     this.bubbleMesh = bubbleMesh;
 
     // Генерация случайной позиции с уменьшенным диапазоном ещё в 2 раза
-const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
-const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
+    const randomX = Math.random() * 0.1125 - 0.05625; // Диапазон от -0.05625 до 0.05625
+    const randomZ = Math.random() * 0.1125 - 0.05625; // Диапазон от -0.05625 до 0.05625
+//const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
+//const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
     this.bubbleMesh.position = new Vector3(randomX, 0.7, randomZ);
 
     this.isBubbleCreated = true;
@@ -238,10 +252,10 @@ const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375
 
     // Добавьте стрелки (уже есть)
     createArrowButton("↑", [0, 100], () => {  
-        if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
+        if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
     });
     createArrowButton("↓", [0, 150], () => { 
-        if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
+        if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
     });
     createArrowButton("←", [-100, 125], () => { 
         if (this.bubbleMesh) this.bubbleMesh.position.x -= moveSpeed; 
@@ -250,7 +264,6 @@ const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375
         if (this.bubbleMesh) this.bubbleMesh.position.x += moveSpeed; 
     });
 
-    // Добавьте обработчик события для клавиши "i"
     // Добавляем обработчик события для клавиш "i" и "ш"
     window.addEventListener("keydown", (event) => {
       if (event.key === "i" || event.key === "ш") {
@@ -367,16 +380,18 @@ private HideInventory(): void {
 
             this.triggerManager2.createStartButton('Начать', () => {
             // Показываем сообщение
-            const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений (кликните по всем точкам, должно получиться 9 штук, проверьте правильно ли вы посчитали количество нажав на клавишу 'i'. После успешного прохождения завершите задание нажав на кнопку 'Завершить' ")
-            const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
-            this.guiManager.CreateDialogBox([page2, page3])
+
+            const page2 = this.dialogPage.addText("Подойдите к пузырьковому уровню и нажмите на него.")
+            const page3 = this.dialogPage.addText("Установите пузырьковый уровень в центре 'Завершить' ")
+            const page4 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+            this.guiManager.CreateDialogBox([page2, page3, page4])
 
               // Активируем режим лазера для второй триггер-зоны
             //this.triggerManager2.distanceMode();
               //this.triggerManager2.enableDistanceMeasurement()
               this.triggerManager2.createStartButton('Завершить', () => {
-                const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-                this.guiManager.CreateDialogBox([page4])
+                const page5 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+                this.guiManager.CreateDialogBox([page5])
                 this.triggerManager2.disableDistanceMeasurement()
 
                 //this.triggerManager2.exitDisLaserMode2();
