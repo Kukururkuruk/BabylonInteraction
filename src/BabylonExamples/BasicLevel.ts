@@ -14,11 +14,12 @@ import {
   AbstractMesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Image as GuiImage, Button, Control } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Image as GuiImage, Button, Ellipse, StackPanel, TextBlock, Control } from "@babylonjs/gui";
 import { TriggersManager } from "./FunctionComponents/TriggerManager3";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import { GUIManager } from "./FunctionComponents/GUIManager";
+import { Animation } from "@babylonjs/core/Animations/animation";
 
 export class Level {
   scene: Scene;
@@ -39,6 +40,7 @@ export class Level {
   private triggerManager2: TriggerManager2;
   private guiManager: GUIManager;
   private arrowButtons: Control[] = [];
+  private dialControls: StackPanel[] = []; // Добавляем свойство для хранения крутилок
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -124,6 +126,7 @@ export class Level {
     this.camera.minZ = 0.45;
     this.camera.speed = 0.35;
     this.camera.angularSensibility = 4000;
+    this.camera.inertia = 0.82;
     this.camera.keysUp.push(87); // W
     this.camera.keysLeft.push(65); // A
     this.camera.keysDown.push(83); // S
@@ -211,8 +214,8 @@ export class Level {
     this.bubbleMesh = bubbleMesh;
 
     // Генерация случайной позиции с уменьшенным диапазоном ещё в 2 раза
-    const randomX = Math.random() * 0.1125 - 0.05625; // Диапазон от -0.05625 до 0.05625
-    const randomZ = Math.random() * 0.1125 - 0.05625; // Диапазон от -0.05625 до 0.05625
+    const randomX = Math.random() * (0.1125 * 8) - (0.05625 * 8); // Диапазон от -0.45 до 0.45
+    const randomZ = Math.random() * (0.1125 * 8) - (0.05625 * 8); // Диапазон от -0.45 до 0.45
 //const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
 //const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
     this.bubbleMesh.position = new Vector3(randomX, 0.7, randomZ);
@@ -232,45 +235,148 @@ export class Level {
 
   CreateArrowsUI(): void {
     const moveSpeed = 0.01;
+    const centerTolerance = 0.05; // Допуск для определения нахождения в центре
 
-    const createArrowButton = (text: string, position: [number, number], onClick: () => void) => {
-        const button = Button.CreateSimpleButton(`button${text}`, text);
-        button.width = "40px";
-        button.height = "40px";
-        button.color = "white";
-        button.background = "grey";
-        button.onPointerClickObservable.add(onClick);
-        button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        button.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        button.left = `${position[0]}px`;
-        button.top = `${position[1]}px`;
-        this.guiTexture.addControl(button);
+    // Флаг для отключения управления
+    let isTaskCompleted = false;
 
-         // Сохраняем кнопку в массив
-        this.arrowButtons.push(button);
+    // Функция для проверки нахождения пузырька в центре
+    const isCentered = (): boolean => {
+        if (!this.bubbleMesh) return false;
+        return (
+            Math.abs(this.bubbleMesh.position.x) < centerTolerance &&
+            Math.abs(this.bubbleMesh.position.z) < centerTolerance
+        );
     };
 
-    // Добавьте стрелки (уже есть)
-    createArrowButton("↑", [0, 100], () => {  
-        if (this.bubbleMesh) this.bubbleMesh.position.z += moveSpeed; 
-    });
-    createArrowButton("↓", [0, 150], () => { 
-        if (this.bubbleMesh) this.bubbleMesh.position.z -= moveSpeed; 
-    });
-    createArrowButton("←", [-100, 125], () => { 
-        if (this.bubbleMesh) this.bubbleMesh.position.x -= moveSpeed; 
-    });
-    createArrowButton("→", [100, 125], () => { 
-        if (this.bubbleMesh) this.bubbleMesh.position.x += moveSpeed; 
-    });
+    // Функция завершения задания
+    const completeTask = () => {
+        if (!isTaskCompleted) {
+            console.log("Пузырек находится в центре! Задание завершено.");
+            // Отключаем управление и кнопки
+            isTaskCompleted = true;
+            this.dialControls.forEach(button => {
+                this.guiTexture.removeControl(button); // Удаляем каждую кнопку
+            });
+            this.dialControls = []; // Очищаем массив после удаления
 
-    // Добавляем обработчик события для клавиш "i" и "ш"
+            // Оставляем только кнопку завершения
+            const endMessage = Button.CreateSimpleButton("endMessage", "Задание завершено!");
+            endMessage.width = "200px";
+            endMessage.height = "40px";
+            endMessage.color = "white";
+            endMessage.background = "green";
+            endMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+            endMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            this.guiTexture.addControl(endMessage);
+
+            // Убираем сообщение через 2 секунды
+            setTimeout(() => {
+                this.guiTexture.removeControl(endMessage); // Удаляем кнопку с сообщением
+            }, 2000); // Подождать 2 секунды перед удалением
+        }
+    };
+
+    // Создание текстуры GUI
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+
+    // Функция для создания крутилки
+    const createDialControl = (label: string, onRotate: (delta: number) => void, position: [number, number]) => {
+        const panel = new StackPanel();
+        panel.width = "100px";
+        panel.height = "100px";
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        panel.left = `${position[0]}px`;
+        panel.top = `${position[1]}px`;
+
+        // Круглая форма крутилки
+        const dial = new Ellipse();
+        dial.width = "80px";
+        dial.height = "80px";
+        dial.color = "white";
+        dial.thickness = 4;
+        dial.background = "grey";
+        dial.isPointerBlocker = true;
+        panel.addControl(dial);
+
+        // Текстовое обозначение для крутилки
+        const labelBlock = new TextBlock();
+        labelBlock.text = label;
+        labelBlock.color = "white";
+        labelBlock.fontSize = 14;
+        panel.addControl(labelBlock);
+
+        // Переменная для отслеживания нажатия кнопки мыши
+        let isMouseDown = false;
+        let lastY: number | null = null;
+
+        // Событие на нажатие левой кнопки мыши
+        dial.onPointerDownObservable.add((event) => {
+            if (event.buttonIndex === 0) { // Проверка на левую кнопку мыши
+                isMouseDown = true;
+            }
+        });
+
+        // Событие на отпускание кнопки мыши
+        dial.onPointerUpObservable.add(() => {
+            isMouseDown = false;
+            lastY = null;
+        });
+
+        // Обработчик для вращения крутилки при движении мыши
+        dial.onPointerMoveObservable.add((event) => {
+            if (isMouseDown && lastY !== null && !isTaskCompleted) { // Проверка на завершение задания
+                const delta = event.y - lastY;
+                onRotate(delta);
+
+                // Проверка, находится ли пузырек в центре после вращения
+                if (isCentered()) {
+                    completeTask(); // Завершаем задание, если пузырек в центре
+                }
+            }
+            lastY = event.y;
+        });
+
+        dial.onPointerOutObservable.add(() => {
+            isMouseDown = false;
+            lastY = null;
+        });
+
+        this.guiTexture.addControl(panel);
+    };
+
+    // Крутилка для движения вправо (с плавностью)
+    createDialControl("Right", (delta) => { 
+        if (this.bubbleMesh && delta > 0 && !isTaskCompleted) {
+            const targetX = this.bubbleMesh.position.x + moveSpeed;
+            this.bubbleMesh.position.x = Math.max(this.bubbleMesh.position.x, targetX);
+        }
+    }, [150, 0]);
+
+    // Крутилка для движения влево (с плавностью)
+    createDialControl("Left", (delta) => { 
+        if (this.bubbleMesh && delta > 0 && !isTaskCompleted) {
+            const targetX = this.bubbleMesh.position.x - moveSpeed;
+            this.bubbleMesh.position.x = Math.min(this.bubbleMesh.position.x, targetX);
+        }
+    }, [-150, 0]);
+
+    // Крутилка для движения вверх и вниз (плавная)
+    createDialControl("Up/Down", (delta) => { 
+        if (this.bubbleMesh && !isTaskCompleted) {
+            const targetZ = this.bubbleMesh.position.z + (delta > 0 ? moveSpeed : -moveSpeed);
+            this.bubbleMesh.position.z = targetZ;
+        }
+    }, [0, -150]);
+
+    // Добавляем обработчик события для клавиши "i"
     window.addEventListener("keydown", (event) => {
-      if (event.key === "i" || event.key === "ш") {
-          console.log("Клавиша 'i' или 'ш' нажата!"); // Лог для проверки
-          this.ToggleInventory();
-      }
-  });
+        if (event.key === "i" || event.key === "ш") {
+            console.log("Клавиша 'i' или 'ш' нажата!");
+            this.ToggleInventory();
+        }
+    });
 }
 
 // Метод для переключения состояния инвентаря
@@ -330,10 +436,10 @@ private HideInventory(): void {
     this.guiTexture.addControl(endMessage);
 
     // Убираем стрелочные кнопки
-    this.arrowButtons.forEach(button => {
+    this.dialControls.forEach(button => {
       this.guiTexture.removeControl(button); // Удаляем каждую кнопку
   });
-  this.arrowButtons = []; // Очищаем массив после удаления
+  this.dialControls = []; // Очищаем массив после удаления
   
      // Убираем сообщение через 2 секунды
      setTimeout(() => {
@@ -349,30 +455,32 @@ private HideInventory(): void {
   }, 4000); // Подождать 4 секунды перед закрытием, чтобы сообщение успело отобразиться
 }
 
-  // Проверка позиции и подсветка, если меш в центре
-  CheckCenterPosition(): void {
-    const centerPosition = new Vector3(0, 0.7, 0); // Определяем центр
-    const threshold = 0.01; // Уменьшаем порог для более строгой проверки
-  
-    if (this.bubbleMesh) {
+CheckCenterPosition(): void {
+  const centerPosition = new Vector3(0, 0.7, 0); // Определяем центр
+  const threshold = 0.05; // Порог для более строгой проверки
+
+  if (this.bubbleMesh) {
       // Проверяем, находится ли пузырь в пределах порога
       const distance = this.bubbleMesh.position.subtract(centerPosition).length();
       
+
       // Проверяем, находится ли меш в центре
       const isInCenter = distance < threshold;
-  
+
       if (isInCenter && !this.isHighlighted) {
-        this.highlightLayer.addMesh(this.bubbleMesh, Color3.Green());
-        console.log("Пузырь в центре!"); // Логируем, когда пузырь в центре
-        this.isHighlighted = true; // Устанавливаем флаг подсветки
-        this.CompleteLevel(); // Завершаем процесс
+          // Если пузырек в центре и еще не подсвечен, добавляем подсветку
+          this.highlightLayer.addMesh(this.bubbleMesh, Color3.Green());
+          console.log("Пузырь в центре!"); // Логируем, когда пузырь в центре
+          this.isHighlighted = true; // Устанавливаем флаг подсветки
+          this.CompleteLevel(); // Завершаем процесс
       } else if (!isInCenter && this.isHighlighted) {
-        this.highlightLayer.removeMesh(this.bubbleMesh);
-        console.log("Пузырь не в центре!"); // Логируем, когда пузырь не в центре
-        this.isHighlighted = false; // Сбрасываем флаг подсветки
+          // Если пузырек не в центре, а был подсвечен, удаляем подсветку
+          this.highlightLayer.removeMesh(this.bubbleMesh);
+          console.log("Пузырь не в центре!"); // Логируем, когда пузырь не в центре
+          this.isHighlighted = false; // Сбрасываем флаг подсветки
       }
-    }
   }
+}
 
   BetonTrigger(): void {
     const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
@@ -381,17 +489,16 @@ private HideInventory(): void {
             this.triggerManager2.createStartButton('Начать', () => {
             // Показываем сообщение
 
-            const page2 = this.dialogPage.addText("Подойдите к пузырьковому уровню и нажмите на него.")
-            const page3 = this.dialogPage.addText("Установите пузырьковый уровень в центре 'Завершить' ")
-            const page4 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
-            this.guiManager.CreateDialogBox([page2, page3, page4])
+            const page2 = this.dialogPage.addText("Подойдите к пузырьковому уровню и нажмите на него. С помощью винтов трегера установите пузырёк уровня в центр.  После того как установите пузырек завершите задание нажав на кнопку 'Завершить' ")
+            const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+            this.guiManager.CreateDialogBox([page2, page3])
 
               // Активируем режим лазера для второй триггер-зоны
             //this.triggerManager2.distanceMode();
               //this.triggerManager2.enableDistanceMeasurement()
               this.triggerManager2.createStartButton('Завершить', () => {
-                const page5 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-                this.guiManager.CreateDialogBox([page5])
+                const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
+                this.guiManager.CreateDialogBox([page4])
                 this.triggerManager2.disableDistanceMeasurement()
 
                 //this.triggerManager2.exitDisLaserMode2();
