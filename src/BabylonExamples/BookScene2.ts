@@ -439,12 +439,14 @@ export class BookScene2 {
                 this.scene
             );
 
-            const light = new DirectionalLight("dirLight", new Vector3(-1, -1, 0), this.scene);
+            const light = new DirectionalLight("dirLight", new Vector3(-1, -1, 1), this.scene);
             light.position = new Vector3(50, 50, -50); // Задаем позицию света
             light.intensity = 2;
     
             // 2. Создание генератора теней
             const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
+            shadowGenerator.useContactHardeningShadow = true;
+            shadowGenerator.contactHardeningLightSizeUVRatio = 0.05; // Настройте по желанию
             // shadowGenerator.usePoissonSampling = true;
             // shadowGenerator.bias = 0.00005;
             // shadowGenerator.normalBias = 0.19;
