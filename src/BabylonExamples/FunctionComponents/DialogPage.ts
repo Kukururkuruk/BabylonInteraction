@@ -42,6 +42,8 @@ export class DialogPage {
         dialogText.resizeToFit = true;
         dialogText.textWrapping = TextWrapping.WordWrap;
         dialogText.width = "90%";
+        dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+
         // dialogText.paddingTop = "10%";
         // dialogText.paddingLeft = "15%";
         // dialogText.paddingRight = "15%";
@@ -62,7 +64,7 @@ export class DialogPage {
                     onComplete();
                 }
             }
-        }, 50);
+        }, 30);
 
         return this.pageContainer;
     }

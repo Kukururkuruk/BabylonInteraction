@@ -8,9 +8,9 @@ const RelMain: React.FC = () => {
        <button>
         <Link to="/терминология">Терминология</Link>
       </button>
-      {/* <button>
+      <button>
         <Link to="/терминтест">Терминология-производительность</Link>
-      </button> */}
+      </button>
       <button>
         <Link to="/тестирование">Тест терминологии</Link>
       </button>

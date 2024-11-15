@@ -12,29 +12,33 @@ const BabylonBook2: React.FC = () => {
 
     const exampleRef = useRef<BookScene2 | null>(null);
 
-    useEffect(() => {
-        if (canvasRef.current && !exampleRef.current) {
-            const example = new BookScene2(canvasRef.current);
-            example.openModal = (keyword: string) => {
-                const meshInfo = meshDataBook.find((item) => item.keyword === keyword);
-                if (meshInfo) {
-                    setCurrentKeyword(keyword);
-                    setCurrentTitle(meshInfo.title);
-                    setCurrentDescription(meshInfo.description);
-                    setIsModalOpen(true);
-                } else {
-                    console.warn(`Данные для ключевого слова "${keyword}" не найдены.`);
-                }
-            };
-            exampleRef.current = example;
-        }
-    }, []);
+useEffect(() => {
+    if (canvasRef.current && !exampleRef.current) {
+        const example = new BookScene2(canvasRef.current);
+        example.openModal = (keyword: string) => {
+            const meshInfo = meshDataBook.find((item) => item.keyword === keyword);
+            if (meshInfo) {
+                setCurrentKeyword(keyword);
+                setCurrentTitle(meshInfo.title);
+                setCurrentDescription(meshInfo.description);
+                setIsModalOpen(true);
+                example.togglePointerLock(); // Включаем pointer lock при открытии модального окна
+            } else {
+                console.warn(`Данные для ключевого слова "${keyword}" не найдены.`);
+            }
+        };
+        exampleRef.current = example;
+    }
+}, []);
+
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setCurrentKeyword(null);
         setCurrentTitle("");
         setCurrentDescription("");
+        exampleRef.current?.togglePointerLock();
+        exampleRef.current?.canvas.focus();
     };
 
     // Обновлённая функция для обработки описания

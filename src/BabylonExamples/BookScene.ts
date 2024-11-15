@@ -68,12 +68,12 @@ export class BookScene {
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
 
-            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтобы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению.\nДля начала кликните мышкой на экран.\nЧтобы осмотреться зажмите левую кнопку мыши.\nА теперь следуйте инструкциям ниже.", async () => {
                 
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
-                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях.\nКак только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
                 const page3 = this.dialogPage.createStartPage("/тестирование")
                 const page4 = this.dialogPage.cluePage("Управление:\nW - движение вперед\nA - движение влево\nS - движение назад\nD - движение вправо\nДля обзора зажмите левую кнопку мыши и двигайте в нужную сторону")
                 this.guiManager.CreateDialogBox([page2, page3, page4], this.counterText);
@@ -129,6 +129,7 @@ export class BookScene {
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
         this.camera.rotation.y = -Math.PI / 2;
+        this.camera.inertia = 0.82
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
@@ -403,7 +404,7 @@ export class BookScene {
         this.counterText.fontSize = "2%";
         this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.counterText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this.counterText.paddingRight = "6%";
+        this.counterText.paddingRight = "5%";
         this.counterText.paddingTop = "6%";
         this.guiTexture.addControl(this.counterText);
 

@@ -9,9 +9,14 @@ import {
     HighlightLayer,
     Color3,
     FreeCameraMouseInput,
+    DirectionalLight,
+    ShadowGenerator,
+    Ray,
+    ExecuteCodeAction,
+    ActionManager,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Control, Rectangle, TextBlock } from "@babylonjs/gui";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager"; // Импортируем GUIManager
 import { DialogPage } from "./FunctionComponents/DialogPage";
@@ -42,11 +47,11 @@ export class BookScene2 {
     private totalMeshes: number = 0;
     private counterText: TextBlock;
 
+    private isLocked: boolean
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.engine = new Engine(this.canvas, true);
-
-        this.playLoadingVideo()
 
         this.engine.displayLoadingUI();
 
@@ -83,6 +88,12 @@ export class BookScene2 {
 
         this.CreateController();
 
+
+
+        
+
+
+
         this.engine.runRenderLoop(() => {
             this.scene.render();
         });
@@ -91,7 +102,7 @@ export class BookScene2 {
 
     CreateScene(): Scene {
         const scene = new Scene(this.engine);
-        new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
+        // new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
 
         const framesPerSecond = 60;
         const gravity = -9.81;
@@ -99,14 +110,14 @@ export class BookScene2 {
         scene.collisionsEnabled = true;
 
         const hdrTexture = new HDRCubeTexture(
-            "/models/railway_bridges_4k.hdr",
+            "/models/test_5.hdr",
             scene,
-            512
+            1024
         );
 
         scene.environmentTexture = hdrTexture;
         scene.createDefaultSkybox(hdrTexture, true);
-        scene.environmentIntensity = 0.5;
+        scene.environmentIntensity = 1;
 
         return scene;
     }
@@ -114,8 +125,185 @@ export class BookScene2 {
 
     
 
+    // CreateController(): void {
+    //     // Установка начальной позиции камеры для лучшей видимости
+    //     this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
+    //     this.camera.attachControl(this.canvas, true);
+    
+    //     // Настройки камеры
+    //     this.camera.applyGravity = true;
+    //     this.camera.checkCollisions = true;
+    //     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    //     this.camera.minZ = 0.45;
+    //     this.camera.speed = 0.55;
+    //     this.camera.angularSensibility = 4000;
+    //     this.camera.rotation.y = -Math.PI / 2;
+    //     this.camera.inertia = 0.82;
+    //     this.camera.keysUp.push(87); // W
+    //     this.camera.keysLeft.push(65); // A
+    //     this.camera.keysDown.push(83); // S
+    //     this.camera.keysRight.push(68); // D
+
+    //     this.canvas.focus();
+    //     this.isLocked = false;
+    
+    //     const customCursor = document.createElement("div");
+    //     customCursor.className = "custom-cursor";
+    //     customCursor.style.position = "absolute";
+    //     customCursor.style.width = "10px";
+    //     customCursor.style.height = "10px";
+    //     customCursor.style.borderRadius = "50%";
+    //     customCursor.style.backgroundColor = "white";
+    //     customCursor.style.pointerEvents = "none";
+    //     customCursor.style.display = "none";
+    //     document.body.appendChild(customCursor);
+    
+    //     document.addEventListener("pointerlockchange", () => {
+    //         this.isLocked = !!document.pointerLockElement;
+    //     });
+    
+    //     window.addEventListener("mousemove", (event) => {
+    //         if (this.isLocked) {
+    //             customCursor.style.left = `${event.clientX}px`;
+    //             customCursor.style.top = `${event.clientY}px`;
+    //         }
+    //     });
+    
+    //     window.addEventListener("keydown", (event) => {
+    //         if (event.key === "e" || event.key === "E") {
+    //             this.togglePointerLock();
+    //         }
+    //     });
+    
+    //     this.scene.onPointerDown = (evt, pickResult) => {
+    //         if (!this.isLocked) {
+    //             this.togglePointerLock();
+    //         }
+    //         if (pickResult.hit) {
+    //             console.log("Клик по объекту:", pickResult.pickedMesh?.name);
+    //         }
+    //     };
+    
+    //     this.camera.inputs.removeByType("FreeCameraMouseInput");
+    
+    //     const customMouseInput = new FreeCameraMouseInput();
+    //     customMouseInput.buttons = [0];
+    //     this.camera.inputs.add(customMouseInput);
+    // }
+    // togglePointerLock(): void {
+    //     const customCursor = document.querySelector(".custom-cursor") as HTMLElement;
+    //     if (this.isLocked) {
+    //         document.exitPointerLock();
+    //         customCursor.style.display = "none";
+    //     } else {
+    //         this.canvas.requestPointerLock();
+    //         customCursor.style.display = "block";
+    //     }
+    // }
+
+
+
+    // CreateController(): void {
+    //     this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
+    //     this.camera.attachControl(this.canvas, true);
+    
+    //     // Настройки камеры
+    //     this.camera.applyGravity = true;
+    //     this.camera.checkCollisions = true;
+    //     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    //     this.camera.minZ = 0.45;
+    //     this.camera.speed = 0.55;
+    //     this.camera.angularSensibility = 4000;
+    //     this.camera.rotation.y = -Math.PI / 2;
+    //     this.camera.inertia = 0.82;
+    //     this.camera.keysUp.push(87); // W
+    //     this.camera.keysLeft.push(65); // A
+    //     this.camera.keysDown.push(83); // S
+    //     this.camera.keysRight.push(68); // D
+
+    //     this.canvas.focus();
+    
+    //     // Создание прицела
+    //     const crosshair = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
+    //     const xRect = new Rectangle("xRect");
+    //     xRect.width = "20px";
+    //     xRect.height = "2px";
+    //     xRect.color = "White";
+    //     xRect.background = "White";
+    //     crosshair.addControl(xRect);
+    
+    //     const yRect = new Rectangle("yRect");
+    //     yRect.width = "2px";
+    //     yRect.height = "20px";
+    //     yRect.color = "White";
+    //     yRect.background = "White";
+    //     crosshair.addControl(yRect);
+    
+    //     // Флаг для указания состояния PointerLock
+    //     this.isLocked = false;
+
+    //             window.addEventListener("keydown", (event) => {
+    //                 if (event.key === "e" || event.key === "E" || event.key === "у" || event.key === "у") {
+    //                      this.togglePointerLock();
+    //                      this.isLocked = true
+    //                     }
+    //             });
+    
+    //     // Обработчик нажатий мыши
+    //     this.scene.onPointerDown = (evt) => {
+    //         if (!this.isLocked) {
+    //             this.togglePointerLock();
+    //             this.isLocked = true
+    //         }
+        
+    //         // Проверка нажатия левой кнопки мыши
+    //         if (evt.button === 0) {
+    //             const origin = this.camera.globalPosition.clone();
+    //             const forward = this.camera.getDirection(Vector3.Forward());
+    //             const ray = new Ray(origin, forward, 200);
+        
+    //             // Проверка попадания луча по объектам
+    //             const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
+        
+    //             if (hit?.pickedMesh) {
+    //                 console.log("Попадание по объекту:", hit.pickedMesh.name);
+                    
+        
+    //                 const pickedMesh = hit.pickedMesh;
+    //                 const actionManager = pickedMesh.actionManager;
+        
+    //                 if (actionManager) {
+    //                     // Зарегистрируем действия для PointerOver и PointerOut
+    //                     actionManager.processTrigger(ActionManager.OnRightPickTrigger)
+    //                     this.togglePointerLock();
+    //                 }
+    //             }
+    //         }
+    //     };
+        
+        
+        
+    
+    //     // Слушатели событий изменения состояния PointerLock
+    //     document.addEventListener("pointerlockchange", this.togglePointerLock.bind(this));
+    //     document.addEventListener("mozpointerlockchange", this.togglePointerLock.bind(this));
+    //     document.addEventListener("webkitpointerlockchange", this.togglePointerLock.bind(this));
+    //     document.addEventListener("mspointerlockchange", this.togglePointerLock.bind(this));
+    // }
+    
+    // // Отдельная функция для входа/выхода из PointerLock
+    // togglePointerLock(): void {
+    //     if (this.isLocked) {
+    //         this.isLocked = false
+    //         this.engine.exitPointerlock()
+    //     } else {
+    //         this.engine.enterPointerlock();
+    //     }
+    // }
+
+
+
     CreateController(): void {
-        // Установка начальной позиции камеры для лучшей видимости
         this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
         this.camera.attachControl(this.canvas, true);
     
@@ -127,22 +315,107 @@ export class BookScene2 {
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
         this.camera.rotation.y = -Math.PI / 2;
+        this.camera.inertia = 0.82;
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
         this.camera.keysRight.push(68); // D
     
-        // Отключаем стандартное управление камерой при использовании мыши
-        this.camera.inputs.removeByType("FreeCameraMouseInput");
+        this.canvas.focus();
     
-        // Создаем кастомный ввод для управления камерой по левому клику
-        const customMouseInput = new FreeCameraMouseInput();
-        customMouseInput.buttons = [0]; // Только левая кнопка мыши (0 - левая, 1 - средняя, 2 - правая)
+        // Создание прицела
+        const crosshair = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
+        const xRect = new Rectangle("xRect");
+        xRect.width = "20px";
+        xRect.height = "2px";
+        xRect.color = "White";
+        xRect.background = "White";
+        crosshair.addControl(xRect);
     
-        // Добавляем кастомный ввод к камере
-        this.camera.inputs.add(customMouseInput);
+        const yRect = new Rectangle("yRect");
+        yRect.width = "2px";
+        yRect.height = "20px";
+        yRect.color = "White";
+        yRect.background = "White";
+        crosshair.addControl(yRect);
+    
+        // Флаг для указания состояния PointerLock
+        this.isLocked = false;
+    
+        window.addEventListener("keydown", (event) => {
+            if (event.key === "e" || event.key === "E" || event.key === "у" || event.key === "у") {
+                this.togglePointerLock();
+            }
+        });
+    
+        // Обработчик нажатий мыши
+        this.scene.onPointerDown = (evt) => {
+            if (!this.isLocked) {
+                this.togglePointerLock();
+            }
+    
+            // Проверка нажатия левой кнопки мыши
+            if (evt.button === 0) {
+                const origin = this.camera.globalPosition.clone();
+                const forward = this.camera.getDirection(Vector3.Forward());
+                const ray = new Ray(origin, forward, 200);
+    
+                // Проверка попадания луча по объектам
+                const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
+    
+                if (hit?.pickedMesh) {
+                    console.log("Попадание по объекту:", hit.pickedMesh.name);
+    
+                    const pickedMesh = hit.pickedMesh;
+                    const actionManager = pickedMesh.actionManager;
+    
+                    if (actionManager) {
+                        // Зарегистрируем действия для PointerOver и PointerOut
+                        actionManager.processTrigger(ActionManager.OnRightPickTrigger);
+                    }
+                }
+            }
+        };
+    
+        // Слушатели событий изменения состояния PointerLock
+        document.addEventListener("pointerlockchange", this.pointerLockChange.bind(this));
+        document.addEventListener("mozpointerlockchange", this.pointerLockChange.bind(this));
+        document.addEventListener("webkitpointerlockchange", this.pointerLockChange.bind(this));
+        document.addEventListener("mspointerlockchange", this.pointerLockChange.bind(this));
     }
+    
+    // Отдельная функция для изменения состояния PointerLock
+    togglePointerLock(): void {
+        if (this.isLocked) {
+            // Если уже заблокирован, выходим
+            document.exitPointerLock();
+        } else {
+            // Если не заблокирован, входим в режим PointerLock
+            this.canvas.requestPointerLock();
+        }
+    }
+    
+    // Обработчик изменений состояния PointerLock
+    pointerLockChange(): void {
+        // Обновляем флаг состояния в зависимости от текущего состояния PointerLock
+        if (document.pointerLockElement === this.canvas || document.mozPointerLockElement === this.canvas || document.webkitPointerLockElement === this.canvas) {
+            this.isLocked = true;
+            // Скрыть стандартный курсор
+            document.body.style.cursor = 'none';
+        } else {
+            this.isLocked = false;
+            // Восстановить стандартный курсор
+            document.body.style.cursor = '';
+        }
+    }
+    
 
+
+
+
+
+    
+    
 
 
 
@@ -165,6 +438,16 @@ export class BookScene2 {
                 "MapPointerSimplev001.glb",
                 this.scene
             );
+
+            const light = new DirectionalLight("dirLight", new Vector3(-1, -1, 0), this.scene);
+            light.position = new Vector3(50, 50, -50); // Задаем позицию света
+            light.intensity = 2;
+    
+            // 2. Создание генератора теней
+            const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
+            // shadowGenerator.usePoissonSampling = true;
+            // shadowGenerator.bias = 0.00005;
+            // shadowGenerator.normalBias = 0.19;
 
             // Создаём объект для группы мешей Sign
             const group = {
@@ -214,6 +497,8 @@ export class BookScene2 {
             // Включаем коллизии для всех мешей
             map.forEach((mesh) => {
                 mesh.checkCollisions = true;
+                mesh.receiveShadows = true;
+                shadowGenerator.addShadowCaster(mesh);
             });
 
             const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
@@ -420,35 +705,6 @@ export class BookScene2 {
     private updateCounter(): void {
         this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
     }
-
-    async playLoadingVideo(): Promise<void> {
-        // Создаем HTMLVideoElement
-        const video = document.createElement("video");
-        video.src = "/models/film_1var_1.mp4";
-        video.autoplay = true;
-        video.muted = false;
-        video.loop = false; // Остановить после одного воспроизведения
-        video.style.position = "absolute";
-        video.style.width = "100%";
-        video.style.height = "100%";
-        video.style.top = "0";
-        video.style.left = "0";
-        video.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
-        video.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
-        video.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
-        
-        // Добавляем видео на страницу
-        document.body.appendChild(video);
-    
-        // Ждем окончания видео
-        return new Promise((resolve) => {
-            video.onended = () => {
-                video.remove(); // Убираем видео из DOM
-                resolve(); // Возвращаем управление после завершения
-            };
-        });
-    }
-
 
 }
 
