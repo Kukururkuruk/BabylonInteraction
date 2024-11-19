@@ -84,6 +84,8 @@ export class Level {
     // Активируем управление правой кнопкой мыши
     this.EnableRightClickMovement();
 
+    //this.CreateArrowImage();  // Вставляем сюда для создания стрелок
+
     this.engine.runRenderLoop(() => {
       // Здесь можно вставить любые обновления состояния
       this.CheckCenterPosition(); // Проверяем позицию для подсветки
@@ -220,26 +222,38 @@ export class Level {
   }
   CreateArrowImage(): void {
     if (!this.arrowImage) {
-        this.arrowImage = new GuiImage("arrow", "/models/f356732a4092c963aa6289e30a17c51c.png");
+      // Получаем размеры окна
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    // Пропорционально вычисляем новые координаты для стрелок
+    const scaleX = windowWidth / 1920;  // 1920 — это начальная ширина, для которой задавались координаты
+    const scaleY = windowHeight / 1080; // 1080 — это начальная высота, для которой задавались координаты
+
+    // Изначальные координаты для стрелок (например, по центру экрана)
+    const arrowX = 100;
+    const arrowY = 200;
+
+    // Применяем масштабирование
+    const newArrowX = arrowX * scaleX;
+    const newArrowY = arrowY * scaleY;
+        this.arrowImage = new GuiImage("arrow", "/models/Стрелочки3.png");
         console.log("Созданное изображение:", this.arrowImage);
-        this.arrowImage.width = "200px";
-        this.arrowImage.height = "200px";
-         // Явное указание позиции
-         this.arrowImage.top = "50px"; // Смещение вниз
-          this.arrowImage.left = "50px"; // Смещение вправо
-        this.arrowImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        this.arrowImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        this.arrowImage.alpha = 0.5; // Прозрачность 50%
+        this.arrowImage.width = "100px";
+        this.arrowImage.height = "100px";
+        
+
+        // Явное указание позиции
+        this.arrowImage.top = "50px"; // Смещение вниз
+        this.arrowImage.left = "150px"; // Смещение вправо
+      this.arrowImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      this.arrowImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        this.arrowImage.alpha = 0.5; // Сделано непрозрачным
         this.arrowImage.zIndex = 10; // Достаточно высокий, но не перекрывающий
         this.arrowImage.isVisible = true; // Скрыто по умолчанию
-        //this.guiTexture.background = "white"; // Установите цвет фона для теста
         this.guiTexture.addControl(this.arrowImage);
+
         console.log("Элементы GUI после добавления:", this.guiTexture.getChildren());
-        /*const testText = new TextBlock();
-        testText.text = "Тест";
-        testText.color = "red";
-        testText.fontSize = 24;
-        this.guiTexture.addControl(testText);*/
     }
 }
 
@@ -330,101 +344,104 @@ applyPressedImage(): void {
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
     const createDialControl = (label: string, onRotate: (delta: number) => void, position: [number, number]) => {
-        const panel = new StackPanel();
-        panel.width = "100px";
-        panel.height = "100px";
-        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        panel.left = `${position[0]}px`;
-        panel.top = `${position[1]}px`;
-
-        const dial = new Ellipse();
-        dial.width = "80px";
-        dial.height = "80px";
-        dial.color = "white";
-        dial.thickness = 4;
-        dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
-        dial.isPointerBlocker = true;
-        panel.addControl(dial);
-
-        const labelBlock = new TextBlock();
-        labelBlock.text = label;
-        labelBlock.color = "white";
-        labelBlock.fontSize = 14;
-        panel.addControl(labelBlock);
-
-        let isMouseDown = false;
-        let lastY: number | null = null;
-        let pixelCounter = 0;
-
-
-    // Эффект свечения при нажатии
-    const applyPressedEffect = () => {
-      dial.width = "100px";
-      dial.height = "100px";
-      dial.color = "lightgreen"; // Зеленая обводка
-      dial.background = "rgba(0, 255, 0, 0.8)"; // Более яркий зеленый
-      dial.thickness = 6; // Увеличение толщины обводки
-  };
-
-  // Возвращение к исходному состоянию
-  const removePressedEffect = () => {
-      dial.width = "80px";
-      dial.height = "80px";
+      const panel = new StackPanel();
+      
+      // Используем фиксированные размеры для теста
+      panel.width = "150px";  // Установим фиксированную ширину
+      panel.height = "150px"; // Установим фиксированную высоту
+      panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      
+      // Позиционирование относительно центра экрана
+      panel.left = `${position[0]}px`;  // Позиция по оси X
+      panel.top = `${position[1]}px`;   // Позиция по оси Y
+  
+      const dial = new Ellipse();
+      dial.width = "80px";  // Фиксированный диаметр круга
+      dial.height = "80px"; // Фиксированный диаметр круга
       dial.color = "white";
+      dial.thickness = 4;
       dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
-      dial.thickness = 4; // Обычная обводка
-  };
-
-  dial.onPointerDownObservable.add((event) => {
-    if (event.buttonIndex === 0) { 
-        isMouseDown = true;
-        applyPressedEffect(); // Применяем визуальный эффект (если нужно)
-        this.CreateArrowImage(); // Создаем изображение, если оно еще не создано
-        this.applyPressedImage(); // Делаем изображение видимым
-        console.log("Изображение успешно загружено!");        
-    }
-});
-
-        dial.onPointerUpObservable.add(() => {
-            isMouseDown = false;
-            removePressedEffect();
-            lastY = null;
-            if (this.arrowImage) {
+      dial.isPointerBlocker = true;
+      panel.addControl(dial);
+  
+      const labelBlock = new TextBlock();
+      labelBlock.text = label;
+      labelBlock.color = "white";
+      labelBlock.fontSize = 14;
+      panel.addControl(labelBlock);
+  
+      let isMouseDown = false;
+      let lastY: number | null = null;
+      let pixelCounter = 0;
+  
+      // Эффект свечения при нажатии
+      const applyPressedEffect = () => {
+          dial.width = "90px"; // Увеличение размера при нажатии
+          dial.height = "90px"; // Увеличение размера при нажатии
+          dial.color = "lightgreen"; // Зеленая обводка
+          dial.background = "rgba(0, 255, 0, 0.8)"; // Более яркий зеленый
+          dial.thickness = 6; // Увеличение толщины обводки
+      };
+  
+      // Возвращение к исходному состоянию
+      const removePressedEffect = () => {
+          dial.width = "80px"; // Возврат к обычному размеру
+          dial.height = "80px"; // Возврат к обычному размеру
+          dial.color = "white";
+          dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
+          dial.thickness = 4; // Обычная обводка
+      };
+  
+      dial.onPointerDownObservable.add((event) => {
+          if (event.buttonIndex === 0) { 
+              isMouseDown = true;
+              applyPressedEffect(); // Применяем визуальный эффект (если нужно)
+              this.CreateArrowImage(); // Создаем изображение, если оно еще не создано
+              this.applyPressedImage(); // Делаем изображение видимым
+              console.log("Изображение успешно загружено!");        
+          }
+      });
+  
+      dial.onPointerUpObservable.add(() => {
+          isMouseDown = false;
+          removePressedEffect();
+          lastY = null;
+          if (this.arrowImage) {
               this.arrowImage.isVisible = false; // Скрываем изображение
               console.log("Изображение скрыто.");
           }
-        });
-
-        dial.onPointerMoveObservable.add((event) => {
-            if (isMouseDown && lastY !== null && !isTaskCompleted) {
-                const delta = event.y - lastY;
-                onRotate(delta);
-
-                pixelCounter += Math.abs(delta);
-                if (pixelCounter >= 5) {  // Каждые 5 пикселей
-                    if (this.bubbleMesh) {
-                        const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01;  // Рандомное смещение
-                        this.bubbleMesh.position.y += randomYOffset;
-                    }
-                    pixelCounter = 0;
-                }
-
-                if (isCentered()) {
-                    completeTask();
-                }
-            }
-            lastY = event.y;
-        });
-
-        dial.onPointerOutObservable.add(() => {
-            isMouseDown = false;
-            removePressedEffect();
-            lastY = null;
-        });
-
-        this.guiTexture.addControl(panel);
-    };
+      });
+  
+      dial.onPointerMoveObservable.add((event) => {
+          if (isMouseDown && lastY !== null && !isTaskCompleted) {
+              const delta = event.y - lastY;
+              onRotate(delta);
+  
+              pixelCounter += Math.abs(delta);
+              if (pixelCounter >= 5) {  // Каждые 5 пикселей
+                  if (this.bubbleMesh) {
+                      const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01;  // Рандомное смещение
+                      this.bubbleMesh.position.y += randomYOffset;
+                  }
+                  pixelCounter = 0;
+              }
+  
+              if (isCentered()) {
+                  completeTask();
+              }
+          }
+          lastY = event.y;
+      });
+  
+      dial.onPointerOutObservable.add(() => {
+          isMouseDown = false;
+          removePressedEffect();
+          lastY = null;
+      });
+  
+      this.guiTexture.addControl(panel);
+  };
 
 // Правая крутилка - движение под углом 135 градусов или 315 градусов
 createDialControl("Right", (delta) => { 
@@ -574,13 +591,13 @@ CheckCenterPosition(): void {
 
 
   BetonTrigger(): void {
-    const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+    const page1 = this.dialogPage.addText("Нажми на кнопку 'Начать' для начала измерения.")
     this.guiManager.CreateDialogBox([page1])
 
             this.triggerManager2.createStartButton('Начать', () => {
             // Показываем сообщение
 
-            const page2 = this.dialogPage.addText("Подойдите к пузырьковому уровню и нажмите на него. С помощью винтов трегера установите пузырёк уровня в центр.  После того как установите пузырек завершите задание нажав на кнопку 'Завершить' ")
+            const page2 = this.dialogPage.addText("Нажмите на пузырьковый уровень. С помощью винтов трегера установите пузырёк уровня в центр.  После того как установите пузырек завершите задание нажав на кнопку 'Завершить' ")
             const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
             this.guiManager.CreateDialogBox([page2, page3])
 
