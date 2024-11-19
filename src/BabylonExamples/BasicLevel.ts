@@ -20,6 +20,9 @@ import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { Animation } from "@babylonjs/core/Animations/animation";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 
 export class Level {
   scene: Scene;
@@ -41,6 +44,7 @@ export class Level {
   private guiManager: GUIManager;
   private arrowButtons: Control[] = [];
   private dialControls: StackPanel[] = []; // Добавляем свойство для хранения крутилок
+  private arrowImage: GuiImage | null = null; // Изображение стрелочек
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -201,6 +205,9 @@ export class Level {
           new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
             console.log("Часть меша Bubble.glb была кликнута!");
             this.CreateBubbleMesh(mesh);
+            
+            
+            
           })
         );
       });
@@ -211,16 +218,56 @@ export class Level {
       console.error("Ошибка при загрузке моделей:", error);
     }
   }
+  CreateArrowImage(): void {
+    if (!this.arrowImage) {
+        this.arrowImage = new GuiImage("arrow", "/models/f356732a4092c963aa6289e30a17c51c.png");
+        console.log("Созданное изображение:", this.arrowImage);
+        this.arrowImage.width = "200px";
+        this.arrowImage.height = "200px";
+         // Явное указание позиции
+         this.arrowImage.top = "50px"; // Смещение вниз
+          this.arrowImage.left = "50px"; // Смещение вправо
+        this.arrowImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this.arrowImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        this.arrowImage.alpha = 0.5; // Прозрачность 50%
+        this.arrowImage.zIndex = 10; // Достаточно высокий, но не перекрывающий
+        this.arrowImage.isVisible = true; // Скрыто по умолчанию
+        //this.guiTexture.background = "white"; // Установите цвет фона для теста
+        this.guiTexture.addControl(this.arrowImage);
+        console.log("Элементы GUI после добавления:", this.guiTexture.getChildren());
+        /*const testText = new TextBlock();
+        testText.text = "Тест";
+        testText.color = "red";
+        testText.fontSize = 24;
+        this.guiTexture.addControl(testText);*/
+    }
+}
+
+applyPressedImage(): void {
+  if (this.arrowImage) {
+      this.arrowImage.isVisible = true;
+      console.log("Изображение отображается на экране!");
+      console.log("Позиция изображения:", this.arrowImage.left, this.arrowImage.top);
+      console.log("Размеры изображения:", this.arrowImage.width, this.arrowImage.height);
+  } else {
+      console.error("Ошибка: изображение не найдено.");
+  }
+}
+
   CreateBubbleMesh(mesh: AbstractMesh): void {
+    
     if (this.isBubbleCreated) {
       console.log("Меш уже создан, пропускаем создание");
       return;
     }
+    
     const bubbleMesh = mesh as Mesh;
+    
     if (!bubbleMesh) {
       console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
       return;
     }
+    
     this.bubbleMesh = bubbleMesh;
 
     // Генерация случайной позиции с уменьшенным диапазоном ещё в 2 раза
@@ -228,7 +275,7 @@ export class Level {
     const randomZ = Math.random() * (0.1125 * 10) - (0.05625 * 10); // Диапазон от -0.45 до 0.45
 //const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
 //const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
-    this.bubbleMesh.position = new Vector3(randomX, 0.7, randomZ);
+    this.bubbleMesh.position = new Vector3(randomX, 0.5, randomZ);
 
     this.isBubbleCreated = true;
     console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
@@ -296,7 +343,7 @@ export class Level {
         dial.height = "80px";
         dial.color = "white";
         dial.thickness = 4;
-        dial.background = "grey";
+        dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
         dial.isPointerBlocker = true;
         panel.addControl(dial);
 
@@ -310,15 +357,43 @@ export class Level {
         let lastY: number | null = null;
         let pixelCounter = 0;
 
-        dial.onPointerDownObservable.add((event) => {
-            if (event.buttonIndex === 0) { 
-                isMouseDown = true;
-            }
-        });
+
+    // Эффект свечения при нажатии
+    const applyPressedEffect = () => {
+      dial.width = "100px";
+      dial.height = "100px";
+      dial.color = "lightgreen"; // Зеленая обводка
+      dial.background = "rgba(0, 255, 0, 0.8)"; // Более яркий зеленый
+      dial.thickness = 6; // Увеличение толщины обводки
+  };
+
+  // Возвращение к исходному состоянию
+  const removePressedEffect = () => {
+      dial.width = "80px";
+      dial.height = "80px";
+      dial.color = "white";
+      dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
+      dial.thickness = 4; // Обычная обводка
+  };
+
+  dial.onPointerDownObservable.add((event) => {
+    if (event.buttonIndex === 0) { 
+        isMouseDown = true;
+        applyPressedEffect(); // Применяем визуальный эффект (если нужно)
+        this.CreateArrowImage(); // Создаем изображение, если оно еще не создано
+        this.applyPressedImage(); // Делаем изображение видимым
+        console.log("Изображение успешно загружено!");        
+    }
+});
 
         dial.onPointerUpObservable.add(() => {
             isMouseDown = false;
+            removePressedEffect();
             lastY = null;
+            if (this.arrowImage) {
+              this.arrowImage.isVisible = false; // Скрываем изображение
+              console.log("Изображение скрыто.");
+          }
         });
 
         dial.onPointerMoveObservable.add((event) => {
@@ -344,13 +419,13 @@ export class Level {
 
         dial.onPointerOutObservable.add(() => {
             isMouseDown = false;
+            removePressedEffect();
             lastY = null;
         });
 
         this.guiTexture.addControl(panel);
     };
 
-  // Правая крутилка - движение под углом 135 градусов
 // Правая крутилка - движение под углом 135 градусов или 315 градусов
 createDialControl("Right", (delta) => { 
   if (this.bubbleMesh && delta !== 0 && !isTaskCompleted) {
@@ -368,7 +443,7 @@ createDialControl("Right", (delta) => {
       const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
       this.bubbleMesh.position.z += randomYOffset;
   }
-}, [150, 0]);
+}, [200, -100]);
 
 // Левая крутилка - движение под углом -45 или -220 градусов
 // Левая крутилка - движение под углом 45 градусов или 220 градусов
@@ -388,7 +463,7 @@ createDialControl("Left", (delta) => {
       const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
       this.bubbleMesh.position.z += randomYOffset;
   }
-}, [-150, 0]);
+}, [-200, -100]);
 
     // Крутилка для движения вверх и вниз
     createDialControl("Up/Down", (delta) => { 
@@ -396,7 +471,7 @@ createDialControl("Left", (delta) => {
             const targetZ = this.bubbleMesh.position.z + (delta > 0 ? moveSpeed : -moveSpeed);
             this.bubbleMesh.position.z = targetZ;
         }
-    }, [0, 150]);
+    }, [0, 200]);
     
 }
 
