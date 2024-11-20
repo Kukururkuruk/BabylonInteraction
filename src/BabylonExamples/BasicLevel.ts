@@ -19,10 +19,6 @@ import { TriggersManager } from "./FunctionComponents/TriggerManager3";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import { GUIManager } from "./FunctionComponents/GUIManager";
-import { Animation } from "@babylonjs/core/Animations/animation";
-import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
-import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 
 export class Level {
   scene: Scene;
@@ -222,22 +218,7 @@ export class Level {
   }
   CreateArrowImage(): void {
     if (!this.arrowImage) {
-      // Получаем размеры окна
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-
-    // Пропорционально вычисляем новые координаты для стрелок
-    const scaleX = windowWidth / 1920;  // 1920 — это начальная ширина, для которой задавались координаты
-    const scaleY = windowHeight / 1080; // 1080 — это начальная высота, для которой задавались координаты
-
-    // Изначальные координаты для стрелок (например, по центру экрана)
-    const arrowX = 100;
-    const arrowY = 200;
-
-    // Применяем масштабирование
-    const newArrowX = arrowX * scaleX;
-    const newArrowY = arrowY * scaleY;
-        this.arrowImage = new GuiImage("arrow", "/models/Стрелочки3.png");
+        this.arrowImage = new GuiImage("arrow", "/models/Strelka1.png");
         console.log("Созданное изображение:", this.arrowImage);
         this.arrowImage.width = "100px";
         this.arrowImage.height = "100px";
@@ -304,6 +285,8 @@ applyPressedImage(): void {
     });
   }
 
+  
+
   CreateArrowsUI(): void {
     const moveSpeed = 0.01;
     const centerTolerance = 0.01;
@@ -341,24 +324,27 @@ applyPressedImage(): void {
         }
     };
 
-    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    //this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    
 
-    const createDialControl = (label: string, onRotate: (delta: number) => void, position: [number, number]) => {
+    
+
+    const createDialControl = (
+      label: string, 
+      onRotate: (delta: number) => void, 
+      position: [number, number]
+  ) => {
       const panel = new StackPanel();
-      
-      // Используем фиксированные размеры для теста
-      panel.width = "150px";  // Установим фиксированную ширину
-      panel.height = "150px"; // Установим фиксированную высоту
+      panel.width = "100px";
+      panel.height = "100px";
       panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
       panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-      
-      // Позиционирование относительно центра экрана
-      panel.left = `${position[0]}px`;  // Позиция по оси X
-      panel.top = `${position[1]}px`;   // Позиция по оси Y
+      panel.left = `${position[0]}px`;
+      panel.top = `${position[1]}px`;
   
       const dial = new Ellipse();
-      dial.width = "80px";  // Фиксированный диаметр круга
-      dial.height = "80px"; // Фиксированный диаметр круга
+      dial.width = "80px";
+      dial.height = "80px";
       dial.color = "white";
       dial.thickness = 4;
       dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
@@ -377,8 +363,8 @@ applyPressedImage(): void {
   
       // Эффект свечения при нажатии
       const applyPressedEffect = () => {
-          dial.width = "90px"; // Увеличение размера при нажатии
-          dial.height = "90px"; // Увеличение размера при нажатии
+          dial.width = "100px";
+          dial.height = "100px";
           dial.color = "lightgreen"; // Зеленая обводка
           dial.background = "rgba(0, 255, 0, 0.8)"; // Более яркий зеленый
           dial.thickness = 6; // Увеличение толщины обводки
@@ -386,14 +372,14 @@ applyPressedImage(): void {
   
       // Возвращение к исходному состоянию
       const removePressedEffect = () => {
-          dial.width = "80px"; // Возврат к обычному размеру
-          dial.height = "80px"; // Возврат к обычному размеру
+          dial.width = "80px";
+          dial.height = "80px";
           dial.color = "white";
           dial.background = "rgba(0, 128, 0, 0.5)"; // Полупрозрачный зеленый
           dial.thickness = 4; // Обычная обводка
       };
   
-      dial.onPointerDownObservable.add((event) => {
+      /*dial.onPointerDownObservable.add((event) => {
           if (event.buttonIndex === 0) { 
               isMouseDown = true;
               applyPressedEffect(); // Применяем визуальный эффект (если нужно)
@@ -438,59 +424,80 @@ applyPressedImage(): void {
           isMouseDown = false;
           removePressedEffect();
           lastY = null;
+      });*/
+  
+      // Обработка колесика мыши
+      dial.onWheelObservable.add((event) => {
+          const delta = event.y;  // Используем компонент y для вертикальной прокрутки
+          if (!isTaskCompleted) {
+            applyPressedEffect(); // Применяем визуальный эффект (если нужно)
+              onRotate(delta);
+              console.log("Колесико мыши прокручено:", delta > 0 ? "вверх" : "вниз");
+              if (isCentered()) {
+                completeTask();
+            }
+          }
       });
+
+      // Сбрасываем подсветку, когда мышь выходит с диала
+    dial.onPointerOutObservable.add(() => {
+      removePressedEffect();
+  });
   
       this.guiTexture.addControl(panel);
   };
+  
+  
 
 // Правая крутилка - движение под углом 135 градусов или 315 градусов
 createDialControl("Right", (delta) => { 
-  if (this.bubbleMesh && delta !== 0 && !isTaskCompleted) {
-      if (delta > 0) {
-          // Движение под углом 135 градусов (вверх и влево)
-          this.bubbleMesh.position.x -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси X
-          this.bubbleMesh.position.z += moveSpeed / Math.SQRT2;  // Положительное движение по оси Z
-      } else {
-          // Движение под углом 315 градусов (вниз и вправо)
-          this.bubbleMesh.position.x += moveSpeed / Math.SQRT2;  // Положительное движение по оси X
-          this.bubbleMesh.position.z -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси Z
-      }
+if (this.bubbleMesh && delta !== 0 && !isTaskCompleted) {
+    if (delta > 0) {
+        // Движение под углом 135 градусов (вверх и влево)
+        this.bubbleMesh.position.x -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси X
+        this.bubbleMesh.position.z += moveSpeed / Math.SQRT2;  // Положительное движение по оси Z
+    } else {
+        // Движение под углом 315 градусов (вниз и вправо)
+        this.bubbleMesh.position.x += moveSpeed / Math.SQRT2;  // Положительное движение по оси X
+        this.bubbleMesh.position.z -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси Z
+    }
 
-      // Случайное смещение по оси Y (вверх или вниз)
-      const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
-      this.bubbleMesh.position.z += randomYOffset;
-  }
+    // Случайное смещение по оси Y (вверх или вниз)
+    const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
+    this.bubbleMesh.position.z += randomYOffset;
+}
 }, [200, -100]);
 
 // Левая крутилка - движение под углом -45 или -220 градусов
 // Левая крутилка - движение под углом 45 градусов или 220 градусов
 createDialControl("Left", (delta) => { 
-  if (this.bubbleMesh && delta !== 0 && !isTaskCompleted) {
-      if (delta > 0) {
-          // Движение под углом +45 градусов (вверх и вправо)
-          this.bubbleMesh.position.x += moveSpeed / Math.SQRT2;  // Положительное движение по оси X
-          this.bubbleMesh.position.z += moveSpeed / Math.SQRT2;  // Положительное движение по оси Z
-      } else {
-          // Движение под углом 220 градусов (вниз и влево)
-          this.bubbleMesh.position.x -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси X
-          this.bubbleMesh.position.z -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси Z
-      }
+if (this.bubbleMesh && delta !== 0 && !isTaskCompleted) {
+    if (delta > 0) {
+        // Движение под углом +45 градусов (вверх и вправо)
+        this.bubbleMesh.position.x += moveSpeed / Math.SQRT2;  // Положительное движение по оси X
+        this.bubbleMesh.position.z += moveSpeed / Math.SQRT2;  // Положительное движение по оси Z
+    } else {
+        // Движение под углом 220 градусов (вниз и влево)
+        this.bubbleMesh.position.x -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси X
+        this.bubbleMesh.position.z -= moveSpeed / Math.SQRT2;  // Отрицательное движение по оси Z
+    }
 
-      // Случайное смещение по оси Y (вверх или вниз)
-      const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
-      this.bubbleMesh.position.z += randomYOffset;
-  }
+    // Случайное смещение по оси Y (вверх или вниз)
+    const randomYOffset = Math.random() < 0.5 ? -0.01 : 0.01; // Рандомное смещение по оси Y
+    this.bubbleMesh.position.z += randomYOffset;
+}
 }, [-200, -100]);
 
-    // Крутилка для движения вверх и вниз
-    createDialControl("Up/Down", (delta) => { 
-        if (this.bubbleMesh && !isTaskCompleted) {
-            const targetZ = this.bubbleMesh.position.z + (delta > 0 ? moveSpeed : -moveSpeed);
-            this.bubbleMesh.position.z = targetZ;
-        }
-    }, [0, 200]);
-    
+  // Крутилка для движения вверх и вниз
+  createDialControl("Up/Down", (delta) => { 
+      if (this.bubbleMesh && !isTaskCompleted) {
+          const targetZ = this.bubbleMesh.position.z + (delta > 0 ? moveSpeed : -moveSpeed);
+          this.bubbleMesh.position.z = targetZ;
+      }
+  }, [0, 200]);
+  
 }
+
 
 
 // Метод для переключения состояния инвентаря
@@ -597,7 +604,7 @@ CheckCenterPosition(): void {
             this.triggerManager2.createStartButton('Начать', () => {
             // Показываем сообщение
 
-            const page2 = this.dialogPage.addText("Нажмите на пузырьковый уровень. С помощью винтов трегера установите пузырёк уровня в центр.  После того как установите пузырек завершите задание нажав на кнопку 'Завершить' ")
+            const page2 = this.dialogPage.addText("Нажмите на пузырьковый уровень. Наведите на нужный винт трегера и при помощи колесика мышки установите пузырёк уровня в центр.  После того как установите пузырек завершите задание нажав на кнопку 'Завершить' ")
             const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
             this.guiManager.CreateDialogBox([page2, page3])
 
