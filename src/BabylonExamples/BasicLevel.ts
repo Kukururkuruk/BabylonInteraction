@@ -12,6 +12,7 @@ import {
   ExecuteCodeAction,
   Color3,
   AbstractMesh,
+  Animation,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Image as GuiImage, Button, Ellipse, StackPanel, TextBlock, Control } from "@babylonjs/gui";
@@ -218,7 +219,7 @@ export class Level {
   }
   CreateArrowImage(): void {
     if (!this.arrowImage) {
-        this.arrowImage = new GuiImage("arrow", "/models/Strelka1.png");
+        this.arrowImage = new GuiImage("arrow", "/models/mouse_scroll_4310.png");
         console.log("Созданное изображение:", this.arrowImage);
         this.arrowImage.width = "100px";
         this.arrowImage.height = "100px";
@@ -360,7 +361,7 @@ applyPressedImage(): void {
       let isMouseDown = false;
       let lastY: number | null = null;
       let pixelCounter = 0;
-  
+      
       // Эффект свечения при нажатии
       const applyPressedEffect = () => {
           dial.width = "100px";
@@ -425,12 +426,15 @@ applyPressedImage(): void {
           removePressedEffect();
           lastY = null;
       });*/
-  
+
+      
       // Обработка колесика мыши
       dial.onWheelObservable.add((event) => {
-          const delta = event.y;  // Используем компонент y для вертикальной прокрутки
+        const delta = event.y * 1;  // Уменьшаем скорость, умножая на 0.1
           if (!isTaskCompleted) {
             applyPressedEffect(); // Применяем визуальный эффект (если нужно)
+            this.CreateArrowImage(); // Создаем изображение, если оно еще не создано
+            this.applyPressedImage(); // Делаем изображение видимым
               onRotate(delta);
               console.log("Колесико мыши прокручено:", delta > 0 ? "вверх" : "вниз");
               if (isCentered()) {
@@ -442,6 +446,10 @@ applyPressedImage(): void {
       // Сбрасываем подсветку, когда мышь выходит с диала
     dial.onPointerOutObservable.add(() => {
       removePressedEffect();
+      if (this.arrowImage) {
+        this.arrowImage.isVisible = false; // Скрываем изображение
+        console.log("Изображение скрыто.");
+    }
   });
   
       this.guiTexture.addControl(panel);
