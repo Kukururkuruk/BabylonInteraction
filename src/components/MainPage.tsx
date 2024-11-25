@@ -35,6 +35,9 @@ const Main: React.FC = () => {
       <button>
         <Link to="/Тахеометр">Тахеометр</Link>
       </button>
+      <button>
+        <Link to="/ТахеометрЗадание">Тахеометр Задание</Link>
+      </button>
     </div>
   );
 };

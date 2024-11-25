@@ -25,7 +25,8 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import * as GUI from "@babylonjs/gui";
 
-export class TotalStation {
+
+export class TotalStationWork{
   scene: Scene;
   engine: Engine;
   camera!: FreeCamera;
@@ -33,22 +34,15 @@ export class TotalStation {
   guiTexture: AdvancedDynamicTexture;
   highlightLayer: HighlightLayer;
   inputMap: { [key: string]: boolean } = {}; // Карта для отслеживания нажатий клавиш
-  private inventoryVisible: boolean = false; // Флаг для отслеживания состояния инвентаря
-  private inventoryImage: Control | null = null; // Используйте Control для GUI
-  private pointsCountText: TextBlock | null = null; // Текст для отображения количества нажатых точек
-  // Хранение точек
-  private points: AbstractMesh[] = [];
   // Счетчик нажатых точек
   private pointsPressedCount = 0;
   private dialogPage: DialogPage;
   private triggerManager2: TriggerManager2;
   private guiManager: GUIManager;
-  private totalPoints: number = 9; // Задаем количество точек, которые нужно нажать
-  private highlightedPoints: Mesh[] = []; // Список для хранения подсвеченных точек
-  private taskCompleted: boolean = false;
+  private isCursorActive: boolean = true;  // Флаг для состояния курсора
+  private isTaskStarted: boolean = false;  // Флаг для отслеживания начала задания
   //private isRequestInProgress = false; // Флаг для отслеживания состояния запроса
-  private isDataSent: boolean = false;
-  private isClicked: boolean = false; // Переменная для отслеживания состояния клика
+
   
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -66,15 +60,12 @@ export class TotalStation {
     //this.sendPointsData(this.pointsPressedCount);
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
-      this.fetchData(); // Вызовите fetchData после загрузки окружения
-      this.createPoints(); // Создаем точки
+
     });
 
     this.CreateController();
     this.BetonTrigger();
 
-    // Добавляем обработчики событий для управления клавиатурой
-    this.AddKeyboardControls();
 
     // Создаем UI с кнопками стрелок
     this.CreateArrowsUI();
@@ -95,7 +86,7 @@ export class TotalStation {
 
   
   // Метод для получения данных
-  async fetchData() {
+  /*async fetchData() {
     try {
       const response = await fetch('http://127.0.0.1:5000/api/data');
       if (!response.ok) {
@@ -114,7 +105,7 @@ export class TotalStation {
     } catch (error) {
       console.error('Ошибка при получении данных:', error);
     }
-  }
+  }*/
 
   CreateScene(): Scene {
     const scene = new Scene(this.engine);
@@ -133,13 +124,13 @@ export class TotalStation {
     
     // Перекрестие
     this.createCrosshair();
-    
+    this.setupCanvasFocus();
 
     return scene;
   }
 
   CreateController(): void {
-    this.camera = new FreeCamera("camera", new Vector3(45.9713, 3, -6.95292), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(45.9713, 3, -1.95292), this.scene);
     this.camera.attachControl(this.canvas, true);
 
     this.camera.applyGravity = true;
@@ -154,71 +145,176 @@ export class TotalStation {
     //this.camera.keysRight.push(68); // D
 
     // Обработка Pointer Lock для свободного обзора
-    this.canvas.addEventListener("click", () => {
-      if (document.pointerLockElement !== this.canvas) {
-          this.canvas.requestPointerLock();
-          console.log("Requesting pointer lock...");
-      }
-  });
-
-  document.addEventListener("pointerlockchange", () => {
-    if (document.pointerLockElement === this.canvas) {
-        console.log("Pointer locked");  // Указатель заблокирован
-    } else {
-        console.log("Pointer unlocked");  // Указатель разблокирован
-    }
-});
-
+    this.setupPointerLock();
     // Добавляем обработку правой кнопки мыши
     this.setupZoomEffect();
   }
 
 
+  setupPointerLock(): void {
+    if (!this.canvas) {
+        console.error("Canvas is not initialized.");
+        return;
+    }
+
+    // Обработчик клика на канвасе
+    this.canvas.addEventListener("click", () => {
+        // Запрашиваем захват указателя мыши
+        this.canvas.requestPointerLock();
+    });
+
+    // Слушаем события выхода из захвата
+    document.addEventListener("pointerlockchange", () => {
+        if (document.pointerLockElement === this.canvas) {
+            console.log("Pointer locked.");
+        } else {
+            console.log("Pointer unlocked.");
+        }
+    });
+}
+
+setupCanvasFocus(): void {
+  if (!this.canvas) {
+      console.error("Canvas is not initialized.");
+      return;
+  }
+
+  // Автоматический фокус на канвасе при загрузке
+  this.canvas.tabIndex = 1; // Делает канвас фокусируемым элементом
+  this.canvas.focus();
+}
+
   
-
+  
   // Метод настройки луча
- // Метод для настройки взаимодействия с лучом (система событий)
-setupRaycastInteraction(): void {
-  this.scene.onPointerObservable.add((pointerInfo) => {
-    if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0 && !this.isClicked) {
-      this.isClicked = true;
-
-      // Получаем направление луча от камеры
-      const ray = this.camera.getForwardRay();
-      
-      // Пытаемся выбрать меш, с которым пересекается луч
-      const pickResult = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
-
-      if (pickResult?.hit && pickResult.pickedMesh) {
-        const pickedMesh = pickResult.pickedMesh;
-
-        // Приводим pickedMesh к типу Mesh (так как это всегда будет Mesh)
-        if (pickedMesh instanceof Mesh) {
-          // Проверяем, что клик был по объекту с именем 'point'
-          if (pickedMesh.name === "point") {
-            console.log("Клик по объекту:", pickedMesh.name);
-            // Вызываем метод для обработки клика по объекту
-            this.handlePointClick(pickedMesh);
-          } else {
-            console.log("Клик не по объекту point");
-          }
+  setupRaycastInteraction(): void {
+    if (!this.scene) {
+      console.error("Scene is not initialized yet.");
+      return;
+    }
+  
+    // Создаем текстовый блок для вывода информации
+    const infoText = new GUI.TextBlock();
+    infoText.color = "white";
+    infoText.fontSize = 24;
+    infoText.textHorizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
+    infoText.textVerticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
+    this.guiTexture.addControl(infoText);
+  
+    // Обработчик кликов по сцене
+    this.scene.onPointerObservable.add((pointerInfo) => {
+      if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0) {
+        // Вычисляем центр экрана
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+  
+        // Выполняем pick на сцене, используя координаты центра экрана
+        const pickResult = this.scene.pick(centerX, centerY, (mesh) => mesh.isPickable, true, this.camera);
+  
+        if (pickResult?.hit && pickResult.pickedMesh && pickResult.pickedPoint) {
+          const pickedMesh = pickResult.pickedMesh;
+          const pickedPoint = pickResult.pickedPoint;
+  
+          // Логика подсветки объекта
+          this.highlightPart(pickedMesh, pickedPoint);
+  
+          // Расстояние до объекта
+          const distance = Vector3.Distance(this.camera.position, pickedPoint);
+  
+          // Обновляем информацию
+          infoText.text = `Название: ${pickedMesh.name}\nРасстояние: ${distance.toFixed(2)} м`;
+  
+          // Визуализируем точку клика
+          this.createHighlightSphere(pickedPoint);
+        } else {
+          infoText.text = "Объект не найден в центре.";
         }
       }
+    });
+  }
 
-      // Сбрасываем флаг через задержку
-      setTimeout(() => {
-        this.isClicked = false;
-      }, 200);  // Задержка в 200 миллисекунд
-    }
-  });
+
+createHighlightSphere(point: Vector3): void {
+  const highlightSize = 0.2; // Размер подсвечиваемой сферы
+
+  // Создаем подсветку в виде маленькой сферы
+  const highlightSphere = MeshBuilder.CreateSphere("highlightSphere", { diameter: highlightSize }, this.scene);
+
+  // Позиционируем сферу точно на точке клика
+  highlightSphere.position = point.clone();
+
+  // Создаем материал для подсветки
+  const highlightMaterial = new StandardMaterial("highlightMaterial", this.scene);
+  highlightMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
+  highlightMaterial.emissiveColor = new Color3(1, 0, 0); // Сияние
+  highlightSphere.material = highlightMaterial;
+
+  // Удаляем подсветку через 2 секунды
+  setTimeout(() => {
+      highlightSphere.dispose();
+  }, 2000);
 }
+
+highlightPart(mesh: AbstractMesh, point: Vector3): void {
+  const highlightSize = 0.2; // Размер подсвечиваемой области
+
+  // Создаем подсветку в виде маленькой сферы
+  const highlightSphere = MeshBuilder.CreateSphere("highlight", { diameter: highlightSize }, this.scene);
+
+  // Позиционируем сферу точно на точке клика
+  highlightSphere.position = point.clone();
+
+  // Создаём материал для подсветки
+  const highlightMaterial = new StandardMaterial("highlightMaterial", this.scene);
+  highlightMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
+  highlightMaterial.emissiveColor = new Color3(0, 1, 0); // Сияние
+  highlightSphere.material = highlightMaterial;
+
+  // Удаляем подсветку через 2 секунды
+  setTimeout(() => {
+    highlightSphere.dispose();
+  }, 2000);
+}
+
 
 // Логика, которая выполняется при клике на объект
 onObjectClicked(mesh: AbstractMesh): void {
-    // Добавьте свои действия с объектом
-    mesh.material = new StandardMaterial("clickedMaterial", this.scene);
-    (mesh.material as StandardMaterial).diffuseColor = new Color3(1, 0, 0); // Меняем цвет объекта на красный
-    console.log(`Вы кликнули по объекту: ${mesh.name}`);
+   // Получаем центр экрана
+   const screenCenterX = this.canvas.width / 2;
+   const screenCenterY = this.canvas.height / 2;
+
+   // Выполняем "лучевое" определение объекта
+   const pickResult = this.scene.pick(
+       screenCenterX,
+       screenCenterY,
+       (mesh) => mesh.isPickable, // Условие для выбора только кликабельных мешей
+       false,
+       this.camera
+   );
+
+   if (pickResult?.hit && pickResult.pickedMesh) {
+       const pickedMesh = pickResult.pickedMesh;
+       console.log(`Выбран объект: ${pickedMesh.name}`);
+
+       // Подсветка объекта
+       this.highlightMesh(pickedMesh);
+   } else {
+       console.log("Нет объектов в центре экрана.");
+   }
+}
+
+highlightMesh(mesh: AbstractMesh): void {
+  const highlightMaterial = new StandardMaterial("highlightMaterial", this.scene);
+  highlightMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
+  highlightMaterial.emissiveColor = new Color3(0, 1, 0); // Сияние
+
+  // Применяем материал к выбранному объекту
+  mesh.material = highlightMaterial;
+
+  // Удаляем подсветку через 2 секунды
+  setTimeout(() => {
+      mesh.material = null; // Убираем подсветку (или возвращаем оригинальный материал)
+  }, 2000);
 }
 
 
@@ -228,6 +324,7 @@ onObjectClicked(mesh: AbstractMesh): void {
         const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
         map.forEach((mesh) => {
             mesh.checkCollisions = true;
+            mesh.isPickable = true; // Делаем меши кликабельными
             // Замораживаем активные меши после завершения всех настроек
         //this.scene.freezeActiveMeshes();
         });
@@ -342,46 +439,6 @@ setupZoomEffect(): void {
   });
 }
 
-createUserPoint(user: { name: string; x: number; y: number; z: number }): void {
-  const sphere = MeshBuilder.CreateSphere(user.name, { diameter: 1 }, this.scene);
-  sphere.position.set(user.x, user.y, user.z);
-
-  // Добавление события клика по точке
-  sphere.actionManager = new ActionManager(this.scene);
-  sphere.actionManager.registerAction(new ExecuteCodeAction(
-      ActionManager.OnPickTrigger, 
-      () => this.handlePointClick(sphere) // Передаём сферу как параметр
-  ));
-}
-
-// Метод обработки клика по точке
-handlePointClick(point: Mesh): void {
-  // Проверяем, была ли точка уже выбрана
-  if (!this.highlightedPoints.includes(point)) {
-    // Добавляем точку в подсветку и увеличиваем счетчик
-    this.highlightLayer.addMesh(point, Color3.Yellow());
-    this.highlightedPoints.push(point);
-    this.pointsPressedCount++;
-    console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
-  } else {
-    // Убираем точку из подсветки и уменьшаем счетчик
-    this.highlightLayer.removeMesh(point);
-    const index = this.highlightedPoints.indexOf(point);
-    if (index !== -1) {
-      this.highlightedPoints.splice(index, 1); // Удаляем точку из массива
-      this.pointsPressedCount--;
-    }
-    console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
-  }
-
-  this.updatePointsCountDisplay(); // Обновляем счетчик на экране
-
-  // Проверяем, завершена ли задача
-  if (this.pointsPressedCount === this.totalPoints && !this.taskCompleted) {
-    this.taskCompleted = true;
-    this.completeTask();
-  }
-}
 
 completeTask(): void {
   const pointsText = `Нажатые точки: ${this.pointsPressedCount}`;
@@ -393,7 +450,7 @@ completeTask(): void {
   this.guiManager.createRouteButton('/test');
 
   // Отправляем данные на сервер только один раз, когда задача завершена
-  this.sendFinalCountToServer(this.pointsPressedCount);
+  //this.sendFinalCountToServer(this.pointsPressedCount);
   console.log("Задача выполнена");
 }
 
@@ -442,122 +499,15 @@ completeTask(): void {
   window.addEventListener("keydown", (event) => {
     if (event.key === "i" || event.key === "ш") {
       console.log("Клавиша 'i' или 'ш' нажата!"); // Лог для проверки
-      this.ToggleInventory();
     }
   });
 
     
   }
 
-  // Метод для переключения состояния инвентаря
-  private ToggleInventory(): void {
-    console.log("Переключение инвентаря, текущее состояние:", this.inventoryVisible);
-    if (this.inventoryVisible) {
-      this.HideInventory();
-    } else {
-      this.ShowInventory();
-    }
-    this.updatePointsCountDisplay(); // Обновление текста
-  }
 
-  // Метод для отображения инвентаря
-  private ShowInventory(): void {
-    console.log("Вызван ShowInventory");
-    if (!this.inventoryImage) {
-      console.log("Создаем новый инвентарь");
-      this.inventoryImage = new GuiImage("inventoryImage", "/models/frame1.png");
-      this.inventoryImage.width = "300px";
-      this.inventoryImage.height = "400px";
-      this.inventoryImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      this.inventoryImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      this.inventoryImage.top = "10px";
-      this.inventoryImage.left = "0px";
-      this.guiTexture.addControl(this.inventoryImage);
-    }
-  
-    console.log("Отображаем инвентарь");
-    this.inventoryImage.isVisible = false; // Показываем инвентарь
-    this.inventoryVisible = true;
-    this.updatePointsCountDisplay();
-  }
-  
 
-  // Метод для скрытия инвентаря
-  private HideInventory(): void {
-    console.log("Вызван HideInventory");
-    if (this.inventoryImage) {
-      console.log("Скрываем инвентарь");
-      this.inventoryImage.isVisible = false;
-    }
-    this.inventoryVisible = false;
-    this.HidePointsCount();
-  }
-
-  // Скрываем текст с количеством нажатых точек
-  private HidePointsCount(): void {
-    if (this.pointsCountText) {
-      this.pointsCountText.isVisible = false;
-    }
-  }
-
-  // Создаем точки на карте
-  // Создание точек на карте
-private createPoints() {
-  const pointsPositions = [
-    new Vector3(12.8824, 6.04612, 7.3295),
-    new Vector3(12.4246 , 8.88759 , -7.65193),
-    new Vector3(-0.54295, 6.38412 , -10.1049),
-    new Vector3(-2.43646 , 6.04612, 6.35334),
-    new Vector3(-4.33195 , 6.1931 , 6.27981),
-    new Vector3(1.08095, 6.38412, 6.13351 ),
-    new Vector3(12.4621 , 6.11568 , -1.98692),
-    new Vector3(12.8824  , 7.3295  , -14.1588),
-    new Vector3(12.9036 , 5.12722  , 12.9169 ),
-  ];
-
-  pointsPositions.forEach(pos => {
-    const point = MeshBuilder.CreateSphere("point", { diameter: 0.3 }, this.scene);
-    point.position = pos;
-    point.isVisible = true;
-    point.isPickable = true;  // Делаем точку кликабельной
-
-    // Добавление точек в массив для управления
-    this.points.push(point);
-
-    // Добавляем действие при клике на точку
-    point.actionManager = new ActionManager(this.scene);
-    point.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-      // Вызываем обработчик клика
-      this.handlePointClick(point);
-
-      // Логируем позицию точки
-      console.log(`Точка нажата: ${point.name}, позиция: ${point.position}`);
-    }));
-
-    console.log(`Точка создана на позиции: ${pos}`);
-  });
-}
-
-// Обновление отображения количества нажатых точек
-private updatePointsCountDisplay(): void {
-  if (!this.pointsCountText) {
-    console.log("Создаём TextBlock для отображения количества нажатых точек.");
-    this.pointsCountText = new TextBlock("pointsCount", `Нажатые точки: ${this.pointsPressedCount}`);
-    this.pointsCountText.color = "white";
-    this.pointsCountText.fontSize = 20;
-    this.pointsCountText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    this.pointsCountText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    this.pointsCountText.top = "10px";
-    this.pointsCountText.left = "10px";
-    this.guiTexture.addControl(this.pointsCountText);
-  }
-
-  this.pointsCountText.text = `Нажатые точки: ${this.pointsPressedCount}`;
-  this.pointsCountText.isVisible = this.inventoryVisible; // Видимость зависит от инвентаря
-  console.log(`Текст обновлён: ${this.pointsCountText.text}`);
-}
-
-  sendFinalCountToServer(pointsPressedCount: number): void {
+  /*sendFinalCountToServer(pointsPressedCount: number): void {
     console.log('Пытаемся отправить данные на сервер:', pointsPressedCount);
   
     if (this.isDataSent) {
@@ -581,7 +531,7 @@ private updatePointsCountDisplay(): void {
     .finally(() => {
       this.isDataSent = false;  // Сброс флага после выполнения запроса
     });
-  }
+  }*/
   
   BetonTrigger(): void {
   const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
@@ -609,23 +559,6 @@ private updatePointsCountDisplay(): void {
       this.triggerManager2.disableDistanceMeasurement()  // Отключение измерений
       this.guiManager.createRouteButton('/test')  // Перенаправление
     });
-  });
-}
-  
-  
-  
-  
-
-AddKeyboardControls(): void {
-  window.addEventListener("keydown", (event) => {
-    this.inputMap[event.key] = true;
-
-    // Удаляем обработку 'i' или 'ш', так как она будет в другом месте
-    // Оставляем только общую обработку других клавиш
-  });
-
-  window.addEventListener("keyup", (event) => {
-    this.inputMap[event.key] = false;
   });
 }
 }
