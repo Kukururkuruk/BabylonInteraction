@@ -43,7 +43,7 @@ export class TotalStationWork {
   private dialogPage: DialogPage;
   private triggerManager2: TriggerManager2;
   private guiManager: GUIManager;
-  private totalPoints: number = 9; // Задаем количество точек, которые нужно нажать
+  private totalPoints: number = 28; // Задаем количество точек, которые нужно нажать
   private highlightedPoints: Mesh[] = []; // Список для хранения подсвеченных точек
   private taskCompleted: boolean = false;
   //private isRequestInProgress = false; // Флаг для отслеживания состояния запроса
@@ -225,7 +225,7 @@ onObjectClicked(mesh: AbstractMesh): void {
   async CreateEnvironment(): Promise<void> {
     try {
         // Продолжаем работу по загрузке окружения
-        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD.gltf", this.scene);
         map.forEach((mesh) => {
             mesh.checkCollisions = true;
             // Замораживаем активные меши после завершения всех настроек
@@ -355,39 +355,77 @@ createUserPoint(user: { name: string; x: number; y: number; z: number }): void {
 }
 
 // Метод обработки клика по точке
-// Метод обработки клика по точке 
 handlePointClick(point: Mesh): void {
   // Проверяем, была ли точка уже выбрана
   if (!this.highlightedPoints.includes(point)) {
-    // Добавляем точку в подсветку и увеличиваем счетчик
-    this.highlightLayer.addMesh(point, Color3.Yellow());
-    this.highlightedPoints.push(point);
-    this.pointsPressedCount++;
-    console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
+      // Добавляем точку в подсветку и увеличиваем счетчик
+      this.highlightLayer.addMesh(point, Color3.Yellow());
+      this.highlightedPoints.push(point);
+      this.pointsPressedCount++;
+      console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
 
-    // Добавляем флаг, чтобы исключить повторную отправку данных до завершения текущего клика
-    if (this.pointsPressedCount === this.totalPoints && !this.taskCompleted) {
-      this.taskCompleted = true;
-      this.completeTask();
-    }
+      // Добавляем флаг, чтобы исключить повторную отправку данных до завершения текущего клика
+      if (this.pointsPressedCount === this.totalPoints && !this.taskCompleted) {
+          this.taskCompleted = true;
+          this.completeTask();
+      }
   } else {
-    // Убираем точку из подсветки и уменьшаем счетчик
-    this.highlightLayer.removeMesh(point);
-    const index = this.highlightedPoints.indexOf(point);
-    if (index !== -1) {
-      this.highlightedPoints.splice(index, 1); // Удаляем точку из массива
-      this.pointsPressedCount--;
-    }
-    console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
+      // Убираем точку из подсветки и уменьшаем счетчик
+      this.highlightLayer.removeMesh(point);
+      const index = this.highlightedPoints.indexOf(point);
+      if (index !== -1) {
+          this.highlightedPoints.splice(index, 1); // Удаляем точку из массива
+          this.pointsPressedCount--;
+      }
+      console.log("Текущее количество нажатых точек:", this.pointsPressedCount);
   }
 
   this.updatePointsCountDisplay(); // Обновляем счетчик на экране
 
   // Проверяем, завершена ли задача
   if (this.pointsPressedCount === this.totalPoints && !this.taskCompleted) {
-    this.taskCompleted = true;
-    this.completeTask();
+      this.taskCompleted = true;
+      this.completeTask();
   }
+
+  // Новая функциональность: расчет расстояния и отображение информации о точке
+  const distance = Vector3.Distance(this.camera.position, point.position);
+  const pointName = point.name;
+
+  // Получение мировых координат точки
+  const worldPosition = point.getAbsolutePosition();
+  const coordinates = `X: ${worldPosition.x.toFixed(2)}, Y: ${worldPosition.y.toFixed(2)}, Z: ${worldPosition.z.toFixed(2)}`;
+
+  console.log(`Расстояние до точки: ${distance.toFixed(2)} м`);
+  console.log(`Наименование точки: ${pointName}`);
+  console.log(`Мировые координаты: ${coordinates}`);
+
+  // Отображение информации на экране
+  const textBlock = new TextBlock();
+  textBlock.text = `Точка: ${pointName}\nРасстояние: ${distance.toFixed(2)} м\nКоординаты: ${coordinates}`;
+  textBlock.color = "white";
+  textBlock.fontSize = 24;
+  textBlock.top = "20px";
+  textBlock.left = "20px";
+  textBlock.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+  textBlock.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+  // Удаляем старую информацию (если была)
+  if (this.pointsCountText) {
+      this.guiTexture.removeControl(this.pointsCountText);
+  }
+
+  // Сохраняем ссылку на текущий текст
+  this.pointsCountText = textBlock;
+
+  // Добавляем новую информацию
+  this.guiTexture.addControl(textBlock);
+
+  // Удаляем текст через 2 секунды
+  setTimeout(() => {
+      this.guiTexture.removeControl(textBlock);
+      this.pointsCountText = null; // Обнуляем ссылку
+  }, 2000);
 }
 
 
@@ -421,18 +459,6 @@ displayPointInfo(point: AbstractMesh): void {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 completeTask(): void {
   const pointsText = `Нажатые точки: ${this.pointsPressedCount}`;
   console.log(pointsText);
@@ -443,7 +469,7 @@ completeTask(): void {
   this.guiManager.createRouteButton('/test');
 
   // Отправляем данные на сервер только один раз, когда задача завершена
-  this.sendFinalCountToServer(this.pointsPressedCount);
+  //this.sendFinalCountToServer(this.pointsPressedCount);
   console.log("Задача выполнена");
 }
 
@@ -557,15 +583,47 @@ completeTask(): void {
   // Создание точек на карте
 private createPoints() {
   const pointsPositions = [
-    new Vector3(12.18, 6.105, 12.58),
-    new Vector3(12.4246 , 8.88759 , -7.65193),
-    new Vector3(-0.54295, 6.38412 , -10.1049),
-    new Vector3(-2.43646 , 6.04612, 6.35334),
-    new Vector3(-4.33195 , 6.1931 , 6.27981),
-    new Vector3(1.08095, 6.38412, 6.13351 ),
-    new Vector3(12.4621 , 6.11568 , -1.98692),
-    new Vector3(12.8824  , 7.3295  , -14.1588),
-    new Vector3(12.9036 , 5.12722  , 12.9169 ),
+    //правая сторона 
+    new Vector3(12.2428, 6.105, 13.0217 ),
+    new Vector3(10.35 , 6.11101   , 13.0217),
+    new Vector3(8.45428 , 6.15668  , 13.0217),
+    new Vector3(6.55912 , 6.21302  , 13.0217),
+    new Vector3(4.66065 , 6.24956 , 13.0217),
+    new Vector3(2.76875 , 6.30783  , 13.0217),
+    new Vector3(0.870274 , 6.3462 , 13.0217 ),
+    new Vector3(-0.754175 , 6.3462  , 13.0217),
+    new Vector3(-2.70299  , 6.30783    , 13.0217),
+    new Vector3(-4.54455 , 6.24956   , 13.0217 ),
+    new Vector3(-6.44302  , 6.21302   , 13.0217 ),
+    new Vector3(-8.33819   , 6.15668    , 13.0217 ),
+    new Vector3(-10.2339   , 6.11101    , 13.0217 ),
+    new Vector3(-12.2339  , 6.105   , 13.0217 ),
+    //левая сторона
+    new Vector3(12.2428, 6.105, -13.0217 ),
+    new Vector3(10.35 , 6.11101   , -13.0217),
+    new Vector3(8.45428 , 6.15668  , -13.0217),
+    new Vector3(6.55912 , 6.21302  , -13.0217),
+    new Vector3(4.66065 , 6.24956 , -13.0217),
+    new Vector3(2.76875 , 6.30783  , -13.0217),
+    new Vector3(0.870274 , 6.3462 , -13.0217 ),
+    new Vector3(-0.754175 , 6.3462  , -13.0217),
+    new Vector3(-2.70299  , 6.30783    , -13.0217),
+    new Vector3(-4.54455 , 6.24956   , -13.0217 ),
+    new Vector3(-6.44302  , 6.21302   , -13.0217 ),
+    new Vector3(-8.33819   , 6.15668    , -13.0217 ),
+    new Vector3(-10.2339   , 6.11101    , -13.0217 ),
+    new Vector3(-12.2339  , 6.105   , -13.0217 ),
+    //угловые элементы правая сторона 
+    new Vector3(12.8763   , 5.905    , 12.9101 ),
+    new Vector3(12.8763    , 5.12908    , 12.9101  ),
+    new Vector3(12.8763   , -0.015   , 12.6601 ),
+
+    //угловые элементы левая сторона 
+    new Vector3(12.8763   , 5.905    , -12.9101 ),
+    new Vector3(12.8763    , 5.12908    , -12.9101  ),
+    new Vector3(12.8763   , -0.015   , -12.6601 ),
+
+
   ];
 
   pointsPositions.forEach(pos => {
