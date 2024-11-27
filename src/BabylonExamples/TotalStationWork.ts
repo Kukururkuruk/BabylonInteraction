@@ -177,41 +177,44 @@ export class TotalStationWork {
   
 
   // Метод настройки луча
- // Метод для настройки взаимодействия с лучом (система событий)
-setupRaycastInteraction(): void {
-  this.scene.onPointerObservable.add((pointerInfo) => {
-    if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0 && !this.isClicked) {
-      this.isClicked = true;
-
-      // Получаем направление луча от камеры
-      const ray = this.camera.getForwardRay();
-      
-      // Пытаемся выбрать меш, с которым пересекается луч
-      const pickResult = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
-
-      if (pickResult?.hit && pickResult.pickedMesh) {
-        const pickedMesh = pickResult.pickedMesh;
-
-        // Приводим pickedMesh к типу Mesh (так как это всегда будет Mesh)
-        if (pickedMesh instanceof Mesh) {
-          // Проверяем, что клик был по объекту с именем 'point'
-          if (pickedMesh.name === "point") {
-            console.log("Клик по объекту:", pickedMesh.name);
-            // Вызываем метод для обработки клика по объекту
-            this.handlePointClick(pickedMesh);
-          } else {
-            console.log("Клик не по объекту point");
+  setupRaycastInteraction(): void {
+    this.scene.onPointerObservable.add((pointerInfo) => {
+      if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 0 && !this.isClicked) {
+        this.isClicked = true;
+  
+        // Получаем направление луча от камеры
+        const ray = this.camera.getForwardRay();
+        
+        // Пытаемся выбрать меш, с которым пересекается луч
+        const pickResult = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
+  
+        if (pickResult?.hit && pickResult.pickedMesh) {
+          const pickedMesh = pickResult.pickedMesh;
+  
+          // Приводим pickedMesh к типу Mesh (так как это всегда будет Mesh)
+          if (pickedMesh instanceof Mesh) {
+            // Проверяем, что клик был по объекту с именем 'point'
+            if (pickedMesh.name.startsWith("point")) {
+              console.log("Клик по объекту:", pickedMesh.name);
+  
+              // Вызываем метод для обработки клика по объекту
+              this.handlePointClick(pickedMesh);
+  
+              // Логируем имя и позицию точки
+              console.log(`Точка нажата: ${pickedMesh.name}, позиция: ${pickedMesh.position}`);
+            } else {
+              console.log("Клик не по объекту point");
+            }
           }
         }
+  
+        // Сбрасываем флаг через задержку
+        setTimeout(() => {
+          this.isClicked = false;
+        }, 200);  // Задержка в 200 миллисекунд
       }
-
-      // Сбрасываем флаг через задержку
-      setTimeout(() => {
-        this.isClicked = false;
-      }, 200);  // Задержка в 200 миллисекунд
-    }
-  });
-}
+    });
+  }
 
 // Логика, которая выполняется при клике на объект
 onObjectClicked(mesh: AbstractMesh): void {
@@ -354,6 +357,7 @@ createUserPoint(user: { name: string; x: number; y: number; z: number }): void {
   ));
 }
 
+// Метод обработки клика по точке
 // Метод обработки клика по точке
 handlePointClick(point: Mesh): void {
   // Проверяем, была ли точка уже выбрана
@@ -583,36 +587,37 @@ completeTask(): void {
   // Создание точек на карте
 private createPoints() {
   const pointsPositions = [
-    //правая сторона 
-    new Vector3(12.2428, 6.105, 13.0217 ),
-    new Vector3(10.35 , 6.11101   , 13.0217),
-    new Vector3(8.45428 , 6.15668  , 13.0217),
-    new Vector3(6.55912 , 6.21302  , 13.0217),
-    new Vector3(4.66065 , 6.24956 , 13.0217),
-    new Vector3(2.76875 , 6.30783  , 13.0217),
-    new Vector3(0.870274 , 6.3462 , 13.0217 ),
-    new Vector3(-0.754175 , 6.3462  , 13.0217),
-    new Vector3(-2.70299  , 6.30783    , 13.0217),
-    new Vector3(-4.54455 , 6.24956   , 13.0217 ),
-    new Vector3(-6.44302  , 6.21302   , 13.0217 ),
-    new Vector3(-8.33819   , 6.15668    , 13.0217 ),
-    new Vector3(-10.2339   , 6.11101    , 13.0217 ),
-    new Vector3(-12.2339  , 6.105   , 13.0217 ),
-    //левая сторона
-    new Vector3(12.2428, 6.105, -13.0217 ),
-    new Vector3(10.35 , 6.11101   , -13.0217),
-    new Vector3(8.45428 , 6.15668  , -13.0217),
-    new Vector3(6.55912 , 6.21302  , -13.0217),
-    new Vector3(4.66065 , 6.24956 , -13.0217),
-    new Vector3(2.76875 , 6.30783  , -13.0217),
-    new Vector3(0.870274 , 6.3462 , -13.0217 ),
-    new Vector3(-0.754175 , 6.3462  , -13.0217),
-    new Vector3(-2.70299  , 6.30783    , -13.0217),
-    new Vector3(-4.54455 , 6.24956   , -13.0217 ),
-    new Vector3(-6.44302  , 6.21302   , -13.0217 ),
-    new Vector3(-8.33819   , 6.15668    , -13.0217 ),
-    new Vector3(-10.2339   , 6.11101    , -13.0217 ),
-    new Vector3(-12.2339  , 6.105   , -13.0217 ),
+   // правая сторона
+  new Vector3(12.2428, 6.13792, 13.0217),
+  new Vector3(10.35, 6.14157, 13.0217),
+  new Vector3(8.45428, 6.18746, 13.0217),
+  new Vector3(6.55912, 6.24409, 13.0217),
+  new Vector3(4.66065, 6.28081, 13.0217),
+  new Vector3(2.76875, 6.33937, 13.0217),
+  new Vector3(0.870274, 6.37793, 13.0217),
+  new Vector3(-0.754175, 6.37793, 13.0217),
+  new Vector3(-2.70299, 6.33937, 13.0217),
+  new Vector3(-4.54455, 6.28081, 13.0217),
+  new Vector3(-6.44302, 6.24409, 13.0217),
+  new Vector3(-8.33819, 6.18746, 13.0217),
+  new Vector3(-10.2339, 6.14157, 13.0217),
+  new Vector3(-12.2339, 6.13752, 13.0217),
+
+  // левая сторона
+  new Vector3(12.2428, 6.13752, -13.0217),
+  new Vector3(10.35, 6.14157, -13.0217),
+  new Vector3(8.45428, 6.18746, -13.0217),
+  new Vector3(6.55912, 6.24409, -13.0217),
+  new Vector3(4.66065, 6.28081, -13.0217),
+  new Vector3(2.76875, 6.33937, -13.0217),
+  new Vector3(0.870274, 6.37793, -13.0217),
+  new Vector3(-0.754175, 6.37793, -13.0217),
+  new Vector3(-2.70299, 6.33937, -13.0217),
+  new Vector3(-4.54455, 6.28081, -13.0217),
+  new Vector3(-6.44302, 6.24409, -13.0217),
+  new Vector3(-8.33819, 6.18746, -13.0217),
+  new Vector3(-10.2339, 6.14157, -13.0217),
+  new Vector3(-12.2339, 6.13752, -13.0217),
     //угловые элементы правая сторона 
     new Vector3(12.8763   , 5.905    , 12.9101 ),
     new Vector3(12.8763    , 5.12908    , 12.9101  ),
@@ -626,11 +631,15 @@ private createPoints() {
 
   ];
 
-  pointsPositions.forEach(pos => {
-    const point = MeshBuilder.CreateSphere("point", { diameter: 0.3 }, this.scene);
+  
+  pointsPositions.forEach((pos, index) => {
+    const point = MeshBuilder.CreateBox("point", { size: 0.1 }, this.scene);
     point.position = pos;
     point.isVisible = true;
     point.isPickable = true;  // Делаем точку кликабельной
+    // Присваиваем уникальное имя точке
+    point.name = `point${index + 1}`;  // Имя будет point1, point2 и так далее
+
 
     // Добавление точек в массив для управления
     this.points.push(point);
