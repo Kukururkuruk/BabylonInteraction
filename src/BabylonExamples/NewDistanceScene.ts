@@ -8,12 +8,18 @@ import {
   FreeCamera,
   AbstractMesh,
   ActionManager,
+  MeshBuilder,
+  StandardMaterial,
+  Color3,
+  Mesh,
+  DynamicTexture,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
+import eventEmitter from "../../EventEmitter";
 
 export class NewDistanceScene {
   scene: Scene;
@@ -42,12 +48,14 @@ export class NewDistanceScene {
     this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
     this.dialogPage = new DialogPage();
 
+    this.CreateController();
+
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
       
   });
   
-    this.CreateController();
+    
 
     this.BetonTrigger();
 
@@ -93,48 +101,306 @@ export class NewDistanceScene {
     this.camera.keysRight.push(68); // D
   }
 
-  async CreateEnvironment(): Promise<void> {
-    try {
-      this.engine.displayLoadingUI();
 
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
 
-      map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-        mesh.isPickable = true;
-      });
 
-      const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
-      nonCollizionMeshs.map((item) => {
-          const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
-          nonCollizionMesh.forEach((mesh) => {
-              mesh.visibility = 0.5;
-              mesh.checkCollisions = false
-          });
-      })
 
-      const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-      BrokenMeshes.forEach((mesh) => {
-          mesh.visibility = 0;
-      });
 
-      this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
-      this.beam2 = this.targetMeshes2[1];
+  // async CreateEnvironment(): Promise<void> {
+  //   try {
+  //     this.engine.displayLoadingUI();
+  
+  //     // Загрузка карты
+  //     const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+  
+  //     map.forEach((mesh) => {
+  //       mesh.checkCollisions = true;
+  //       mesh.isPickable = true;
+  //     });
+  
+  //     const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"];
+  //     nonCollizionMeshs.forEach((item) => {
+  //       const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+  //       nonCollizionMesh.forEach((mesh) => {
+  //         mesh.visibility = 0.5;
+  //         mesh.checkCollisions = false;
+  //       });
+  //     });
+  
+  //     const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+  //     BrokenMeshes.forEach((mesh) => {
+  //       mesh.visibility = 0;
+  //     });
+  
+  //     this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
+  //     this.beam2 = this.targetMeshes2[1];
+  
+  //     this.nonCollizionMesh = map.filter((mesh) => mesh.name === "SM_0_Road_1_R");
+  //     this.bob = this.nonCollizionMesh[0];
+  
+  //     console.log("Модели успешно загружены.");
+  
+  //     // Загрузка новой модели Rangefinder_LP.glb
+  //     const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Rangefinder_LP.glb", this.scene);
+  //     console.log(rangefinderMeshes);
+       
 
-      this.nonCollizionMesh = map.filter((mesh) => mesh.name === "SM_0_Road_1_R");
-      this.bob = this.nonCollizionMesh[0]
 
-      console.log("nonCollizionMesh", this.bob);
+  //     rangefinderMeshes.forEach((mesh) => {
+  //       // Отзеркаливание по оси X
+  //       // mesh.scaling.z *= -1;
+  //       // Установка масштаба
+  //       mesh.scaling = new Vector3(3, 3, -3); // Увеличиваем в 3 раза, как было в запросе
+  //       mesh.rotation.y = Math.PI / 3
+      
+  //       // // Закрепление модели за камерой
+  //       mesh.parent = this.camera;
+      
+  //       // Установка позиции относительно камеры
+  //       const offset = new Vector3(-0.7, -0.5, 1.1); // Настройте значения по необходимости
+  //       mesh.position = offset;
+  //     });
+
+
+  //     const thirdMesh = rangefinderMeshes[2];
+
+  //         // Получение размеров меша
+  //   const boundingInfo = thirdMesh.getBoundingInfo();
+  //   const boundingBox = boundingInfo.boundingBox;
+  //   const size = boundingBox.maximum.subtract(boundingBox.minimum);
+  //   const width = size.z;
+  //   const height = size.y;
+
+  //   // Определение размеров плоскости
+  //   const planeWidth = width; // Ширина плоскости равна ширине меша
+  //   const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
+
+
+  //     const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 512, height: 256 }, this.scene, false);
+  //     dynamicTexture.hasAlpha = true;
+
+  //     eventEmitter.on("updateTextPlane", (newText: string) => {
+  //       if (dynamicTexture) {
+  //           // Очистка всей текстуры
+  //           dynamicTexture.getContext().clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+  //           dynamicTexture.update();
+            
+  //           // Рисование нового текста
+  //           dynamicTexture.drawText(newText, 50, 100, "bold 48px Arial", "white", "transparent");
+  //       }
+  //   });
+
+  //   eventEmitter.on("updateAngleText", (newText: string) => {
+  //     if (dynamicTexture) {
+  //         // Очистка всей текстуры
+  //         dynamicTexture.getContext().clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+  //         dynamicTexture.update();
+          
+  //         // Рисование нового текста углов
+  //         dynamicTexture.drawText(newText, 50, 100, "bold 48px Arial", "white", "transparent");
+
+  //         // Здесь можно добавить таймер для скрытия текста углов, если требуется
+  //     }
+  // });
+
+  //     const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+  //     textMaterial.diffuseTexture = dynamicTexture;
+  //     textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
+  //     textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
+
+  //     const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+  //     textPlane.material = textMaterial;
+
+  //     // Позиционируем плоскость относительно меша
+  //     textPlane.parent = thirdMesh;
+  //     textPlane.rotation.y = -Math.PI / 2
+  //     textPlane.scaling = new Vector3(-1, 1, 1);
+  //     textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); // Смещение по Y (вверх)
       
 
 
-      console.log("Модели успешно загружены.");
+
+
+
+
+  
+  //   } catch (error) {
+  //     console.error("Ошибка при загрузке моделей:", error);
+  //   } finally {
+  //     this.engine.hideLoadingUI();
+  //   }
+  // }
+
+
+  
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+        this.engine.displayLoadingUI();
+
+        // Загрузка карты
+        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+
+        map.forEach((mesh) => {
+            mesh.checkCollisions = true;
+            mesh.isPickable = true;
+        });
+
+        const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"];
+        nonCollizionMeshs.forEach((item) => {
+            const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+            nonCollizionMesh.forEach((mesh) => {
+                mesh.visibility = 0.5;
+                mesh.checkCollisions = false;
+            });
+        });
+
+        const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+        BrokenMeshes.forEach((mesh) => {
+            mesh.visibility = 0;
+        });
+
+        this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
+        this.beam2 = this.targetMeshes2[1];
+
+        this.nonCollizionMesh = map.filter((mesh) => mesh.name === "SM_0_Road_1_R");
+        this.bob = this.nonCollizionMesh[0];
+
+        console.log("Модели успешно загружены.");
+
+        // Загрузка новой модели Rangefinder_LP.glb
+        const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Rangefinder_LP.glb", this.scene);
+        console.log(rangefinderMeshes);
+
+        rangefinderMeshes.forEach((mesh) => {
+            // Отзеркаливание по оси Z и масштабирование
+            mesh.scaling = new Vector3(3, 3, -3); // Масштабируем в 3 раза и отражаем по Z
+            mesh.rotation.y = Math.PI / 3;
+
+            // Закрепление модели за камерой
+            mesh.parent = this.camera;
+
+            // Установка позиции относительно камеры
+            const offset = new Vector3(-0.7, -0.5, 1.1); // Настройте значения по необходимости
+            mesh.position = offset;
+        });
+
+        const thirdMesh = rangefinderMeshes[2];
+
+        // Получение размеров меша
+        const boundingInfo = thirdMesh.getBoundingInfo();
+        const boundingBox = boundingInfo.boundingBox;
+        const size = boundingBox.maximum.subtract(boundingBox.minimum);
+        const width = size.z;
+        const height = size.y;
+
+        // Определение размеров плоскости
+        const planeWidth = width; // Ширина плоскости равна ширине меша
+        const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
+
+        // Создание DynamicTexture с достаточным разрешением
+        const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+        dynamicTexture.hasAlpha = true;
+
+        // Установка шрифта перед измерением текста
+        const font = "bold 90px Arial";
+        const ctx = dynamicTexture.getContext();
+        ctx.font = font;
+
+        // Определение максимальной ширины текста с учётом отступов
+        const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
+
+        // Функция для разбиения текста на строки с учётом символов \n и ширины
+        function wrapText(context, text, maxWidth) {
+            const lines = [];
+            const paragraphs = text.split('\n');
+
+            paragraphs.forEach(paragraph => {
+                const words = paragraph.split(' ');
+                let currentLine = '';
+
+                words.forEach(word => {
+                    const testLine = currentLine + word + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+
+                    if (testWidth > maxWidth && currentLine !== '') {
+                        lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+
+                lines.push(currentLine.trim());
+            });
+
+            return lines;
+        }
+
+        // Функция для обновления текста с переносом
+        function updateDynamicText(newText) {
+            ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+
+            // Устанавливаем шрифт
+            ctx.font = font;
+
+            // Разбиваем текст на строки с учетом \n и ширины
+            const lines = wrapText(ctx, newText, maxTextWidth);
+
+            // Рисуем каждую строку с увеличивающимся смещением по Y
+            const lineHeight = 90; // Можно настроить в зависимости от шрифта
+            lines.forEach((line, index) => {
+                ctx.fillStyle = "white"; // Цвет текста
+                ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
+            });
+
+            // Обновляем текстуру
+            dynamicTexture.update();
+        }
+
+        // Обработчики событий
+        eventEmitter.on("updateTextPlane", (newText) => {
+            if (dynamicTexture) {
+                updateDynamicText(newText);
+            }
+        });
+
+        eventEmitter.on("updateAngleText", (newText) => {
+            if (dynamicTexture) {
+                updateDynamicText(newText);
+            }
+        });
+
+        // Создание материала для текста
+        const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+        textMaterial.diffuseTexture = dynamicTexture;
+        textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
+        textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
+
+        // Создание плоскости для текста
+        const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+        textPlane.material = textMaterial;
+
+        // Позиционируем плоскость относительно меша
+        textPlane.parent = thirdMesh;
+        textPlane.rotation.y = -Math.PI / 2;
+
+        // Компенсируем отражение родителя по оси Z
+        textPlane.scaling = new Vector3(-1, 1, 1);
+
+        // Устанавливаем позицию
+        textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); // Смещение по Y (вверх)
     } catch (error) {
-      console.error("Ошибка при загрузке моделей:", error);
+        console.error("Ошибка при загрузке моделей:", error);
     } finally {
-      this.engine.hideLoadingUI();
+        this.engine.hideLoadingUI();
     }
-  }
+}
+
+
+
+
 
   // BetonTrigger(): void {
   //     const fullText1 = "Нажми на кнопку для начала измерения.";

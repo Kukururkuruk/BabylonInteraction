@@ -10,6 +10,7 @@ import {
   InputText,
 } from "@babylonjs/gui";
 import * as GUI from '@babylonjs/gui/2D';
+import eventEmitter from "../../../EventEmitter";
 
 interface ButtonOptions {
   name: string;
@@ -786,6 +787,7 @@ export class GUIManager {
     textBlock.color = "white";
     textBlock.fontSize = 24;
     this.advancedTexture.addControl(textBlock);
+    eventEmitter.emit("updateTextPlane", textBlock.text);
     
     // Удаление сообщения через 5 секунд
     setTimeout(() => {

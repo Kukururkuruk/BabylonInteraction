@@ -14,6 +14,7 @@ import BabylonTotal from './components/BabylonTotal';
 import BabylonNewDistanceScene from './components/BabylonNewDistance';
 import RelMain from './components/RelMainPage';
 import BabylonBook2 from './components/BabylonBook2';
+import BabylonTest2 from './components/BabylonTest2';
 
 
 const App: React.FC = () => {
@@ -34,6 +35,7 @@ const App: React.FC = () => {
         <Route path='/beton' element={<BabylonBeton />} />
         <Route path="/total" element={<BabylonTotal />} />
         <Route path='/newdistance' element={<BabylonNewDistanceScene />} />
+        <Route path='/test2' element={<BabylonTest2 />} />
       </Routes>
     </Router>
   );
