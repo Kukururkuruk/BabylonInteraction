@@ -7,6 +7,10 @@ import {
     HDRCubeTexture,
     FreeCamera,
     AbstractMesh,
+    MeshBuilder,
+    Color3,
+    StandardMaterial,
+    DynamicTexture,
   } from "@babylonjs/core";
   import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
@@ -107,6 +111,132 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
 
         this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
         this.beam2 = this.targetMeshes2[1];
+
+
+        // Загрузка новой модели Rangefinder_LP.glb
+        const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_LP2.glb", this.scene);
+        console.log(rangefinderMeshes);
+
+        rangefinderMeshes.forEach((mesh) => {
+            // Отзеркаливание по оси Z и масштабирование
+            mesh.scaling = new Vector3(-0.1, 0.1, 0.1); // Масштабируем в 3 раза и отражаем по Z
+            mesh.rotation.x = Math.PI / 2;
+
+            // Закрепление модели за камерой
+            mesh.parent = this.camera;
+
+            // Установка позиции относительно камеры
+            const offset = new Vector3(-0.7, -0.5, 1.1); // Настройте значения по необходимости
+            mesh.position = offset;
+        });
+
+        const thirdMesh = rangefinderMeshes[2];
+
+        // Получение размеров меша
+        const boundingInfo = thirdMesh.getBoundingInfo();
+        const boundingBox = boundingInfo.boundingBox;
+        const size = boundingBox.maximum.subtract(boundingBox.minimum);
+        const width = size.z;
+        const height = size.y;
+
+        // Определение размеров плоскости
+        const planeWidth = width; // Ширина плоскости равна ширине меша
+        const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
+
+        // Создание DynamicTexture с достаточным разрешением
+        const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+        dynamicTexture.hasAlpha = true;
+
+        // Установка шрифта перед измерением текста
+        const font = "bold 90px Arial";
+        const ctx = dynamicTexture.getContext();
+        ctx.font = font;
+
+        // Определение максимальной ширины текста с учётом отступов
+        const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
+
+        // Функция для разбиения текста на строки с учётом символов \n и ширины
+        function wrapText(context, text, maxWidth) {
+            const lines = [];
+            const paragraphs = text.split('\n');
+
+            paragraphs.forEach(paragraph => {
+                const words = paragraph.split(' ');
+                let currentLine = '';
+
+                words.forEach(word => {
+                    const testLine = currentLine + word + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+
+                    if (testWidth > maxWidth && currentLine !== '') {
+                        lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+
+                lines.push(currentLine.trim());
+            });
+
+            return lines;
+        }
+
+        // Функция для обновления текста с переносом
+        function updateDynamicText(newText) {
+            ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+
+            // Устанавливаем шрифт
+            ctx.font = font;
+
+            // Разбиваем текст на строки с учетом \n и ширины
+            const lines = wrapText(ctx, newText, maxTextWidth);
+
+            // Рисуем каждую строку с увеличивающимся смещением по Y
+            const lineHeight = 90; // Можно настроить в зависимости от шрифта
+            lines.forEach((line, index) => {
+                ctx.fillStyle = "white"; // Цвет текста
+                ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
+            });
+
+            // Обновляем текстуру
+            dynamicTexture.update();
+        }
+
+        // // Обработчики событий
+        // eventEmitter.on("updateTextPlane", (newText) => {
+        //     if (dynamicTexture) {
+        //         updateDynamicText(newText);
+        //     }
+        // });
+
+        // eventEmitter.on("updateAngleText", (newText) => {
+        //     if (dynamicTexture) {
+        //         updateDynamicText(newText);
+        //     }
+        // });
+
+        // Создание материала для текста
+        const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+        textMaterial.diffuseTexture = dynamicTexture;
+        textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
+        textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
+
+        // Создание плоскости для текста
+        const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+        textPlane.material = textMaterial;
+
+        // Позиционируем плоскость относительно меша
+        textPlane.parent = thirdMesh;
+        textPlane.rotation.y = -Math.PI / 2;
+
+        // Компенсируем отражение родителя по оси Z
+        textPlane.scaling = new Vector3(-1, 1, 1);
+
+        // Устанавливаем позицию
+        textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); // Смещение по Y (вверх)
+
   
         console.log("Модели успешно загружены.");
       } catch (error) {
