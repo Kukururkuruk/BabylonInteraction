@@ -139,49 +139,94 @@ export class DialogPage {
         return grid
     }
 
-    createStartPage(ref: string): void {
+    // createStartPage(ref: string): void {
+    //     // Создаем отдельный контейнер для этой страницы
+    //     const innerContainer = new Rectangle();
+    //     innerContainer.width = "55%";
+    //     innerContainer.height = "85%";
+    //     innerContainer.thickness = 0;
+
+    //     // Создаем текстовое сообщение
+    //     const messageText = new TextBlock();
+    //     messageText.text = "Если готовы начать тестирование нажмите на кнопку";
+    //     messageText.color = "#212529";
+    //     messageText.fontSize = "5%";
+    //     messageText.fontFamily = "Segoe UI";
+    //     messageText.textWrapping = TextWrapping.WordWrap;
+    //     messageText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    //     messageText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+    //     // Добавляем текст в контейнер
+    //     innerContainer.addControl(messageText);
+
+    //     // Создаем кнопку
+    //     const startButton = Button.CreateSimpleButton("startBtn", "Перейти");
+    //     startButton.width = "150px";
+    //     startButton.height = "50px";
+    //     startButton.color = "white";
+    //     startButton.background = "gray";
+    //     startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    //     startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    //     startButton.top = "-75px";
+
+    //     // Добавляем кнопку в контейнер
+    //     innerContainer.addControl(startButton);
+
+    //     // Обработка нажатия на кнопку
+    //     startButton.onPointerUpObservable.add(() => {
+    //         window.location.href = ref;
+    //     });
+
+    //     // Добавляем контейнер со всеми элементами в ScrollViewer
+    //     this.pageContainer.addControl(innerContainer);
+
+    //     return innerContainer
+    // }
+
+    createStartPage(message: string, buttonLabel: string, onButtonClick: () => void): void {
         // Создаем отдельный контейнер для этой страницы
         const innerContainer = new Rectangle();
         innerContainer.width = "55%";
         innerContainer.height = "85%";
         innerContainer.thickness = 0;
-
+        // innerContainer.background = 'red'
+    
         // Создаем текстовое сообщение
         const messageText = new TextBlock();
-        messageText.text = "Если готовы начать тестирование нажмите на кнопку";
+        messageText.text = message;
         messageText.color = "#212529";
-        messageText.fontSize = "5%";
+        messageText.fontSize = "4.5%";
         messageText.fontFamily = "Segoe UI";
         messageText.textWrapping = TextWrapping.WordWrap;
-        messageText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        messageText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
+        messageText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        messageText.paddingTop = "-50%"
+    
         // Добавляем текст в контейнер
         innerContainer.addControl(messageText);
-
-        // Создаем кнопку
-        const startButton = Button.CreateSimpleButton("startBtn", "Перейти");
-        startButton.width = "150px";
-        startButton.height = "50px";
-        startButton.color = "white";
-        startButton.background = "gray";
-        startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        startButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        startButton.top = "-75px";
-
+    
+        // Создаем кнопку с переданным текстом
+        const button = Button.CreateSimpleButton("actionBtn", buttonLabel);
+        button.width = "150px";
+        button.height = "50px";
+        button.color = "white";
+        button.background = "gray";
+        button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        button.top = "-75px";
+    
+        // Добавляем обработчик нажатия на кнопку
+        button.onPointerUpObservable.add(onButtonClick);
+    
         // Добавляем кнопку в контейнер
-        innerContainer.addControl(startButton);
-
-        // Обработка нажатия на кнопку
-        startButton.onPointerUpObservable.add(() => {
-            window.location.href = ref;
-        });
-
-        // Добавляем контейнер со всеми элементами в ScrollViewer
+        innerContainer.addControl(button);
+    
+        // Добавляем контейнер со всеми элементами в ScrollViewer или другой родительский контейнер
         this.pageContainer.addControl(innerContainer);
-
-        return innerContainer
+    
+        return innerContainer;
     }
+    
+    
 
     createTextGridPage(header: string, items: string[]): void {
         // Создаем новый Grid

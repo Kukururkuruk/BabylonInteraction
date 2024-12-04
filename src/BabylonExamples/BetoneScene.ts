@@ -18,7 +18,7 @@ import {
   } from "@babylonjs/core";
   import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
-import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Button, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
   
@@ -251,73 +251,167 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       return lines;
   }
 
-  BetonTrigger(): void {
-      const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
-      this.guiManager.CreateDialogBox([page1]);
+//   BetonTrigger(): void {
+//       const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
+//       this.guiManager.CreateDialogBox([page1]);
 
-      const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-      let clickCount = 0;
-      let clickCountText: TextBlock | null = null;
+//       const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
+//       let clickCount = 0;
+//       let clickCountText: TextBlock | null = null;
 
-      const targetMeshForLaser2 = this.beam2;
+//       const targetMeshForLaser2 = this.beam2;
 
-      const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-          clickZonePosition,
-          () => {
-              if (!this.zoneTriggered) {
-                  this.zoneTriggered = true;
-                  console.log("Вошли в зону кликов");
-                  this.triggerManager.createStartButton('Начать', () => {
-                      const page2 = this.dialogPage.addText("Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.");
-                      this.guiManager.CreateDialogBox([page2]);
+//       const secondTriggerZone = this.triggerManager.setupZoneTrigger(
+//           clickZonePosition,
+//           () => {
+//               if (!this.zoneTriggered) {
+//                   this.zoneTriggered = true;
+//                   console.log("Вошли в зону кликов");
+//                   this.triggerManager.createStartButton('Начать', () => {
+//                       const page2 = this.dialogPage.addText("Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.");
+//                       this.guiManager.CreateDialogBox([page2]);
 
-                      if (this.beam2) {
-                          this.triggerManager.setupClickableMesh(this.beam2, () => {
-                              clickCount++;
-                              const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
+//                       if (this.beam2) {
+//                           this.triggerManager.setupClickableMesh(this.beam2, () => {
+//                               clickCount++;
+//                               const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
 
-                              // Обновляем текст на динамической текстуре
-                              this.updateDynamicText(`\n${randomValue}`);
-                          });
+//                               // Обновляем текст на динамической текстуре
+//                               this.updateDynamicText(`\n${randomValue}`);
+//                           });
 
-                          this.triggerManager.activateLaserMode2(this.beam2);
-                          this.triggerManager.createStartButton('Завершить', () => {
-                              const page3 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
-                              this.guiManager.CreateDialogBox([page3]);
+//                           this.triggerManager.activateLaserMode2(this.beam2);
+//                           this.triggerManager.createStartButton('Завершить', () => {
+//                               const page3 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
+//                               this.guiManager.CreateDialogBox([page3]);
 
-                              const totalClicksMessage = new TextBlock();
-                              totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
-                              totalClicksMessage.color = "white";
-                              totalClicksMessage.fontSize = 24;
-                              totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-                              totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-                              totalClicksMessage.top = "-10%";
-                              this.guiTexture.addControl(totalClicksMessage);
+//                               const totalClicksMessage = new TextBlock();
+//                               totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
+//                               totalClicksMessage.color = "white";
+//                               totalClicksMessage.fontSize = 24;
+//                               totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+//                               totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+//                               totalClicksMessage.top = "-10%";
+//                               this.guiTexture.addControl(totalClicksMessage);
 
-                              setTimeout(() => {
-                                  this.guiTexture.removeControl(totalClicksMessage);
-                              }, 3000);
+//                               setTimeout(() => {
+//                                   this.guiTexture.removeControl(totalClicksMessage);
+//                               }, 3000);
 
-                              if (clickCountText) {
-                                  this.guiTexture.removeControl(clickCountText);
-                                  clickCountText = null;
-                              }
-                              clickCount = 0;
+//                               if (clickCountText) {
+//                                   this.guiTexture.removeControl(clickCountText);
+//                                   clickCountText = null;
+//                               }
+//                               clickCount = 0;
 
-                              if (this.beam2) {
-                                  this.triggerManager.removeMeshAction(this.beam2);
-                              }
+//                               if (this.beam2) {
+//                                   this.triggerManager.removeMeshAction(this.beam2);
+//                               }
 
-                              this.triggerManager.exitLaserMode2();
-                              this.guiManager.createRouteButton('/test');
-                          });
-                      }
-                  });
-              }
-          },
-          undefined,
-          20,
-          true
-      );
-  }
+//                               this.triggerManager.exitLaserMode2();
+//                               this.guiManager.createRouteButton('/test');
+//                           });
+//                       }
+//                   });
+//               }
+//           },
+//           undefined,
+//           20,
+//           true
+//       );
+//   }
+
+
+
+
+BetonTrigger(): void {
+
+    const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
+    let clickCount = 0;
+    let clickCountText: TextBlock | null = null;
+
+    const targetMeshForLaser2 = this.beam2;
+
+    const secondTriggerZone = this.triggerManager.setupZoneTrigger(
+        clickZonePosition,
+        () => {
+            if (!this.zoneTriggered) {
+                this.zoneTriggered = true;
+                console.log("Вошли в зону кликов");
+
+                // Создаем страницу с кнопкой "Начать"
+                const startPage = this.dialogPage.createStartPage(
+                    "Нажми на кнопку для начала измерения.",
+                    "Начать",
+                    () => {
+
+                        if (this.beam2) {
+                            this.triggerManager.setupClickableMesh(this.beam2, () => {
+                                clickCount++;
+                                const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
+
+                                // Обновляем текст на динамической текстуре
+                                this.updateDynamicText(`\n${randomValue}`);
+                            });
+
+                            this.triggerManager.activateLaserMode2(this.beam2);
+
+                            // Создаем страницу с кнопкой "Завершить"
+                            const finishPage = this.dialogPage.createStartPage(
+                                "Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.",
+                                "Завершить",
+                                () => {
+                                    const totalClicksMessage = new TextBlock();
+                                    totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
+                                    totalClicksMessage.color = "white";
+                                    totalClicksMessage.fontSize = 24;
+                                    totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+                                    totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+                                    totalClicksMessage.top = "-10%";
+                                    this.guiTexture.addControl(totalClicksMessage);
+
+                                    setTimeout(() => {
+                                        this.guiTexture.removeControl(totalClicksMessage);
+                                    }, 3000);
+
+                                    if (clickCountText) {
+                                        this.guiTexture.removeControl(clickCountText);
+                                        clickCountText = null;
+                                    }
+                                    clickCount = 0;
+
+                                    if (this.beam2) {
+                                        this.triggerManager.removeMeshAction(this.beam2);
+                                    }
+
+                                    this.triggerManager.exitLaserMode2();
+
+                                    // Создаем страницу с кнопкой "Перейти на основную карту"
+                                    const routePage = this.dialogPage.createStartPage(
+                                        "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
+                                        "Перейти на основную карту",
+                                        () => {
+                                            window.location.href = '/test';
+                                        }
+                                    );
+
+                                    this.guiManager.CreateDialogBox([routePage]);
+                                }
+                            );
+
+                            this.guiManager.CreateDialogBox([finishPage]);
+                        }
+                    }
+                );
+
+                this.guiManager.CreateDialogBox([startPage]);
+            }
+        },
+        undefined,
+        20,
+        true
+    );
+}
+
+
 }
