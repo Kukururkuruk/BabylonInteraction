@@ -720,33 +720,67 @@ private updatePointsCountDisplay(): void {
     });
   }
   
-  BetonTrigger(): void {
-  const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-  this.guiManager.CreateDialogBox([page1])
+//   BetonTrigger(): void {
+//   const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+//   this.guiManager.CreateDialogBox([page1])
 
-  this.triggerManager2.createStartButton('Начать', () => {
-    const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений...")
-    const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
-    this.guiManager.CreateDialogBox([page2, page3])
+//   this.triggerManager2.createStartButton('Начать', () => {
+//     const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений...")
+//     const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+//     this.guiManager.CreateDialogBox([page2, page3])
 
-    // Проверка, чтобы обработчик не был привязан дважды
-    let finishButtonDisabled = false;  // Флаг для блокировки кнопки
+//     // Проверка, чтобы обработчик не был привязан дважды
+//     let finishButtonDisabled = false;  // Флаг для блокировки кнопки
 
-    this.triggerManager2.createStartButton('Завершить', () => {
-      if (finishButtonDisabled) {
-        console.log('Кнопка "Завершить" уже нажата, пропускаем действие');
-        return;  // Если кнопка уже была нажата, не выполняем действия
-      }
+//     this.triggerManager2.createStartButton('Завершить', () => {
+//       if (finishButtonDisabled) {
+//         console.log('Кнопка "Завершить" уже нажата, пропускаем действие');
+//         return;  // Если кнопка уже была нажата, не выполняем действия
+//       }
 
-      finishButtonDisabled = true;  // Блокируем кнопку
-      console.log('Кнопка "Завершить" нажата');
-      this.sendFinalCountToServer(this.pointsPressedCount);  // Отправка данных
-      const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту")
-      this.guiManager.CreateDialogBox([page4])
-      this.triggerManager2.disableDistanceMeasurement()  // Отключение измерений
-      this.guiManager.createRouteButton('/test')  // Перенаправление
-    });
-  });
+//       finishButtonDisabled = true;  // Блокируем кнопку
+//       console.log('Кнопка "Завершить" нажата');
+//       this.sendFinalCountToServer(this.pointsPressedCount);  // Отправка данных
+//       const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту")
+//       this.guiManager.CreateDialogBox([page4])
+//       this.triggerManager2.disableDistanceMeasurement()  // Отключение измерений
+//       this.guiManager.createRouteButton('/test')  // Перенаправление
+//     });
+//   });
+// }
+
+
+BetonTrigger(): void {
+
+  const startPage = this.dialogPage.createStartPage(
+    "Нажми на кнопку для начала измерения.",
+    "Начать",
+    () => {
+      const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений...")
+      const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+      this.guiManager.CreateDialogBox([page2, page3])
+  
+      // Проверка, чтобы обработчик не был привязан дважды
+      let finishButtonDisabled = false;  // Флаг для блокировки кнопки
+  
+      this.triggerManager2.createStartButton('Завершить', () => {
+        if (finishButtonDisabled) {
+          console.log('Кнопка "Завершить" уже нажата, пропускаем действие');
+          return;  // Если кнопка уже была нажата, не выполняем действия
+        }
+  
+        finishButtonDisabled = true;  // Блокируем кнопку
+        console.log('Кнопка "Завершить" нажата');
+        this.sendFinalCountToServer(this.pointsPressedCount);  // Отправка данных
+        const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту")
+        this.guiManager.CreateDialogBox([page4])
+        this.triggerManager2.disableDistanceMeasurement()  // Отключение измерений
+        this.guiManager.createRouteButton('/test')  // Перенаправление
+      });
+    }
+);
+
+this.guiManager.CreateDialogBox([startPage]);
 }
   
   

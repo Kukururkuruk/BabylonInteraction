@@ -12,6 +12,9 @@ import BabylonBeton from './components/BabylonBeton';
 import BabylonTotal from './components/BabylonTotal';
 import BabylonNewDistanceScene from './components/BabylonNewDistance';
 import BabylonTotalWork from './components/BabylonTotalWork';
+import BabylonBook2 from './components/BabylonBook2';
+import BabylonTest2 from './components/BabylonTest2';
+
 
 const App: React.FC = () => {
   return (
@@ -29,6 +32,8 @@ const App: React.FC = () => {
         <Route path="/Тахеометр" element={<BabylonTotal />} />
         <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
         <Route path='/ТахеометрЗадание' element={<BabylonTotalWork/>} />
+        <Route path='/КрашТест' element={<BabylonBook2 />} />
+        <Route path='/Производительность' element={<BabylonTest2 />} />
       </Routes>
     </Router>
   );
