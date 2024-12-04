@@ -22,6 +22,7 @@ import {
   SceneLoader,
   TransformNode,
   GlowLayer,
+  AxesViewer,
 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
@@ -719,12 +720,11 @@ export class TriggerManager2 {
           // Привязываем все загруженные меши к родительскому узлу
           meshes.forEach((mesh) => {
             mesh.parent = parentNode;
+            mesh.isPickable = false
           });
     
           // Устанавливаем начальные настройки для родительского узла
           parentNode.rotationQuaternion = Quaternion.Identity();
-          parentNode.isPickable = false;
-          parentNode.isVisible = false;
           parentNode.scaling.x *= -1
     
           // Корректируем ориентацию модели
@@ -976,7 +976,7 @@ export class TriggerManager2 {
 
   public distanceMode(): void {
     // Создаем маленький шарик вместо куба
-    this.centralCube2 = MeshBuilder.CreateSphere("centralCube2", { diameter: 0.3 }, this.scene); // Уменьшенный диаметр для указателя
+    this.centralCube2 = MeshBuilder.CreateSphere("centralCube2", { diameter: 0.05 }, this.scene); // Уменьшенный диаметр для указателя
     const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
     sphereMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
     sphereMaterial.emissiveColor = new Color3(0, 1, 0); // Добавляем свечение, чтобы шарик выделялся
@@ -1148,6 +1148,171 @@ export class TriggerManager2 {
 // }
 
 
+enableDistanceMeasurement(): void {
+  this.measuringDistance = true;
+  this.firstPoint = null;
+  this.secondPoint = null;
+
+  let sphere: Mesh | null = null; // Сфера, отображающая первую точку
+  let line: LinesMesh | null = null; // Линия, соединяющая первую точку с курсором
+  let axesViewer: AxesViewer | null = null; // Визуализатор осей
+
+  // Создаем текстовый блок для отображения углов
+  if (!this.angleText) {
+      this.angleText = new TextBlock();
+      this.angleText.text = "";
+      this.angleText.color = "white";
+      this.angleText.fontSize = 24;
+      this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+      this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      this.angleText.top = "10px";
+      this.angleText.left = "10px";
+      this.angleText.isHitTestVisible = false;
+  }
+
+  // Обработчик кликов
+  this.scene.onPointerDown = (evt, pickResult) => {
+      if (evt.button === 2) { // Правая кнопка мыши
+          if (pickResult.hit && pickResult.pickedPoint) {
+              if (!this.firstPoint) {
+                  // Установка первой точки
+                  this.firstPoint = pickResult.pickedPoint.clone();
+
+                  // Создаем сферу в месте первого клика
+                  if (sphere) {
+                      sphere.dispose();
+                  }
+                  sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.05 }, this.scene);
+                  sphere.position = this.firstPoint;
+                  const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
+                  sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
+                  sphereMaterial.emissiveColor = new Color3(1, 0, 0);
+                  sphere.material = sphereMaterial;
+
+                  // Создаем линию
+                  if (line) {
+                      line.dispose();
+                  }
+                  if (!this.glowLayer) {
+                      this.glowLayer = new GlowLayer("glow", this.scene);
+                      this.glowLayer.intensity = 1;
+                  }
+                  line = MeshBuilder.CreateLines("line", {
+                      points: [this.firstPoint, this.firstPoint.clone()],
+                      updatable: true,
+                  }, this.scene);
+                  line.color = new Color3(0, 1, 0); // Зеленый цвет
+                  line.isPickable = false;
+                  this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+                      if (mesh === line) {
+                          result.r = 0;
+                          result.g = 1;
+                          result.b = 0;
+                      }
+                  };
+                  this.glowLayer.intensity = 1; // Регулировка яркости свечения
+                  this.glowLayer.addIncludedOnlyMesh(line);
+
+                  // Создаем оси координат
+                  if (!axesViewer) {
+                      axesViewer = new AxesViewer(this.scene, 0.5); // Длина осей 0.5 единиц
+                  }
+                  axesViewer.update(
+                    this.firstPoint,
+                    new Vector3(1, 0, 0), // X-ось
+                    new Vector3(0, 1, 0), // Y-ось
+                    new Vector3(0, 0, 1)  // Z-ось
+                );
+              } else if (!this.secondPoint) {
+                  // Установка второй точки и завершение измерения
+                  this.secondPoint = pickResult.pickedPoint.clone();
+
+                  // Вычисляем расстояние
+                  const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+
+                  // Эмитируем событие с расстоянием
+                  eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
+
+                  // Сброс состояния для нового измерения
+                  this.firstPoint = null;
+                  this.secondPoint = null;
+
+                  // Удаление объектов
+                  if (sphere) {
+                      sphere.dispose();
+                      sphere = null;
+                  }
+                  if (line) {
+                      line.dispose();
+                      line = null;
+                  }
+                  if (axesViewer) {
+                      axesViewer.dispose();
+                      axesViewer = null;
+                  }
+                  this.angleText.isVisible = false;
+              }
+          }
+      } else if (evt.button === 0) {
+          console.log("Левый клик. Замеры не проводятся.");
+      }
+  };
+
+  // Обновление углов и линии перед каждым кадром
+  this.scene.registerBeforeRender(() => {
+      if (this.firstPoint && !this.secondPoint) {
+          const pointerRay = this.scene.createPickingRay(
+              this.scene.pointerX,
+              this.scene.pointerY,
+              Matrix.Identity(),
+              this.scene.activeCamera
+          );
+          const pickResult = this.scene.pickWithRay(pointerRay);
+
+          if (pickResult.hit && pickResult.pickedPoint) {
+              const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+
+              // Глобальные оси
+              const globalX = new Vector3(1, 0, 0);
+              const globalY = new Vector3(0, 1, 0);
+              const globalZ = new Vector3(0, 0, 1);
+
+              // Вычисляем углы относительно осей X, Y и Z
+              const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+              const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+              const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+
+              // Обновляем текст углов
+              this.angleText.text = `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
+              this.angleText.isVisible = true;
+
+              // Эмитируем событие для обновления углов
+              eventEmitter.emit("updateAngleText", this.angleText.text);
+
+              // Обновляем линию
+              if (line) {
+                  const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
+                  line = MeshBuilder.CreateLines("line", {
+                      points: updatedPoints,
+                      updatable: true,
+                      instance: line,
+                  }, this.scene);
+              }
+
+              // Обновляем позицию осей координат
+              if (axesViewer) {
+                axesViewer.update(
+                  this.firstPoint,
+                  new Vector3(1, 0, 0), // X-ось
+                  new Vector3(0, 1, 0), // Y-ось
+                  new Vector3(0, 0, 1)  // Z-ось
+              );
+              }
+          }
+      }
+  });
+}
+
 
 // enableDistanceMeasurement(): void {
 //   this.measuringDistance = true;
@@ -1182,7 +1347,7 @@ export class TriggerManager2 {
 //                   if (sphere) {
 //                       sphere.dispose();
 //                   }
-//                   sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.2 }, this.scene);
+//                   sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.05 }, this.scene);
 //                   sphere.position = this.firstPoint;
 //                   const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
 //                   sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
@@ -1195,21 +1360,22 @@ export class TriggerManager2 {
 //                   }
 //                   if (!this.glowLayer) {
 //                     this.glowLayer = new GlowLayer("glow", this.scene);
-//                     this.glowLayer.intensity = 0.3;
+//                     this.glowLayer.intensity = 1;
 //                   }
 //                   line = MeshBuilder.CreateLines("line", {
 //                       points: [this.firstPoint, this.firstPoint.clone()],
 //                       updatable: true,
 //                   }, this.scene);
 //                   line.color = new Color3(1, 0, 0); // Зеленый цвет
+//                   line.isPickable = false
 //                   this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
 //                     if (mesh == line) {
 //                         result.r = 0;
 //                         result.g = 1;
-//                         result.b = 1;
+//                         result.b = 0;
 //                     }
 //                 }
-//                 this.glowLayer.intensity = 2; // Регулировка яркости свечения
+//                 this.glowLayer.intensity = 1; // Регулировка яркости свечения
 //                 this.glowLayer.addIncludedOnlyMesh(line);
 //               } else if (!this.secondPoint) {
 //                   // Установка второй точки и завершение измерения
@@ -1286,133 +1452,6 @@ export class TriggerManager2 {
 //       }
 //   });
 // }
-
-
-
-
-
-enableDistanceMeasurement(): void {
-  this.measuringDistance = true;
-  this.firstPoint = null;
-  this.secondPoint = null;
-
-  let model: Mesh | null = null; // Модель, отображающая первую точку
-  let line: LinesMesh | null = null; // Линия, соединяющая первую точку с курсором
-
-  // Загрузка модели
-  const loadModel = async (): Promise<Mesh> => {
-      const result = await SceneLoader.ImportMeshAsync(
-          "", 
-          "./models/", 
-          "Rangefinder_LP.glb", 
-          this.scene
-      );
-      return result.meshes[0] as Mesh; // Возвращаем первую часть загруженной модели
-  };
-
-  // Обработчик кликов
-  this.scene.onPointerDown = async (evt, pickResult) => {
-      if (evt.button !== 2 || !pickResult.hit || !pickResult.pickedPoint) return;
-
-      if (!this.firstPoint) {
-          // Установка первой точки
-          this.firstPoint = pickResult.pickedPoint.clone();
-
-          // Удаляем старую модель, если она существует
-          if (model) {
-              model.dispose();
-          }
-
-          // Загружаем модель и устанавливаем её в первую точку
-          model = await loadModel();
-          model.position = this.firstPoint;
-          model.rotation.y = -Math.PI / 2
-
-                  // Создаем линию
-                  if (line) {
-                    line.dispose();
-                }
-                if (!this.glowLayer) {
-                  this.glowLayer = new GlowLayer("glow", this.scene);
-                  this.glowLayer.intensity = 0.3;
-                }
-                line = MeshBuilder.CreateLines("line", {
-                    points: [this.firstPoint, this.firstPoint.clone()],
-                    updatable: true,
-                }, this.scene);
-                line.color = new Color3(1, 0, 0); // Зеленый цвет
-                this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
-                  if (mesh == line) {
-                      result.r = 0;
-                      result.g = 1;
-                      result.b = 1;
-                  }
-              }
-              this.glowLayer.intensity = 2; // Регулировка яркости свечения
-              this.glowLayer.addIncludedOnlyMesh(line);
-      } else if (!this.secondPoint) {
-          // Установка второй точки и завершение измерения
-          this.secondPoint = pickResult.pickedPoint.clone();
-
-          // Вычисляем расстояние
-          const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
-
-          // Эмитируем событие с расстоянием
-          eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
-
-          // Сброс состояния
-          this.firstPoint = null;
-          this.secondPoint = null;
-
-          // Удаляем временные объекты
-          if (model) {
-              model.dispose();
-              model = null;
-          }
-          if (line) {
-              line.dispose();
-              line = null;
-          }
-      }
-  };
-
-  // Обновление ориентации модели и линии
-  this.scene.registerBeforeRender(() => {
-      if (this.firstPoint && !this.secondPoint && model) {
-          const pointerRay = this.scene.createPickingRay(
-              this.scene.pointerX,
-              this.scene.pointerY,
-              Matrix.Identity(),
-              this.scene.activeCamera
-          );
-          const pickResult = this.scene.pickWithRay(pointerRay);
-
-          if (pickResult.hit && pickResult.pickedPoint) {
-              const direction = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
-
-              // Обновляем ориентацию модели
-              model.lookAt(pickResult.pickedPoint);
-
-              // Обновляем линию
-              if (line) {
-                  const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
-                  MeshBuilder.CreateLines("line", {
-                      points: updatedPoints,
-                      updatable: true,
-                      instance: line,
-                  }, this.scene);
-              }
-          }
-      }
-  });
-}
-
-
-
-
-
-
-
 
 
 

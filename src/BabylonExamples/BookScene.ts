@@ -153,7 +153,7 @@ export class BookScene {
             const { meshes: map } = await SceneLoader.ImportMeshAsync(
                 "",
                 "./models/",
-                "Map_1.gltf",
+                "Map_1_MOD.gltf",
                 this.scene
             );
 
@@ -240,10 +240,10 @@ export class BookScene {
                     groupName: "SpanStructureBeam_L_4",
                     baseName: "SM_0_SpanStructureBeam_L_4",
                 },
-                {
-                    groupName: "Retaining_wall_Block_LP_L_5",
-                    baseName: "SM_0_Retaining_wall_Block_LP_L",
-                },
+                // {
+                //     groupName: "Retaining_wall_Block_LP_L_5",
+                //     baseName: "SM_0_Retaining_wall_Block_LP_L",
+                // },
                 // Добавьте дополнительные группы по необходимости
             ];
 
@@ -253,6 +253,8 @@ export class BookScene {
 
             // Определение одиночных мешей с точными именами
             const singleMeshNames = [
+                // Стена
+                "SM_0_Retaining_wall_Block_LP_L",
                 // Колонна монолит
                 "SM_0_MonolithicRack_R",
                 // Колонна

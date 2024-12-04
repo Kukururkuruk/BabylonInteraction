@@ -239,7 +239,7 @@ export class NewDistanceScene {
         this.engine.displayLoadingUI();
 
         // Загрузка карты
-        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
+        const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD.gltf", this.scene);
 
         map.forEach((mesh) => {
             mesh.checkCollisions = true;
@@ -501,7 +501,7 @@ export class NewDistanceScene {
 
             this.triggerManager.createStartButton('Начать', () => {
             // Показываем сообщение
-            const page2 = this.dialogPage.addText("Вам нужно измерить длину конструкций которые представлены на второй странице. Для того чтобы начать измерение нажмите на правую кнопку мыши в месте откуда хотите начать. Второй раз кликните в том месте где нужно закончить измерение. Появившуюся цифру введите на второй странице")
+            const page2 = this.dialogPage.addText("Вам нужно измерить длину конструкций которые представлены на второй странице. Для того чтобы начать измерение нажмите на правую кнопку мыши в месте откуда хотите начать. В этом месте создается ось координат, которая поможет вам правильно определить угол. Второй раз кликните в том месте где нужно закончить измерение. Появившееся число введите на второй странице")
             const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
             this.guiManager.CreateDialogBox([page2, page3])
 
