@@ -139,7 +139,7 @@ export class TotalStationWork {
   }
 
   CreateController(): void {
-    this.camera = new FreeCamera("camera", new Vector3(45.9713, 3, -6.95292), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(45.9713, 3, 0.5), this.scene);
     this.camera.attachControl(this.canvas, true);
 
     this.camera.applyGravity = true;
@@ -147,7 +147,8 @@ export class TotalStationWork {
     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
     this.camera.minZ = 0.45;
     this.camera.speed = 0.55;
-    this.camera.angularSensibility = 4000;
+    this.camera.angularSensibility = 10000;
+    this.camera.inertia = 0.8;
     //this.camera.keysUp.push(87); // W
     //this.camera.keysLeft.push(65); // A
     //this.camera.keysDown.push(83); // S
