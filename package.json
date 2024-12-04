@@ -10,10 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@babylonjs/core": "^7.32.0",
-    "@babylonjs/gui": "^7.32.0",
-    "@babylonjs/inspector": "^7.32.0",
-    "@babylonjs/loaders": "^7.32.0",
+    "@babylonjs/core": "^7.34.1",
+"@babylonjs/gui": "^7.34.1",
+"@babylonjs/inspector": "^7.34.1",
+"@babylonjs/loaders": "^7.34.1",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@vitejs/plugin-react": "^4.3.3",
