@@ -15,6 +15,7 @@ import {
     Space,
     Camera,
     Viewport,
+    PBRMaterial,
   } from "@babylonjs/core";
   import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
@@ -117,7 +118,7 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       this.camera = new FreeCamera("camera", new Vector3(17, 2, 13), this.scene);
       this.camera.attachControl(this.canvas, true);
   
-      this.camera.applyGravity = false;
+      this.camera.applyGravity = true;
       this.camera.checkCollisions = true;
       this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
       this.camera.minZ = 0.45;
@@ -164,7 +165,46 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
 
               mesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
               mesh.rotate(Axis.Z, Math.PI / 6, Space.LOCAL);
+
+              if (mesh.material) {
+                simplifyMaterial(mesh.material, this.scene);
+            }
           });
+
+          function simplifyMaterial(material, scene) {
+            if (material instanceof PBRMaterial) {
+                // Для PBR материалов
+                material.metallic = 0; // Убираем металлические отражения
+                material.roughness = 1; // Максимальная шероховатость для минимальных бликов
+        
+                // Отключение карт, добавляющих сложность
+                material.metallicTexture = null;
+                material.roughnessTexture = null;
+                material.reflectivityTexture = null;
+                material.bumpTexture = null; // Отключение нормальной карты, если не нужна
+        
+                // Отключение эмиссии, если она используется
+                material.emissiveColor = new Color3(0, 0, 0);
+        
+            } else if (material instanceof StandardMaterial) {
+                // Для Standard материалов
+                material.specularColor = new Color3(0, 0, 0); // Убираем блики
+        
+                // Отключение карт, добавляющих сложность
+                material.specularTexture = null;
+                material.bumpTexture = null; // Отключение нормальной карты, если не нужна
+        
+                // Отключение эмиссии, если она используется
+                material.emissiveColor = new Color3(0, 0, 0);
+            } else {
+                // Для других типов материалов, если необходимо
+                console.warn("Неизвестный тип материала:", material.getClassName());
+            }
+        
+            // Дополнительные настройки, если необходимо
+            // Например, можно установить diffuseColor или другие свойства
+            // material.diffuseColor = new Color3(0.8, 0.8, 0.8); // Опционально
+        }
 
           const thirdMesh = rangefinderMeshes[2];
           const boundingInfo = thirdMesh.getBoundingInfo();
