@@ -750,15 +750,14 @@ private updatePointsCountDisplay(): void {
 // }
 
 
-BetonTrigger(): void {
-  // Создаём первую страницу с кнопкой "Начать"
+BetonTrigger(): void {  
+  // 1. Первая страница: кнопка "Начать" с текстом
   const startPage = this.dialogPage.createStartPage(
       "Нажми на кнопку для начала измерения.",
       "Начать",
       () => {
-          // Переход на страницы с текстом и вводом данных
-          this.guiManager.clearDialogBox();
-          this.showMeasurementPages();
+          this.guiManager.clearDialogBox(); // Очищаем текущее окно
+          this.showMeasurementPage(); // Переход к странице "Продолжить"
       }
   );
 
@@ -766,61 +765,55 @@ BetonTrigger(): void {
   this.guiManager.CreateDialogBox([startPage]);
 }
 
-// Логика отображения страниц с текстом и вводом данных
-private showMeasurementPages(): void {
-  // Создаём текстовую страницу и страницу с вводом данных
-  const page2 = this.dialogPage.addText("Произведите съемку для обследования мостовых сооружений...");
-  const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"]);
-
-  // Добавляем текстовые страницы
-  this.guiManager.CreateDialogBox([page2, page3]);
-
-  // Добавляем кнопку "Продолжить" для перехода к кнопке "Завершить"
+// 2. Страница с текстом и кнопкой "Продолжить"
+private showMeasurementPage(): void {
   const continueButton = this.dialogPage.createStartPage(
-      "",
+      "Произведите съемку для обследования мостовых сооружений...",
       "Продолжить",
       () => {
-          this.guiManager.clearDialogBox();
-          this.showFinishButton();
+          this.guiManager.clearDialogBox(); // Очищаем текущее окно
+          this.showFinishPage(); // Переход к странице "Завершить"
       }
   );
 
-  // Добавляем кнопку "Продолжить" после отображения текстовых страниц
+  // Отображаем текст и кнопку "Продолжить"
   this.guiManager.CreateDialogBox([continueButton]);
 }
 
-// Логика отображения кнопки "Завершить"
-private showFinishButton(): void {
-  let finishButtonDisabled = false; // Флаг для предотвращения повторного нажатия
-
-  const finishPage = this.dialogPage.createStartPage(
-      "Нажми на кнопку для завершения.",
+// 3. Страница с кнопкой "Завершить"
+private showFinishPage(): void {
+  const finishButton = this.dialogPage.createStartPage(
+      "Отлично, а теперь нажмите на кнопку для завершения",
       "Завершить",
       () => {
-          if (finishButtonDisabled) return; // Проверяем флаг
-          finishButtonDisabled = true; // Блокируем кнопку
-
-          // Логика завершения
-          this.sendFinalCountToServer(this.pointsPressedCount);
-          this.triggerManager2.disableDistanceMeasurement();
-          this.showFinalPage();
+          this.guiManager.clearDialogBox(); // Очищаем текущее окно
+          this.showRoutePage(); // Переход к странице "Перейти"
       }
   );
 
-  // Отображаем страницу с кнопкой "Завершить"
-  this.guiManager.CreateDialogBox([finishPage]);
+  // Отображаем кнопку "Завершить"
+  this.guiManager.CreateDialogBox([finishButton]);
 }
 
-// Логика отображения финальной страницы
-private showFinalPage(): void {
-  this.guiManager.clearDialogBox();
+// 4. Страница с кнопкой "Перейти"
+private showRoutePage(): void {
+  const routeButton = this.dialogPage.createStartPage(
+      "Отлично, а теперь нажмите на кнопку для перехода на основную карту",
+      "Перейти",
+      () => {
+          this.guiManager.clearDialogBox(); // Очищаем текущее окно
+          this.guiManager.createRouteButton('/test'); // Переход на карту
+      }
+  );
 
-  const page4 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
-
-  // Отображаем финальный текст и кнопку перехода
-  this.guiManager.CreateDialogBox([page4]);
-  this.guiManager.createRouteButton('/test');
+  // Отображаем текст и кнопку "Перейти"
+  this.guiManager.CreateDialogBox([routeButton]);
 }
+
+
+
+
+
   
   
   
