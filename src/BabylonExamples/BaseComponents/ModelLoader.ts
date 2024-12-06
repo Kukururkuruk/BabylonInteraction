@@ -1,5 +1,5 @@
 // ModelLoader.ts
-import { Scene, AbstractMesh, SceneLoader, Mesh } from "@babylonjs/core";
+import { Scene, AbstractMesh, SceneLoader, Mesh, Vector3, FreeCamera } from "@babylonjs/core";
 
 export class ModelLoader {
   private scene: Scene;
@@ -83,6 +83,45 @@ export class ModelLoader {
         this.scene
       );
       this.loadedMeshes["sign"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели указателя:", error);
+      throw error;
+    }
+  }
+
+  public async loadUltranModel(camera: FreeCamera): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "UltrasonicTester_FR_LP.glb",
+        this.scene
+      );
+      const image = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "SM_Tilt_sign_LP.glb",
+        this.scene
+      );
+      console.log(image.meshes);
+      
+      result.meshes.forEach((mesh) => {
+        mesh.scaling = new Vector3(0.04, 0.04, 0.04)
+        mesh.parent = camera;
+        mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI/6)
+        const offset = new Vector3(-0.55, -0.5, 0.86);
+        mesh.position = offset;
+      })
+      result.meshes[1].scaling.x = -0.04
+      result.meshes[2].scaling.x = -0.04
+      console.log(result.meshes);
+
+      image.meshes[1].scaling = new Vector3(0.5, 0.5, 0.5)
+      image.meshes[1].parent = result.meshes[2]
+      image.meshes[1].position =  new Vector3 (0, 6.5, -10.22)
+      image.meshes[1].rotation = new Vector3(  0, Math.PI / 2, Math.PI / 9) // менять по X:  2 ← , -2 → , 0 ↑ , 3 ↖ , -3 ↗
+
+      this.loadedMeshes["ultra"] = result.meshes;
     } catch (error) {
       console.error("Ошибка при загрузке модели указателя:", error);
       throw error;

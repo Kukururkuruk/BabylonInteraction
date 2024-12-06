@@ -22,6 +22,7 @@ import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { AdvancedDynamicTexture, Button, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
+import { ModelLoader } from "./BaseComponents/ModelLoader";
   
   export class BetoneScene {
     scene: Scene;
@@ -32,6 +33,7 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
     private triggerManager: TriggerManager2;
     private guiManager: GUIManager;
     private dialogPage: DialogPage;
+    private modelLoader: ModelLoader;
     private zoneTriggered: boolean = false;
     private targetMeshes2: AbstractMesh[];
     private beam2: AbstractMesh;
@@ -50,6 +52,9 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
       this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
       this.dialogPage = new DialogPage()
+
+      // Инициализация загрузчика моделей
+        this.modelLoader = new ModelLoader(this.scene);
   
       this.CreateEnvironment().then(() => {
         this.engine.hideLoadingUI();
@@ -152,59 +157,68 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
           this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
           this.beam2 = this.targetMeshes2[1];
 
-          const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_LP2.glb", this.scene);
-          console.log(rangefinderMeshes);
 
-          rangefinderMeshes.forEach((mesh) => {
-              mesh.scaling = new Vector3(-0.05, 0.05, 0.05);
-              mesh.rotation.y = Math.PI / 2;
 
-              mesh.parent = this.camera;
-              const offset = new Vector3(-0.7, -0.6, 1.1);
-              mesh.position = offset;
+        //   const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_LP2.glb", this.scene);
+        //   console.log(rangefinderMeshes);
+        //   rangefinderMeshes.forEach((mesh) => {
+        //       mesh.scaling = new Vector3(-0.05, 0.05, 0.05);
+        //       mesh.rotation.y = Math.PI / 2;
 
-              mesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
-              mesh.rotate(Axis.Z, Math.PI / 6, Space.LOCAL);
+        //       mesh.parent = this.camera;
+        //       const offset = new Vector3(-0.7, -0.6, 1.1);
+        //       mesh.position = offset;
 
-              if (mesh.material) {
-                simplifyMaterial(mesh.material, this.scene);
-            }
-          });
+        //       mesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
+        //       mesh.rotate(Axis.Z, Math.PI / 6, Space.LOCAL);
 
-          function simplifyMaterial(material, scene) {
-            if (material instanceof PBRMaterial) {
-                // Для PBR материалов
-                material.metallic = 0; // Убираем металлические отражения
-                material.roughness = 1; // Максимальная шероховатость для минимальных бликов
+        //       if (mesh.material) {
+        //         simplifyMaterial(mesh.material, this.scene);
+        //     }
+        //   });
+        //   function simplifyMaterial(material, scene) {
+        //     if (material instanceof PBRMaterial) {
+        //         // Для PBR материалов
+        //         material.metallic = 0; // Убираем металлические отражения
+        //         material.roughness = 1; // Максимальная шероховатость для минимальных бликов
         
-                // Отключение карт, добавляющих сложность
-                material.metallicTexture = null;
-                material.roughnessTexture = null;
-                material.reflectivityTexture = null;
-                material.bumpTexture = null; // Отключение нормальной карты, если не нужна
+        //         // Отключение карт, добавляющих сложность
+        //         material.metallicTexture = null;
+        //         material.roughnessTexture = null;
+        //         material.reflectivityTexture = null;
+        //         material.bumpTexture = null; // Отключение нормальной карты, если не нужна
         
-                // Отключение эмиссии, если она используется
-                material.emissiveColor = new Color3(0, 0, 0);
+        //         // Отключение эмиссии, если она используется
+        //         material.emissiveColor = new Color3(0, 0, 0);
         
-            } else if (material instanceof StandardMaterial) {
-                // Для Standard материалов
-                material.specularColor = new Color3(0, 0, 0); // Убираем блики
+        //     } else if (material instanceof StandardMaterial) {
+        //         // Для Standard материалов
+        //         material.specularColor = new Color3(0, 0, 0); // Убираем блики
         
-                // Отключение карт, добавляющих сложность
-                material.specularTexture = null;
-                material.bumpTexture = null; // Отключение нормальной карты, если не нужна
+        //         // Отключение карт, добавляющих сложность
+        //         material.specularTexture = null;
+        //         material.bumpTexture = null; // Отключение нормальной карты, если не нужна
         
-                // Отключение эмиссии, если она используется
-                material.emissiveColor = new Color3(0, 0, 0);
-            } else {
-                // Для других типов материалов, если необходимо
-                console.warn("Неизвестный тип материала:", material.getClassName());
-            }
+        //         // Отключение эмиссии, если она используется
+        //         material.emissiveColor = new Color3(0, 0, 0);
+        //     } else {
+        //         // Для других типов материалов, если необходимо
+        //         console.warn("Неизвестный тип материала:", material.getClassName());
+        //     }
         
-            // Дополнительные настройки, если необходимо
-            // Например, можно установить diffuseColor или другие свойства
-            // material.diffuseColor = new Color3(0.8, 0.8, 0.8); // Опционально
-        }
+        //     // Дополнительные настройки, если необходимо
+        //     // Например, можно установить diffuseColor или другие свойства
+        //     // material.diffuseColor = new Color3(0.8, 0.8, 0.8); // Опционально
+        //     }
+
+            await this.modelLoader.loadUltranModel(this.camera)
+            const rangefinderMeshes = this.modelLoader.getMeshes('ultra') || [];
+            console.log(rangefinderMeshes);
+
+
+            
+
+
 
           const thirdMesh = rangefinderMeshes[2];
           const boundingInfo = thirdMesh.getBoundingInfo();
@@ -368,6 +382,7 @@ BetonTrigger(): void {
 
     const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
     let clickCount = 0;
+    let clickFour = 0
     let clickCountText: TextBlock | null = null;
 
     const targetMeshForLaser2 = this.beam2;
@@ -387,11 +402,18 @@ BetonTrigger(): void {
 
                         if (this.beam2) {
                             this.triggerManager.setupClickableMesh(this.beam2, () => {
-                                clickCount++;
+                                clickFour++
+                                
                                 const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
 
+                                if (clickFour === 4) {
                                 // Обновляем текст на динамической текстуре
                                 this.updateDynamicText(`\n${randomValue}`);
+                                clickCount++;
+                                clickFour = 0
+                                }
+
+
                             });
 
                             this.triggerManager.activateLaserMode2(this.beam2);
