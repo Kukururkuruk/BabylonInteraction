@@ -63,6 +63,9 @@ export class TotalStationWork {
     this.triggerManager2 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
     this.guiManager = new GUIManager(this.scene, this.textMessages);
     this.dialogPage = new DialogPage();
+
+
+    
     // Инициализация планшета
 const planshet = new Planshet(this.scene);
 
