@@ -1,9 +1,15 @@
-import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping, ScrollViewer, Button } from "@babylonjs/gui";
+import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping, ScrollViewer, Button, StackPanel, AdvancedDynamicTexture, Image } from "@babylonjs/gui";
 import eventEmitter from "../../../EventEmitter"
+import { Color3, FreeCamera, Mesh, MeshBuilder, Scene, StandardMaterial, Vector3, VideoTexture } from "@babylonjs/core";
 
 export class DialogPage {
+    private scene: Scene;
     public pageContainer: Rectangle;
     public scrollViewer: ScrollViewer
+    private videoMesh: Mesh;
+    private videoTexture: VideoTexture;
+    private skipButtonGui: Button;
+    private htmlVideo: HTMLVideoElement;
 
     constructor() {
         this.pageContainer = new Rectangle();
@@ -27,12 +33,18 @@ export class DialogPage {
     }
 
     // Метод для добавления текста на страницу
-    addText(content: string, onComplete?: () => void): TextBlock {
+    addText(content: string, onComplete?: () => void): void {
 
         // if (this.currentPageBox) {
         //     this.advancedTexture.removeControl(this.currentPageBox);
         //   }
         this.scrollViewer.clearControls();
+
+        const innerContainer = new Rectangle();
+        innerContainer.width = "55%";
+        innerContainer.height = "85%";
+        innerContainer.thickness = 0;
+        // innerContainer.background = 'red'
 
         const dialogText = new TextBlock();
         dialogText.text = "";
@@ -41,7 +53,7 @@ export class DialogPage {
         dialogText.fontFamily = "Segoe UI";
         dialogText.resizeToFit = true;
         dialogText.textWrapping = TextWrapping.WordWrap;
-        dialogText.width = "90%";
+        dialogText.width = "60%";
         dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
 
         // dialogText.paddingTop = "10%";
@@ -50,7 +62,8 @@ export class DialogPage {
         // dialogText.paddingBottom = "7%";
 
         // Добавляем dialogText в ScrollViewer
-        this.scrollViewer.addControl(dialogText);
+        innerContainer.addControl(dialogText);
+        this.scrollViewer.addControl(innerContainer);
 
         let currentIndex = 0;
 
@@ -66,7 +79,7 @@ export class DialogPage {
             }
         }, 30);
 
-        return this.pageContainer;
+        return dialogText;
     }
 
     cluePage(content: string): TextBlock {
@@ -226,8 +239,6 @@ export class DialogPage {
         return innerContainer;
     }
     
-    
-
     createTextGridPage(header: string, items: string[]): void {
         // Создаем новый Grid
         const grid = new Grid();
@@ -281,6 +292,414 @@ export class DialogPage {
         this.pageContainer.addControl(grid);
 
         return grid
+    }
+
+    /**
+     * Создает страницу с текстовым блоком, где указанные слова заменены на пробелы.
+     * @param content - исходный текст
+     * @param wordsToReplace - массив слов, которые нужно заменить пробелами
+     */
+    addClickableWordsPage(
+        content: string, 
+        clickableWords: { word: string; imageUrl: string; top?: string; left?: string; width?: string }[], 
+        advancedTexture: AdvancedDynamicTexture
+    ): void {
+        this.pageContainer.clearControls();
+
+
+    
+        let modifiedText = content;
+    
+        // Заменяем указанные слова на подчёркивания (или любой маркер)
+        clickableWords.forEach((obj) => {
+            const w = obj.word;
+            const underscores = "..".repeat(w.length);
+            modifiedText = modifiedText.replace(w, underscores);
+        });
+
+        const innerContainer = new Rectangle();
+        innerContainer.width = "55%";
+        innerContainer.height = "85%";
+        innerContainer.thickness = 0;
+        // innerContainer.background = 'red'
+    
+        const dialogText = new TextBlock();
+        dialogText.text = modifiedText;
+        dialogText.color = "#212529";
+        dialogText.fontSize = "4.5%";
+        dialogText.fontFamily = "Segoe UI";
+        dialogText.resizeToFit = true;
+        dialogText.textWrapping = true;
+        dialogText.width = "90%";
+        dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        dialogText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        innerContainer.addControl(dialogText);
+    
+        // Создаем оверлей для отображения картинок
+        const overlay = this.createImageOverlay(advancedTexture);
+    
+        // Для каждого кликабельного слова создадим кнопку
+        clickableWords.forEach((obj, index) => {
+            const btn = Button.CreateSimpleButton("wordBtn" + index, obj.word);
+            btn.fontSize = "4.5%";
+            btn.width = obj.width ?? "90px";
+            btn.height = "19px";
+            btn.color = "#212529";
+            btn.background = "#B9BFBF";
+            btn.thickness = 1;
+            btn.textBlock!.textWrapping = true;
+            btn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+            btn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+            // Если top и left не указаны, используем значения по умолчанию
+            btn.top = obj.top ?? "190px";
+            btn.left = obj.left ?? "10px";
+    
+            // При клике на кнопку показываем картинку в оверлее
+            btn.onPointerUpObservable.add(() => {
+                this.showImageInOverlay(overlay, obj.imageUrl);
+            });
+    
+            innerContainer.addControl(btn);
+        });
+
+        this.pageContainer.addControl(innerContainer);
+    
+        return innerContainer;
+    }
+    
+
+    /**
+     * Создаем страницу с несколькими картинками (миниатюрами), расположенными по две в ряд.
+     * При клике на миниатюру появляется оверлей с увеличенной версией картинки.
+     * Под каждой картинкой размещаем название.
+     * @param images - массив объектов: { thumbnailUrl: string, fullImageUrl: string, name: string }
+     * @param advancedTexture - ссылка на AdvancedDynamicTexture
+     */
+    addZoomableImagePage(images: { thumbnailUrl: string; fullImageUrl: string; name?: string; }[], advancedTexture: AdvancedDynamicTexture): void {
+        // Очищаем контейнер
+        this.pageContainer.clearControls();
+    
+        // Создаём оверлей для увеличенной картинки
+        const overlay = this.createImageOverlay(advancedTexture);
+    
+        // Количество колонок
+        const cols = 2;
+        const rows = Math.ceil(images.length / cols);
+
+        const innerContainer = new Rectangle();
+        innerContainer.width = "55%";
+        innerContainer.height = "85%";
+        innerContainer.thickness = 0;
+        // innerContainer.background = 'red'
+    
+        // Создаём основной Grid для картинок
+        const grid = new Grid();
+        grid.width = "100%";
+        grid.height = "100%";
+
+    
+        // Определяем колонки по 50% ширины
+        for (let c = 0; c < cols; c++) {
+            grid.addColumnDefinition(0.5);
+        }
+    
+        // Определяем строки
+        for (let r = 0; r < rows; r++) {
+            grid.addRowDefinition(1 / rows);
+        }
+    
+        images.forEach((imgData, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+    
+            // Контейнер для одной ячейки
+            const imgContainer = new Rectangle();
+            imgContainer.width = "90%";
+            imgContainer.height = "90%";
+            imgContainer.thickness = 0;
+            imgContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            imgContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+            // Внутренний Grid для картинки и подписи
+            const innerGrid = new Grid();
+            innerGrid.width = "100%";
+
+    
+            // Если есть подпись, две строки: одна под картинку, одна под текст
+            if (imgData.name) {
+                innerGrid.addRowDefinition(150, true); // 150px под картинку
+                innerGrid.addRowDefinition(30, true);  // 30px под подпись
+            } else {
+                // Без подписи одна строка
+                innerGrid.addRowDefinition(150, true);
+            }
+            // Одна колонка
+            innerGrid.addColumnDefinition(1);
+    
+            // Создаём миниатюру картинки
+            const thumbImage = new Image("thumbImage" + index, imgData.thumbnailUrl);
+            thumbImage.width = "100%";
+            thumbImage.height = "100%";
+            thumbImage.stretch = Image.STRETCH_UNIFORM;
+    
+            // При клике - увеличенная картинка
+            thumbImage.onPointerUpObservable.add(() => {
+                this.showImageInOverlay(overlay, imgData.fullImageUrl);
+            });
+    
+            // Добавляем картинку в первую строку
+            innerGrid.addControl(thumbImage, 0, 0);
+    
+            // Если есть подпись, добавляем текст
+            if (imgData.name) {
+                const nameText = new TextBlock();
+                nameText.text = imgData.name;
+                nameText.color = "#212529";
+                nameText.fontSize = "50%";
+                nameText.textWrapping = true;
+                nameText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+                nameText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+                innerGrid.addControl(nameText, 1, 0);
+            }
+    
+            imgContainer.addControl(innerGrid);
+            grid.addControl(imgContainer, row, col);
+        });
+    
+        innerContainer.addControl(grid)
+        this.pageContainer.addControl(grid);
+        return innerContainer;
+    }
+
+    addZoomableVideoPage(
+        items: { thumbnailUrl: string; videoUrl: string; name?: string; }[],
+        advancedTexture: AdvancedDynamicTexture,
+        camera: FreeCamera
+    ): void {
+        this.pageContainer.clearControls();
+    
+        // Количество колонок
+        const cols = 2;
+        const rows = Math.ceil(items.length / cols);
+    
+        const innerContainer = new Rectangle();
+        innerContainer.width = "55%";
+        innerContainer.height = "85%";
+        innerContainer.thickness = 0;
+        innerContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        innerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+        const grid = new Grid();
+        grid.width = "100%";
+        grid.height = "100%";
+    
+        for (let c = 0; c < cols; c++) {
+            grid.addColumnDefinition(1 / cols);
+        }
+    
+        for (let r = 0; r < rows; r++) {
+            grid.addRowDefinition(1 / rows);
+        }
+    
+        items.forEach((item, index) => {
+            const row = Math.floor(index / cols);
+            const col = index % cols;
+    
+            const imgContainer = new Rectangle();
+            imgContainer.width = "90%";
+            imgContainer.height = "90%";
+            imgContainer.thickness = 0;
+            imgContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            imgContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+            const innerGrid = new Grid();
+            innerGrid.width = "100%";
+            innerGrid.thickness = 0;
+    
+            // Две строки: под миниатюру и под подпись
+            innerGrid.addRowDefinition(0.8); // миниатюра занимает 80% высоты
+            innerGrid.addRowDefinition(0.2); // подпись занимает 20%
+            innerGrid.addColumnDefinition(1);
+    
+            // Миниатюра - это Image
+            const thumbImage = new Image("thumb" + index, item.thumbnailUrl);
+            thumbImage.width = "100%";
+            thumbImage.height = "100%";
+            thumbImage.stretch = Image.STRETCH_UNIFORM;
+    
+            thumbImage.onPointerUpObservable.add(() => {
+                this.showVideo(item.videoUrl, advancedTexture, camera);
+            });
+    
+            innerGrid.addControl(thumbImage, 0, 0);
+    
+            const nameText = new TextBlock();
+            nameText.text = item.name || "";
+            nameText.color = "#212529";
+            nameText.fontSize = 14;
+            nameText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            nameText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+            innerGrid.addControl(nameText, 1, 0);
+    
+            imgContainer.addControl(innerGrid);
+            grid.addControl(imgContainer, row, col);
+        });
+    
+        innerContainer.addControl(grid);
+        this.pageContainer.addControl(innerContainer);
+        return innerContainer
+    }
+    
+
+    private showVideo(videoUrl: string, advancedTexture: AdvancedDynamicTexture, camera: FreeCamera): void {
+        // Если видео уже отображается, сначала удаляем его
+        if (this.videoMesh) {
+            this.hideVideo();
+        }
+    
+        // Создаём видео элемент
+        this.htmlVideo = document.createElement('video');
+        this.htmlVideo.src = videoUrl;
+        this.htmlVideo.crossOrigin = "anonymous";
+        this.htmlVideo.autoplay = true;
+        this.htmlVideo.loop = true;
+        this.htmlVideo.muted = false; // Измените по необходимости
+        this.htmlVideo.play();
+    
+        // Создаём VideoTexture
+        this.videoTexture = new VideoTexture("videoTexture", this.htmlVideo, this.scene, true, true, VideoTexture.TRILINEAR_SAMPLINGMODE, {
+            autoUpdateTexture: true,
+            loop: true
+        });
+    
+        // Создаём материал с видео текстурой
+        const videoMaterial = new StandardMaterial("videoMaterial", this.scene);
+        videoMaterial.diffuseTexture = this.videoTexture;
+        videoMaterial.emissiveTexture = this.videoTexture;
+        videoMaterial.disableLighting = true;
+        videoMaterial.emissiveColor = new Color3(1, 1, 1);
+    
+        // Создаём плоскость для отображения видео
+        this.videoMesh = MeshBuilder.CreatePlane("videoPlane", { width: 1.5, height: 1 }, this.scene);
+        this.videoMesh.material = videoMaterial;
+        // this.videoMesh.scaling.x *= -1
+        this.videoMesh.scaling.y *= -1
+    
+        if (camera) {
+            // Делаем плоскость дочерним объектом камеры
+            this.videoMesh.parent = camera;
+    
+            // Устанавливаем позицию плоскости относительно камеры
+            // Например, перед камерой на 2 единицы
+            this.videoMesh.position = new Vector3(0, 0, 1.5);
+    
+            // Опционально: ориентируем плоскость, чтобы она всегда смотрела в ту же сторону, что и камера
+            this.videoMesh.rotation = new Vector3(0, 0, 0);
+        } else {
+            console.warn("Активная камера не найдена. Видео не будет позиционироваться относительно камеры.");
+        }
+    
+        // Создаём кнопку "Пропустить" в Babylon GUI
+        this.skipButtonGui = Button.CreateSimpleButton("skipButton", "Пропустить");
+        this.skipButtonGui.width = "150px";
+        this.skipButtonGui.height = "40px";
+        this.skipButtonGui.color = "white";
+        this.skipButtonGui.background = "red";
+        this.skipButtonGui.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        this.skipButtonGui.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        this.skipButtonGui.paddingRight = "20px";
+        this.skipButtonGui.paddingBottom = "20px";
+    
+        this.skipButtonGui.onPointerUpObservable.add(() => {
+            this.hideVideo();
+        });
+    
+        advancedTexture.addControl(this.skipButtonGui);
+    }
+    
+    
+
+    private hideVideo(): void {
+        // Останавливаем видео
+        if (this.htmlVideo) {
+            this.htmlVideo.pause();
+            this.htmlVideo.src = "";
+            this.htmlVideo.load();
+            this.htmlVideo = null;
+        }
+    
+        // Удаляем VideoTexture
+        if (this.videoTexture) {
+            this.videoTexture.dispose();
+            this.videoTexture = null;
+        }
+    
+        // Удаляем плоскость с видео
+        if (this.videoMesh) {
+            this.videoMesh.dispose();
+            this.videoMesh = null;
+        }
+    
+        // Удаляем кнопку "Пропустить"
+        if (this.skipButtonGui) {
+            this.skipButtonGui.dispose();
+            this.skipButtonGui = null;
+        }
+    }
+    
+    
+    
+    /**
+     * Создаем оверлей для отображения картинок в полный размер.
+     * По умолчанию невидим, показывается при вызове showImageInOverlay.
+     */
+    private createImageOverlay(advancedTexture: AdvancedDynamicTexture): Rectangle {
+        const overlay = new Rectangle();
+        overlay.width = "100%";
+        overlay.height = "100%";
+        overlay.background = "rgba(0, 0, 0, 0.8)";
+        overlay.thickness = 0;
+        overlay.isVisible = false;
+        overlay.zIndex = 999; // Чтобы было поверх всех
+
+        const fullImage = new Image("fullImage", "");
+        fullImage.width = "80%";
+        fullImage.height = "80%";
+        fullImage.stretch = Image.STRETCH_UNIFORM;
+        fullImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        fullImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        // Добавляем кнопку закрытия
+        const closeButton = Button.CreateSimpleButton("closeOverlay", "Закрыть");
+        closeButton.width = "100px";
+        closeButton.height = "50px";
+        closeButton.color = "white";
+        closeButton.background = "gray";
+        closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        closeButton.top = "-10%";
+        closeButton.onPointerUpObservable.add(() => {
+            overlay.isVisible = false;
+        });
+
+        overlay.addControl(fullImage);
+        overlay.addControl(closeButton);
+
+        advancedTexture.addControl(overlay);
+
+        return overlay;
+    }
+
+    /**
+     * Показываем картинку в оверлее
+     */
+    private showImageInOverlay(overlay: Rectangle, imageUrl: string) {
+        // Находим Image внутри оверлея
+        const fullImage = overlay.getChildByName("fullImage") as Image;
+        fullImage.source = imageUrl;
+        overlay.isVisible = true;
     }
 }
 

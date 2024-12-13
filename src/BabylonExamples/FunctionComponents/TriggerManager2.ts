@@ -36,7 +36,9 @@ import {
 import { TriggerZone } from "./TriggerZone";
 import { GUIManager } from "./GUIManager";
 import { DialogPage } from "./DialogPage";
+import { ModelLoader } from "../BaseComponents/ModelLoader";
 import eventEmitter from "../../../EventEmitter";
+import { faL } from "@fortawesome/free-solid-svg-icons";
 
 export class TriggerManager2 {
   private scene: Scene;
@@ -55,6 +57,7 @@ export class TriggerManager2 {
   private currentIntersectedSphere: number | null = null;
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
+  private modelLoader: ModelLoader;
   private camera: FreeCamera;
 
 
@@ -81,6 +84,8 @@ export class TriggerManager2 {
    private targetRotationQuaternion: Quaternion = new Quaternion();
    private accumulatedRotation: number = 0;
 
+   private rangefinderMesh: Mesh;
+
    measurementLine: LinesMesh | null = null;
 
    glowLayer: GlowLayer
@@ -97,7 +102,12 @@ export class TriggerManager2 {
       this.camera = camera;
       this.guiManager = new GUIManager(this.scene, this.textMessages);
       this.dialogPage = new DialogPage()
+      this.modelLoader = new ModelLoader(this.scene);
     }
+
+    public setRangefinderMesh(mesh: Mesh): void {
+      this.rangefinderMesh = mesh;
+  }
   
     setupZoneTrigger(
       zonePosition: Vector3,
@@ -168,7 +178,9 @@ export class TriggerManager2 {
       distance: number,
       rotationX: number,
       positionY: number,
-      targetPosition: Vector3
+      targetPosition: Vector3,
+      pos?: Vector3,
+      rot?: Vector3,
     ): void {
       const camera = this.scene.activeCamera as FreeCamera;
       const x = targetPosition.x + distance * Math.sin(angle);
@@ -178,6 +190,11 @@ export class TriggerManager2 {
       camera.position = new Vector3(x, y, z);
       camera.setTarget(targetPosition);
       camera.rotation.x = rotationX;
+      if (pos && rot) {
+        camera.position = pos;
+        camera.rotation = rot
+      }
+
     }
   
     disableCameraMovement(): void {
@@ -190,210 +207,417 @@ export class TriggerManager2 {
       camera.attachControl(this.canvas, true);
     }
 
-    createRadioButtons(onHide: () => void): void {
-      const radioButtons: RadioButton[] = [];
+    // createRadioButtons(onHide: () => void): void {
+    //   const radioButtons: RadioButton[] = [];
   
-      // Создаем контейнер для радио-кнопок
-      const container = new Rectangle();
-      container.width = "15%"; // Увеличили ширину для горизонтального размещения
-      container.height = "50%"; // Уменьшили высоту
-      container.top = "3%"
-      container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-      container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-      container.thickness = 0;
-      container.background = "transparent";
+    //   // Создаем контейнер для радио-кнопок
+    //   const container = new Rectangle();
+    //   container.width = "15%"; // Увеличили ширину для горизонтального размещения
+    //   container.height = "50%"; // Уменьшили высоту
+    //   container.top = "3%"
+    //   container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    //   container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    //   container.thickness = 0;
+    //   container.background = "transparent";
   
-      // Создаем Grid внутри контейнера
-      const grid = new Grid();
-      grid.width = "100%";
-      grid.height = "100%";
+    //   // Создаем Grid внутри контейнера
+    //   const grid = new Grid();
+    //   grid.width = "100%";
+    //   grid.height = "100%";
   
-      // Определяем колонки для кнопок
-      grid.addColumnDefinition(1); // Колонка для кнопки 1
-      grid.addColumnDefinition(1); // Колонка для кнопок 2 и 3
-      grid.addColumnDefinition(1); // Колонка для кнопки 4
+    //   // Определяем колонки для кнопок
+    //   grid.addColumnDefinition(1); // Колонка для кнопки 1
+    //   grid.addColumnDefinition(1); // Колонка для кнопок 2 и 3
+    //   grid.addColumnDefinition(1); // Колонка для кнопки 4
   
-      // Определяем строки
-      grid.addRowDefinition(1); // Строка 0
-      grid.addRowDefinition(1); // Строка 1 (для кнопки 3)
+    //   // Определяем строки
+    //   grid.addRowDefinition(1); // Строка 0
+    //   grid.addRowDefinition(1); // Строка 1 (для кнопки 3)
   
-      for (let i = 0; i < 4; i++) {
-          // Контейнер для радио-кнопки и лейбла
-          const buttonContainer = new Rectangle();
-          buttonContainer.width = "100%";
-          buttonContainer.height = "100%";
-          buttonContainer.thickness = 0;
-          buttonContainer.background = "transparent";
+    //   for (let i = 0; i < 4; i++) {
+    //       // Контейнер для радио-кнопки и лейбла
+    //       const buttonContainer = new Rectangle();
+    //       buttonContainer.width = "100%";
+    //       buttonContainer.height = "100%";
+    //       buttonContainer.thickness = 0;
+    //       buttonContainer.background = "transparent";
   
-          // Радио-кнопка
-          const radioButton = new RadioButton();
-          radioButton.width = "30%";
-          radioButton.height = "13%"; // Занимает 30% высоты контейнера
-          radioButton.color = "white";
-          radioButton.background = "grey";
-          radioButton.group = "group1";
+    //       // Радио-кнопка
+    //       const radioButton = new RadioButton();
+    //       radioButton.width = "30%";
+    //       radioButton.height = "13%"; // Занимает 30% высоты контейнера
+    //       radioButton.color = "white";
+    //       radioButton.background = "grey";
+    //       radioButton.group = "group1";
   
-          // Позиционируем радио-кнопку внутри контейнера
-          radioButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          radioButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    //       // Позиционируем радио-кнопку внутри контейнера
+    //       radioButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+    //       radioButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
   
-          // Добавляем радио-кнопку и лейбл в контейнер
-          buttonContainer.addControl(radioButton);
+    //       // Добавляем радио-кнопку и лейбл в контейнер
+    //       buttonContainer.addControl(radioButton);
 
   
-          // Определяем позицию в Grid
-          let row = 0;
-          let column = 0;
+    //       // Определяем позицию в Grid
+    //       let row = 0;
+    //       let column = 0;
   
-          if (i === 0) {
-              column = 0; // Кнопка 1 в колонке 0, строке 0
-              row = 0;
-              buttonContainer.top = "85%"
-              buttonContainer.left = "35%"
+    //       if (i === 0) {
+    //           column = 0; // Кнопка 1 в колонке 0, строке 0
+    //           row = 0;
+    //           buttonContainer.top = "85%"
+    //           buttonContainer.left = "35%"
 
-          } else if (i === 1) {
-              column = 1; // Кнопка 2 в колонке 1, строке 0
-              row = 0;
-              buttonContainer.top = "40%"
+    //       } else if (i === 1) {
+    //           column = 1; // Кнопка 2 в колонке 1, строке 0
+    //           row = 0;
+    //           buttonContainer.top = "40%"
 
-          } else if (i === 2) {
-              column = 1; // Кнопка 3 в колонке 1, строке 1
-              row = 1;
-              buttonContainer.top = "15%"
+    //       } else if (i === 2) {
+    //           column = 1; // Кнопка 3 в колонке 1, строке 1
+    //           row = 1;
+    //           buttonContainer.top = "15%"
 
-          } else if (i === 3) {
-              column = 2; // Кнопка 4 в колонке 2, строке 0
-              row = 0;
-              buttonContainer.top = "85%"
+    //       } else if (i === 3) {
+    //           column = 2; // Кнопка 4 в колонке 2, строке 0
+    //           row = 0;
+    //           buttonContainer.top = "85%"
 
+    //       }
+  
+    //       // Добавляем контейнер кнопки в Grid
+    //       grid.addControl(buttonContainer, row, column);
+  
+    //       // Добавляем радио-кнопку в массив
+    //       radioButtons.push(radioButton);
+  
+    //       // Обработчик события при выборе радио-кнопки
+    //       radioButton.onIsCheckedChangedObservable.add((state) => {
+    //           if (state) {
+    //               console.log(`Выбрана радио-кнопка: ${i + 1}`);
+    //               if (i === 2) { // Третья кнопка
+    //                   this.guiTexture.removeControl(container);
+    //                   onHide();
+    //                   this.activateLaserMode();
+    //               } else if (i !== 2) {
+    //                 this.showMessage("Неправильный выбор. Попробуйте снова.");
+    //               }
+    //           }
+    //       });
+    //   }
+  
+    //   // Добавляем Grid в контейнер
+    //   container.addControl(grid);
+  
+    //   // Добавляем контейнер на экран
+    //   this.guiTexture.addControl(container);
+    // }
+
+    
+
+    async createRadioButtons(onHide: () => void): Promise<void> {
+      // Загрузка модели дальномера
+      await this.modelLoader.loadRangeModel();
+      const rangefinderMeshes = this.modelLoader.getMeshes('range') || [];
+      console.log(rangefinderMeshes);
+      
+      
+      // Если не нашли меши, завершаем
+      if (rangefinderMeshes.length === 0) {
+        console.error("Не удалось найти меши дальномера");
+        return;
+      }
+    
+      // Исходный меш (или корневой меш)
+      const baseMesh = rangefinderMeshes[1];
+      console.log(baseMesh);
+      
+      baseMesh.scaling = new Vector3(1, 1, -1)
+      
+      // Задаем список позиций, где мы хотим разместить модели
+      // Замените данные координаты на нужные
+      const positions = [
+        { x: 12.32, y: 8.77, z: -3.60 },
+        { x: 12.32, y: 8.24, z: -3.60 },
+        { x: 12.12, y: 7.84, z: -3.60 },
+        { x: 12.12, y: 7.45, z: -3.60 }
+      ];
+    
+      // Предположим, что третья позиция (индекс 2) – правильная
+      const correctIndex = 2;
+    
+      // Массив для хранение копий мешей
+      const placedMeshes: AbstractMesh[] = [];
+    
+      for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+    
+        // Клонируем исходный меш
+        const meshClone = baseMesh.clone(`rangefinder_clone_${i}`, null);
+        if (!meshClone) continue;
+    
+        // Устанавливаем позицию
+        meshClone.position.set(pos.x, pos.y, pos.z);
+    
+        // Изначально полупрозрачный
+        meshClone.visibility = 0.5;
+    
+        // Добавляем ActionManager для обработки событий мыши
+        meshClone.actionManager = new ActionManager(this.scene);
+    
+        // При наведении курсора – сделать полностью видимым
+        meshClone.actionManager.registerAction(new ExecuteCodeAction(
+          ActionManager.OnPointerOverTrigger, 
+          () => {
+            meshClone.visibility = 1;
           }
-  
-          // Добавляем контейнер кнопки в Grid
-          grid.addControl(buttonContainer, row, column);
-  
-          // Добавляем радио-кнопку в массив
-          radioButtons.push(radioButton);
-  
-          // Обработчик события при выборе радио-кнопки
-          radioButton.onIsCheckedChangedObservable.add((state) => {
-              if (state) {
-                  console.log(`Выбрана радио-кнопка: ${i + 1}`);
-                  if (i === 2) { // Третья кнопка
-                      this.guiTexture.removeControl(container);
-                      onHide();
-                      this.activateLaserMode();
-                  } else if (i !== 2) {
-                    this.showMessage("Неправильный выбор. Попробуйте снова.");
-                  }
-              }
-          });
+        ));
+    
+        // При отводе курсора – сделать полупрозрачным
+        meshClone.actionManager.registerAction(new ExecuteCodeAction(
+          ActionManager.OnPointerOutTrigger, 
+          () => {
+            meshClone.visibility = 0.5;
+          }
+        ));
+    
+        // При клике по модели
+        meshClone.actionManager.registerAction(new ExecuteCodeAction(
+          ActionManager.OnPickTrigger,
+          () => {
+            if (i === correctIndex) {
+              // Правильный выбор
+              // Скрываем все модели
+              placedMeshes.forEach(m => m.setEnabled(false));
+              // Вызываем onHide()
+              onHide();
+              // Запускаем режим лазера
+              this.activateLaserMode();
+            } else {
+              // Неправильная позиция
+              this.showMessage("Неправильная позиция");
+            }
+          }
+        ));
+    
+        placedMeshes.push(meshClone);
       }
-  
-      // Добавляем Grid в контейнер
-      container.addControl(grid);
-  
-      // Добавляем контейнер на экран
-      this.guiTexture.addControl(container);
     }
+    
+
+
+  //   activateLaserMode(): void {
+  //     const camera = this.scene.activeCamera as FreeCamera;
   
-// Метод для активации режима лазера
-    activateLaserMode(): void {
-        const camera = this.scene.activeCamera as FreeCamera;
+  //     const cubeSize = 0.15; 
+  //     this.centralCube = MeshBuilder.CreateBox("centralCube", { size: cubeSize }, this.scene);
+  //     this.centralCube.parent = camera;
+  //     this.centralCube.position = new Vector3(0, 0, 3);
+  
+  //     const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
+  //     cubeMaterial.diffuseColor = new Color3(0, 1, 0);
+  //     this.centralCube.material = cubeMaterial;
+  //     this.centralCube.isVisible = false;
+  //     this.centralCube.isPickable = false;
+  
+  //     const rayLength = 100;
+  //     const rayPoints = [
+  //         new Vector3(0, 0, cubeSize / 2 + 0.01),
+  //         new Vector3(0, 0, cubeSize / 2 + 0.01 + rayLength),
+  //     ];
+  //     this.redRay = MeshBuilder.CreateLines("redRay", { points: rayPoints }, this.scene);
+  //     this.redRay.parent = this.centralCube;
+  //     const rayMaterial = new StandardMaterial("rayMaterial", this.scene);
+  //     rayMaterial.emissiveColor = new Color3(1, 0, 0);
+  //     this.redRay.color = rayMaterial.emissiveColor;
+  
+  //     const pointSize = 0.05;
+  //     this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
+  //     const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
+  //     pointMaterial.emissiveColor = new Color3(1, 0, 0);
+  //     this.intersectionPoint.material = pointMaterial;
+  //     this.intersectionPoint.isVisible = false;
+  
+  //     this.createAdditionalSpheres();
+  
+  //     // Переменные для линии и glowLayer
+  //     let dynamicLine: LinesMesh | null = null;
+  //     let glowLayer: GlowLayer | null = null;
+  
+  //     // Функция для создания или обновления линии
+  //     const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
+  //         if (!existingLine) {
+  //             // Создаем новую линию
+  //             const line = MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true }, this.scene);
+  //             line.color = new Color3(0, 1, 0);
+  //             line.isPickable = false;
+  
+  //             // Создаем GlowLayer, если не существует
+  //             if (!glowLayer) {
+  //                 glowLayer = new GlowLayer("glow", this.scene);
+  //                 glowLayer.intensity = 1;
+  //             }
+  
+  //             glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+  //                 if (mesh === line) {
+  //                     result.r = 0;
+  //                     result.g = 1;
+  //                     result.b = 0;
+  //                 }
+  //             };
+  //             glowLayer.addIncludedOnlyMesh(line);
+  
+  //             return line;
+  //         } else {
+  //             // Обновляем существующую линию
+  //             MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true, instance: existingLine }, this.scene);
+  //             return existingLine;
+  //         }
+  //     };
+  
+  //     this.scene.registerBeforeRender(() => {
+  //         this.updateRayIntersection();
+  //         this.checkSphereIntersection();
+  
+  //         const staticPoint = new Vector3(-12.12, 7.84, -3.60);
+  //         if (this.intersectionPoint && this.intersectionPoint.position) {
+  //             // Обновляем или создаем линию между staticPoint и intersectionPoint
+  //             dynamicLine = createOrUpdateLineBetweenPoints(staticPoint, this.intersectionPoint.position, dynamicLine);
+  
+  //             // Расчет дистанции и углов
+  //             const distance = Vector3.Distance(staticPoint, this.intersectionPoint.position);
+  //             const euler = camera.rotation;
+  //             const angleX = Tools.ToDegrees(euler.x);
+  //             const angleY = Tools.ToDegrees(euler.y);
+  
+  //             eventEmitter.emit(
+  //                 "updateDistanceAngleText",
+  //                 `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние: ${distance.toFixed(2)} м`
+  //             );
+  //         } else {
+  //             // Если точки для intersectionPoint нет - убираем линию
+  //             if (dynamicLine) {
+  //                 dynamicLine.dispose();
+  //                 dynamicLine = null;
+  //             }
+  //         }
+  //     });
+  // }
+  
 
-        // Отключаем управление камерой и оставляем только вращение мышью
-        camera.detachControl();
-        camera.inputs.clear(); // Удаляем все входы
-        camera.inputs.addMouse(); // Добавляем только вращение мышью
-        camera.attachControl(this.canvas, true);
-        camera.fov /= 2;
 
-        const cubeSize = 0.5; // Уменьшенный размер куба
-        this.centralCube = MeshBuilder.CreateBox("centralCube", { size: cubeSize }, this.scene);
 
-        // Привязка куба к камере
-        this.centralCube.parent = camera;
 
-        // Установка относительной позиции куба (чуть правее и вперед)
-        this.centralCube.position = new Vector3(0, 0, 3); // Измените значения по своему усмотрению
 
-        // Создание материала для куба
-        const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
-        cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зелёный цвет для куба
-        this.centralCube.material = cubeMaterial;
+  
+  
 
-        // Сделать куб невидимым для отладки
-        this.centralCube.isVisible = false;
+  activateLaserMode(): void {
+    const camera = this.scene.activeCamera as FreeCamera;
 
-        // Создание красного луча (линии) исходящего из передней грани куба
-        const rayLength = 100; // Длина лазера
-        const rayPoints = [
-            new Vector3(0, 0, cubeSize / 2 + 0.01), // Начало чуть перед грани куба
-            new Vector3(0, 0, cubeSize / 2 + 0.01 + rayLength), // Конец луча
-        ];
-        this.redRay = MeshBuilder.CreateLines("redRay", { points: rayPoints }, this.scene);
+    // Сфера пересечения
+    const pointSize = 0.05;
+    this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
+    const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
+    pointMaterial.emissiveColor = new Color3(1, 0, 0);
+    this.intersectionPoint.material = pointMaterial;
+    this.intersectionPoint.isVisible = false;
+    this.intersectionPoint.isPickable = false; // Сфера не участвует в пересечении
 
-        // Привязка луча к кубу, чтобы он двигался вместе с ним
-        this.redRay.parent = this.centralCube;
+    this.createAdditionalSpheres();
 
-        // Создание материала для луча
-        const rayMaterial = new StandardMaterial("rayMaterial", this.scene);
-        rayMaterial.emissiveColor = new Color3(1, 0, 0); // Красный цвет
-        this.redRay.color = rayMaterial.emissiveColor;
+    let dynamicLine: LinesMesh | null = null;
+    let glowLayer: GlowLayer | null = null;
 
-        // Создание точки пересечения (маленькая сфера), изначально скрытая
-        const pointSize = 0.15;
-        this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
-        const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
-        pointMaterial.emissiveColor = new Color3(1, 0, 0); // Красный цвет
-        this.intersectionPoint.material = pointMaterial;
-        this.intersectionPoint.isVisible = false; // Скрыта по умолчанию
+    const staticPoint = new Vector3(-12.12, 7.84, -3.60);
 
-        // Создание дополнительных сфер
-        this.createAdditionalSpheres();
+    const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
+        if (!existingLine) {
+            const line = MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true }, this.scene);
+            line.color = new Color3(0, 1, 0);
+            line.isPickable = false; // Линия не участвует в пересечении
+            if (!glowLayer) {
+                glowLayer = new GlowLayer("glow", this.scene);
+                glowLayer.intensity = 1;
+            }
+            glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+                if (mesh === line) {
+                    result.r = 0;
+                    result.g = 1;
+                    result.b = 0;
+                }
+            };
+            glowLayer.addIncludedOnlyMesh(line);
+            return line;
+        } else {
+            MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true, instance: existingLine }, this.scene);
+            return existingLine;
+        }
+    };
 
-        // Добавление кнопки отображения координат сферы (опционально)
-        // this.AddSpherePositionButton();
+    this.scene.registerBeforeRender(() => {
+        const origin = camera.globalPosition.clone();
+        const forward = camera.getDirection(Vector3.Forward());
+        const ray = new Ray(origin, forward, 200);
 
-        if (!this.angleText) {
-        this.angleText = new TextBlock();
-        this.angleText.text = "Угол X: 0°, Угол Y: 0°";
-        this.angleText.color = "white";
-        this.angleText.fontSize = 24;
-        this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this.angleText.top = "10px";
-        this.angleText.left = "10px";
-        this.angleText.isHitTestVisible = false;
-        this.guiTexture.addControl(this.angleText);
-      }
-        
-        
+        // Исключаем служебные объекты из пересечения (сферу и динамическую линию)
+        const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable && mesh !== this.intersectionPoint && mesh.name !== "dynamicLine");
 
-        // Добавление обновления пересечений перед каждым кадром
-        this.scene.registerBeforeRender(() => {
-            this.updateRayIntersection();
-            this.checkSphereIntersection();
+        if (hit && hit.pickedPoint) {
+            this.intersectionPoint.position.copyFrom(hit.pickedPoint);
+            this.intersectionPoint.isVisible = true;
 
+// Предположим, что у вас есть ссылка на меш дальномера
+const rangefinderMesh = this.rangefinderMesh;
+
+// Получаем направление вперёд относительно меша (по умолчанию Vector3.Forward() = (0,0,1))
+const forwardDirection = rangefinderMesh.getDirection(new Vector3(0.7, 0, 0));
+
+// Определяем, на сколько единиц вперёд сместить точку. 
+// Например, на 0.5 единиц вперёд от текущей позиции меша.
+const offsetDistance = 0.5;
+
+// Получаем стартовую точку как позицию меша + смещённый вперёд вектор
+const start = rangefinderMesh.getAbsolutePosition().add(forwardDirection.scale(offsetDistance));
+
+            dynamicLine = createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, dynamicLine);
+
+            const distance = Vector3.Distance(staticPoint, this.intersectionPoint.position);
             const euler = camera.rotation;
-                const angleX = Tools.ToDegrees(euler.x);
-                const angleY = Tools.ToDegrees(euler.y);
-                if (this.angleText) {
-                  this.angleText.text = `Угол X: ${angleX.toFixed(2)}°, Угол Y: ${angleY.toFixed(2)}°`;
-              }
-        });
-    }
+            const angleX = Tools.ToDegrees(euler.x);
+            const angleY = Tools.ToDegrees(euler.y);
+            eventEmitter.emit(
+                "updateDistanceAngleText",
+                `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние:${distance.toFixed(2)} м`
+            );
+        } else {
+            this.intersectionPoint.isVisible = false;
+            if (dynamicLine) {
+                dynamicLine.dispose();
+                dynamicLine = null;
+            }
+        }
+    });
+}
+
+
+
+
+
+
+    
 
 // Метод для создания дополнительных сфер
     private createAdditionalSpheres(): void {
         // Координаты сфер
         const sphereCoordinates = [
-            new Vector3(-1.00, 8.32, -3.59),
-            new Vector3(-0.98, 8.09, -3.59),
-            new Vector3(-0.81, 9.08, -3.59)
+            new Vector3(-1.00, 8.32, -3.6),
+            new Vector3(-0.98, 8.09, -3.6),
+            new Vector3(-0.81, 9.08, -3.6)
         ];
 
         // Общие настройки для всех сфер
-        const sphereDiameter = 0.2;
+        const sphereDiameter = 0.1;
         const sphereMaterial = new StandardMaterial("additionalSphereMaterial", this.scene);
         sphereMaterial.diffuseColor = new Color3(0, 0, 1); // Синий цвет
         sphereMaterial.emissiveColor = new Color3(0, 0, 1);
@@ -412,9 +636,12 @@ export class TriggerManager2 {
         this.sphere3.material = sphereMaterial;
 
         // Опционально: сделать сферы невидимыми и отображать их только для отладки
-        // this.sphere1.isVisible = false;
-        // this.sphere2.isVisible = false;
-        // this.sphere3.isVisible = false;
+        this.sphere1.visibility = 0.5;
+        this.sphere1.checkCollisions = false
+        this.sphere2.visibility = 0.5;
+        this.sphere2.checkCollisions = false
+        this.sphere3.visibility = 0.5;
+        this.sphere3.checkCollisions = false
     }
 
 // Метод для проверки пересечения основной сферы с дополнительными сферами
@@ -427,7 +654,7 @@ export class TriggerManager2 {
         const mainRadius = 0.1; // Половина диаметра 0.4
 
         // Определяем радиусы дополнительных сфер
-        const additionalRadius = 0.1; // Половина диаметра 0.4
+        const additionalRadius = 0; // Половина диаметра 0.4
 
         // Функция для вычисления расстояния между двумя точками
         const distance = (a: Vector3, b: Vector3): number => {

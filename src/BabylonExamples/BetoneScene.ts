@@ -41,6 +41,9 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
     private dynamicTexture: DynamicTexture;
     private ctx: CanvasRenderingContext2D;
 
+    private clickCount = 0; // Счётчик всех кликов для цикла
+    private clickFour = 0;  // Счётчик внутри цикла (каждый 4 клика)
+
   
     constructor(canvas: HTMLCanvasElement) {
       this.canvas = canvas;
@@ -159,58 +162,6 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
 
 
 
-        //   const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_LP2.glb", this.scene);
-        //   console.log(rangefinderMeshes);
-        //   rangefinderMeshes.forEach((mesh) => {
-        //       mesh.scaling = new Vector3(-0.05, 0.05, 0.05);
-        //       mesh.rotation.y = Math.PI / 2;
-
-        //       mesh.parent = this.camera;
-        //       const offset = new Vector3(-0.7, -0.6, 1.1);
-        //       mesh.position = offset;
-
-        //       mesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
-        //       mesh.rotate(Axis.Z, Math.PI / 6, Space.LOCAL);
-
-        //       if (mesh.material) {
-        //         simplifyMaterial(mesh.material, this.scene);
-        //     }
-        //   });
-        //   function simplifyMaterial(material, scene) {
-        //     if (material instanceof PBRMaterial) {
-        //         // Для PBR материалов
-        //         material.metallic = 0; // Убираем металлические отражения
-        //         material.roughness = 1; // Максимальная шероховатость для минимальных бликов
-        
-        //         // Отключение карт, добавляющих сложность
-        //         material.metallicTexture = null;
-        //         material.roughnessTexture = null;
-        //         material.reflectivityTexture = null;
-        //         material.bumpTexture = null; // Отключение нормальной карты, если не нужна
-        
-        //         // Отключение эмиссии, если она используется
-        //         material.emissiveColor = new Color3(0, 0, 0);
-        
-        //     } else if (material instanceof StandardMaterial) {
-        //         // Для Standard материалов
-        //         material.specularColor = new Color3(0, 0, 0); // Убираем блики
-        
-        //         // Отключение карт, добавляющих сложность
-        //         material.specularTexture = null;
-        //         material.bumpTexture = null; // Отключение нормальной карты, если не нужна
-        
-        //         // Отключение эмиссии, если она используется
-        //         material.emissiveColor = new Color3(0, 0, 0);
-        //     } else {
-        //         // Для других типов материалов, если необходимо
-        //         console.warn("Неизвестный тип материала:", material.getClassName());
-        //     }
-        
-        //     // Дополнительные настройки, если необходимо
-        //     // Например, можно установить diffuseColor или другие свойства
-        //     // material.diffuseColor = new Color3(0.8, 0.8, 0.8); // Опционально
-        //     }
-
             await this.modelLoader.loadUltranModel(this.camera)
             const rangefinderMeshes = this.modelLoader.getMeshes('ultra') || [];
             console.log(rangefinderMeshes);
@@ -220,37 +171,37 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
 
 
 
-          const thirdMesh = rangefinderMeshes[2];
-          const boundingInfo = thirdMesh.getBoundingInfo();
-          const boundingBox = boundingInfo.boundingBox;
-          const size = boundingBox.maximum.subtract(boundingBox.minimum);
-          const width = size.z;
-          const height = size.y;
+        //   const thirdMesh = rangefinderMeshes[2];
+        //   const boundingInfo = thirdMesh.getBoundingInfo();
+        //   const boundingBox = boundingInfo.boundingBox;
+        //   const size = boundingBox.maximum.subtract(boundingBox.minimum);
+        //   const width = size.z;
+        //   const height = size.y;
 
-          const planeWidth = width;
-          const planeHeight = height;
+        //   const planeWidth = width;
+        //   const planeHeight = height;
 
-          // Создание DynamicTexture
-          this.dynamicTexture = new DynamicTexture("DynamicTexture", { width: 512, height: 512 }, this.scene, false);
-          this.dynamicTexture.hasAlpha = true;
+        //   // Создание DynamicTexture
+        //   this.dynamicTexture = new DynamicTexture("DynamicTexture", { width: 512, height: 512 }, this.scene, false);
+        //   this.dynamicTexture.hasAlpha = true;
 
-          this.ctx = this.dynamicTexture.getContext();
-          const font = "bold 90px Arial";
-          this.ctx.font = font;
+        //   this.ctx = this.dynamicTexture.getContext();
+        //   const font = "bold 90px Arial";
+        //   this.ctx.font = font;
 
-          const maxTextWidth = this.dynamicTexture.getSize().width + 100;
+        //   const maxTextWidth = this.dynamicTexture.getSize().width + 100;
 
-          const textMaterial = new StandardMaterial("TextMaterial", this.scene);
-          textMaterial.diffuseTexture = this.dynamicTexture;
-          textMaterial.emissiveColor = new Color3(1, 1, 1);
-          textMaterial.backFaceCulling = false;
+        //   const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+        //   textMaterial.diffuseTexture = this.dynamicTexture;
+        //   textMaterial.emissiveColor = new Color3(1, 1, 1);
+        //   textMaterial.backFaceCulling = false;
 
-          const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth - 0.5, height: 3.5 }, this.scene);
-          textPlane.material = textMaterial;
+        //   const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth - 0.5, height: 3.5 }, this.scene);
+        //   textPlane.material = textMaterial;
 
-          textPlane.parent = thirdMesh;
-          textPlane.rotation.x = -Math.PI / 2.3;
-          textPlane.position = new Vector3(0.015, 7, -9.5);
+        //   textPlane.parent = thirdMesh;
+        //   textPlane.rotation.x = -Math.PI / 2.3;
+        //   textPlane.position = new Vector3(0.015, 7, -9.5);
 
           console.log("Модели успешно загружены.");
       } catch (error) {
@@ -379,13 +330,18 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
 
 
 BetonTrigger(): void {
-
     const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-    let clickCount = 0;
-    let clickFour = 0
     let clickCountText: TextBlock | null = null;
 
     const targetMeshForLaser2 = this.beam2;
+
+    // Углы вращения по оси Y (пример из кода)
+    const rotationXValues = [
+        Math.PI ,   // 90 градусов
+        Math.PI/ 2,       // 180 градусов
+        Math.PI / 3,   // 60 градусов
+        -Math.PI / 3   // -60 градусов
+    ];
 
     const secondTriggerZone = this.triggerManager.setupZoneTrigger(
         clickZonePosition,
@@ -399,20 +355,41 @@ BetonTrigger(): void {
                     "Нажми на кнопку для начала измерения.",
                     "Начать",
                     () => {
-
                         if (this.beam2) {
+                            // Привязываем клик к beam2
                             this.triggerManager.setupClickableMesh(this.beam2, () => {
-                                clickFour++
-                                
-                                const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
+                                this.clickFour++;
+                                this.clickCount++;
 
-                                if (clickFour === 4) {
-                                // Обновляем текст на динамической текстуре
-                                this.updateDynamicText(`\n${randomValue}`);
-                                clickCount++;
-                                clickFour = 0
+                                // Логика вращения второй модели
+                                const imageMeshes = this.modelLoader.getMeshes("image") || [];
+                                if (imageMeshes.length > 1) {
+                                    const targetMesh = imageMeshes[1]; // Предполагается, что это нужный меш
+                                    const rotationIndex = (this.clickFour - 1) % rotationXValues.length;
+                                    targetMesh.rotation.y = rotationXValues[rotationIndex];
+                                    console.log(`Установлен rotation.y: ${rotationXValues[rotationIndex]} для clickFour: ${this.clickFour}`);
+                                } else {
+                                    console.warn("Меш 'image' или его второй элемент не найден.");
                                 }
 
+                                // Генерируем случайное число
+                                const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
+
+                                // Определяем индекс ячейки для обновления
+                                const cellIndex = (this.clickCount - 1) % 4;
+
+                                // Если мы делаем пятый клик (или 9, 13 и т.д.), то сначала сбрасываем все ячейки
+                                if (cellIndex === 0 && this.clickCount > 1) {
+                                    this.modelLoader.resetAllCells();
+                                }
+
+                                // Обновляем нужную ячейку в GUI
+                                this.modelLoader.updateCellText(cellIndex, randomValue.toString());
+
+                                // Если 4 клика достигнуты, мы можем ввести дополнительную логику. Например:
+                                if (this.clickCount % 4 === 0) {
+                                    console.log("Заполнены все 4 ячейки, следующий клик начнет новый цикл.");
+                                }
 
                             });
 
@@ -424,7 +401,7 @@ BetonTrigger(): void {
                                 "Завершить",
                                 () => {
                                     const totalClicksMessage = new TextBlock();
-                                    totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
+                                    totalClicksMessage.text = `Вы произвели измерение ${this.clickCount} раз(а)`;
                                     totalClicksMessage.color = "white";
                                     totalClicksMessage.fontSize = 24;
                                     totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -440,7 +417,8 @@ BetonTrigger(): void {
                                         this.guiTexture.removeControl(clickCountText);
                                         clickCountText = null;
                                     }
-                                    clickCount = 0;
+                                    this.clickCount = 0;
+                                    this.clickFour = 0;
 
                                     if (this.beam2) {
                                         this.triggerManager.removeMeshAction(this.beam2);
@@ -474,6 +452,7 @@ BetonTrigger(): void {
         true
     );
 }
+
 
 
 }
