@@ -22,6 +22,7 @@ const BabylonBook: React.FC = () => {
                     setCurrentTitle(meshInfo.title);
                     setCurrentDescription(meshInfo.description);
                     setIsModalOpen(true);
+                    example.togglePointerLock();
                 } else {
                     console.warn(`Данные для ключевого слова "${keyword}" не найдены.`);
                 }
@@ -35,6 +36,8 @@ const BabylonBook: React.FC = () => {
         setCurrentKeyword(null);
         setCurrentTitle("");
         setCurrentDescription("");
+        exampleRef.current?.togglePointerLock();
+        exampleRef.current?.canvas.focus();
     };
 
     // Обновлённая функция для обработки описания

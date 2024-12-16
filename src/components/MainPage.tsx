@@ -45,6 +45,9 @@ const Main: React.FC = () => {
       <button>
         <Link to="/Производительность">Test</Link>
       </button>
+      <button>
+        <Link to="/texture">Texture</Link>
+      </button>
     </div>
   );
 };

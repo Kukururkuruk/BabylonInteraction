@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { BetoneScene } from '../BabylonExamples/BetoneScene';
+import { TextureScene } from '../BabylonExamples/TextureScene';
 
-const BabylonBeton: React.FC = () => {
+const BabylonTexture: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     if (canvasRef.current) {
-      new BetoneScene(canvasRef.current); // Передаем функцию открытия модального окна
+      new TextureScene(canvasRef.current); // Передаем функцию открытия модального окна
     }
   }, []);
 
@@ -17,4 +17,4 @@ const BabylonBeton: React.FC = () => {
   );
 };
 
-export default BabylonBeton;
+export default BabylonTexture;
