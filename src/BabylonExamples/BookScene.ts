@@ -9,6 +9,8 @@ import {
     HighlightLayer,
     Color3,
     FreeCameraMouseInput,
+    MeshBuilder,
+    Mesh,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
@@ -66,14 +68,21 @@ export class BookScene {
         this.CreateEnvironment().then(async () => {
             this.engine.hideLoadingUI();
 
-            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению. Для начала кликните мышкой на экран. Чтобы осмотреться зажмите левую кнопку мыши. А теперь следуйте инструкциям ниже.", async () => {
+            const page1 = this.dialogPage.addText("Привет! Вы запустили приложение 'Терминология', но прежде чем начать пройдите обучение по передвижению.\nДля начала кликните мышкой на экран.\nЧтобы осмотреться зажмите левую кнопку мыши.\nА теперь следуйте инструкциям ниже.", async () => {
                 
                 // После завершения печати первого текста вызываем createGui()
                 await this.guiManager.createGui();
                 
-                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях. Как только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
-                const page3 = this.dialogPage.createStartPage("/тестирование")
-                this.guiManager.CreateDialogBox([page2, page3], this.counterText);
+                const page2 = this.dialogPage.addText("Нажимая правой кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\nСиним подсвечиваются те, на которые вы уже нажимали.\nВ верхней части планшета расположена информация о найденых сооружениях.\nКак только осмотрите все и будете готовы переходить к тестированию нажмите на кнопку 'Вперед' в нижней части планшета.")
+                const page3 = this.dialogPage.createStartPage(
+                    "Нажмите на кнопку для начала тестирования",
+                    "Начать",
+                    () => {
+                        window.location.href = '/тестирование';
+                    }
+                );
+                const page4 = this.dialogPage.cluePage("Управление:\nW - движение вперед\nA - движение влево\nS - движение назад\nD - движение вправо\nДля обзора зажмите левую кнопку мыши и двигайте в нужную сторону")
+                this.guiManager.CreateDialogBox([page2, page3, page4], this.counterText);
               })
  
             this.guiManager.CreateDialogBox([page1], this.counterText);
@@ -126,6 +135,7 @@ export class BookScene {
         this.camera.speed = 0.55;
         this.camera.angularSensibility = 4000;
         this.camera.rotation.y = -Math.PI / 2;
+        this.camera.inertia = 0.82
         this.camera.keysUp.push(87); // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
@@ -149,7 +159,7 @@ export class BookScene {
             const { meshes: map } = await SceneLoader.ImportMeshAsync(
                 "",
                 "./models/",
-                "Map_1.gltf",
+                "Map_1_MOD.gltf",
                 this.scene
             );
 
@@ -159,6 +169,8 @@ export class BookScene {
                 "MapPointerSimplev001.glb",
                 this.scene
             );
+
+            this.guiManager.createBorderBox()
 
             // Создаём объект для группы мешей Sign
             const group = {
@@ -234,10 +246,10 @@ export class BookScene {
                     groupName: "SpanStructureBeam_L_4",
                     baseName: "SM_0_SpanStructureBeam_L_4",
                 },
-                {
-                    groupName: "Retaining_wall_Block_LP_L_5",
-                    baseName: "SM_0_Retaining_wall_Block_LP_L",
-                },
+                // {
+                //     groupName: "Retaining_wall_Block_LP_L_5",
+                //     baseName: "SM_0_Retaining_wall_Block_LP_L",
+                // },
                 // Добавьте дополнительные группы по необходимости
             ];
 
@@ -247,6 +259,8 @@ export class BookScene {
 
             // Определение одиночных мешей с точными именами
             const singleMeshNames = [
+                // Стена
+                "SM_0_Retaining_wall_Block_LP_L",
                 // Колонна монолит
                 "SM_0_MonolithicRack_R",
                 // Колонна
@@ -398,7 +412,7 @@ export class BookScene {
         this.counterText.fontSize = "2%";
         this.counterText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.counterText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this.counterText.paddingRight = "6%";
+        this.counterText.paddingRight = "5%";
         this.counterText.paddingTop = "6%";
         this.guiTexture.addControl(this.counterText);
 
@@ -410,33 +424,35 @@ export class BookScene {
         this.counterText.text = `Найдено конструкций ${this.clickedMeshes} из ${this.totalMeshes + 1}`;
     }
 
-    async playLoadingVideo(): Promise<void> {
-        // Создаем HTMLVideoElement
-        const video = document.createElement("video");
-        video.src = "/models/film_1var_1_2K.mp4";
-        video.autoplay = true;
-        video.muted = false;
-        video.loop = false; // Остановить после одного воспроизведения
-        video.style.position = "absolute";
-        video.style.width = "100%";
-        video.style.height = "100%";
-        video.style.top = "0";
-        video.style.left = "0";
-        video.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
-        video.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
-        video.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
-        
-        // Добавляем видео на страницу
-        document.body.appendChild(video);
+    async playLoadingVideo() {
+        const videoElement = document.createElement("video");
+        videoElement.src = "/models/film_1var_1_2K.mp4?v=" + new Date().getTime(); // Уникальный URL
+        videoElement.autoplay = false;
+        videoElement.muted = true;
+        videoElement.loop = false;
+        videoElement.preload = "auto";
+        videoElement.style.position = "absolute";
+        videoElement.style.top = "0";
+        videoElement.style.left = "0";
+        videoElement.style.width = "100%";
+        videoElement.style.height = "100%";
+        videoElement.style.objectFit = 'cover'; // Масштабирование с сохранением пропорций, с черными полосами
+        videoElement.style.backgroundColor = 'black'; // Заполнение недостающих частей черным цветом
+        videoElement.style.zIndex = "100"; // Обеспечиваем отображение поверх всего
+        document.body.appendChild(videoElement);
     
-        // Ждем окончания видео
-        return new Promise((resolve) => {
-            video.onended = () => {
-                video.remove(); // Убираем видео из DOM
-                resolve(); // Возвращаем управление после завершения
+        // Ждем, пока данные загрузятся, и начинаем воспроизведение
+        return new Promise<void>((resolve) => {
+            videoElement.addEventListener("loadeddata", () => {
+                videoElement.play();
+            });
+            videoElement.onended = () => {
+                videoElement.remove();
+                resolve();
             };
         });
     }
+    
 
 }
 

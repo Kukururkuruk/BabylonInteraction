@@ -3348,3 +3348,1627 @@ const coordinates = [
     { x: 74.79, y: 3, z: 19.70 },
     { x: 76.79, y: 3, z: 20.70 }
   ];
+
+
+
+
+  import { AdvancedDynamicTexture, Rectangle, Button, TextBlock, StackPanel, Control } from "@babylonjs/gui";
+import * as BABYLON from "babylonjs";
+
+export class Planshet {
+    private guiTexture: AdvancedDynamicTexture;
+    private container: Rectangle;
+    private pages: StackPanel[];
+    private currentPageIndex: number = 0;
+    private isVisible: boolean = false;
+    private navPanel: StackPanel | null = null;
+
+    constructor(private scene: BABYLON.Scene) {
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.container = this.createContainer();
+        this.pages = [];
+        this.guiTexture.addControl(this.container);
+
+        this.initializePages();
+    }
+
+    private createContainer(): Rectangle {
+        const container = new Rectangle();
+        container.width = "50%";
+        container.height = "70%";
+        container.background = "black";
+        container.thickness = 2;
+        container.color = "white";
+        container.isVisible = false;
+        return container;
+    }
+
+    private initializePages() {
+        this.pages = [
+            this.createPage("Добро пожаловать на главный экран!", 24),
+            this.createProjectsPage(),
+            this.createPage(
+                "Текущий проект: TotalStationWork\nОписание: Этот проект включает в себя работу с тотальными станциями, для измерения расстояний и углов.",
+                20
+            ),
+            this.createPage("Конец презентации!", 20),
+        ];
+    }
+
+    private createPage(content: string, fontSize: number): StackPanel {
+        const page = new StackPanel();
+        const text = new TextBlock();
+        text.text = content;
+        text.color = "white";
+        text.fontSize = fontSize;
+        page.addControl(text);
+        return page;
+    }
+
+    private createProjectsPage(): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP; // Выравнивание всей страницы по верхней границе
+    
+        // Контейнер для заголовка
+        const headerContainer = new StackPanel();
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP; // Выравнивание заголовка по верхней границе
+        headerContainer.height = "100px"; // Фиксированная высота для заголовка (можно изменить)
+    
+        const header = new TextBlock();
+        header.text = "Выберите проект, чтобы увидеть описание:";
+        header.color = "white";
+        header.fontSize = 24;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER; // Центрирование текста по горизонтали
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER; // Центрирование текста в контейнере заголовка
+    
+        headerContainer.addControl(header);
+        page.addControl(headerContainer);
+    
+        // Контейнер для ячеек проектов
+        const projectsContainer = new StackPanel();
+        projectsContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP; // Выравнивание ячеек сразу под заголовком
+        projectsContainer.paddingTop = "10px"; // Отступ между заголовком и ячейками
+    
+        const projects = [
+            { id: "project1", name: "TotalStationWork", description: "Работа с тотальными станциями для измерения расстояний и углов." },
+            { id: "project2", name: "TotalStation", description: "Программное обеспечение для обработки данных с тотальной станции." },
+            { id: "project3", name: "TestScene2", description: "Простой тестовый проект для работы с Babylon.js." },
+            { id: "project4", name: "QuestionScene", description: "Проект с вопросами и ответами." },
+            { id: "project5", name: "NewDistanceScene", description: "Проект для работы с измерениями расстояний." },
+            { id: "project6", name: "FullExample", description: "Полный пример работы с Babylon.js." },
+            { id: "project7", name: "DistanceScene", description: "Проект для работы с дистанциями и измерениями." },
+            { id: "project8", name: "BookScene2", description: "Проект с 3D книгой." },
+            { id: "project9", name: "BookScene", description: "Проект с интерактивной книгой." },
+            { id: "project10", name: "BetoneScene", description: "Проект с бетоном и строительными материалами." },
+        ];
+    
+        projects.forEach(({ id, name, description }) => {
+            const cell = this.createProjectCell(id, name, description);
+            projectsContainer.addControl(cell);
+        });
+    
+        page.addControl(projectsContainer);
+    
+        return page;
+    }
+    
+    private createProjectCell(id: string, name: string, description: string): Rectangle {
+        const cell = new Rectangle();
+        cell.width = "90%";  // Уменьшаем ширину ячейки
+        cell.height = "40px";  // Уменьшаем высоту ячейки
+        cell.color = "white";
+        cell.background = "blue";
+        cell.paddingTop = "5px";
+        cell.paddingBottom = "5px";
+        cell.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cell.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const cellText = new TextBlock();
+        cellText.text = name;
+        cellText.color = "white";
+        cellText.fontSize = 18;  // Уменьшаем размер шрифта
+        cellText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cellText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        cell.addControl(cellText);
+    
+        cell.onPointerClickObservable.add(() => {
+            alert(`Проект: ${name}\nОписание: ${description}`);
+        });
+    
+        return cell;
+    }
+    
+    private createProjectButton(id: string, name: string, description: string): Button {
+        const button = Button.CreateSimpleButton(id, name);
+        button.width = "200px";
+        button.height = "50px";
+        button.color = "white";
+        button.background = "blue";
+        button.onPointerClickObservable.add(() => {
+            alert(`Проект: ${name}\nОписание: ${description}`);
+        });
+        return button;
+    }
+
+    public toggle() {
+        this.isVisible = !this.isVisible;
+        this.container.isVisible = this.isVisible;
+        if (this.isVisible) {
+            this.updatePage();
+        }
+    }
+
+    private navigate(direction: number) {
+        const newIndex = this.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < this.pages.length) {
+            this.currentPageIndex = newIndex;
+            this.updatePage();
+        }
+    }
+
+    private updatePage() {
+        this.container.clearControls();
+
+        if (!this.navPanel) {
+            this.navPanel = this.createNavigationPanel();
+        }
+
+        const navContainer = this.createNavContainer();
+        navContainer.addControl(this.navPanel);
+
+        this.container.addControl(navContainer);
+        this.container.addControl(this.pages[this.currentPageIndex]);
+    }
+
+    private createNavigationPanel(): StackPanel {
+        const panel = new StackPanel();
+        panel.isVertical = false;
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        panel.width = "100%";
+
+        const prevButton = this.createNavButton("prev", "Previous", () => this.navigate(-1));
+        const nextButton = this.createNavButton("next", "Next", () => this.navigate(1));
+
+        panel.addControl(prevButton);
+        panel.addControl(nextButton);
+
+        return panel;
+    }
+
+    private createNavButton(id: string, label: string, callback: () => void): Button {
+        const button = Button.CreateSimpleButton(id, label);
+        button.width = "80px";
+        button.height = "30px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(callback);
+        return button;
+    }
+
+    private createNavContainer(): Rectangle {
+        const container = new Rectangle();
+        container.height = "60px";
+        container.width = "100%";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        container.thickness = 0;
+        return container;
+    }
+}
+
+
+
+
+----------------------------------------------------------------------------------------------
+private openProjectDescription(
+        name: string,
+        description: string,
+        image: string | null,
+        video: string | null
+    ): void {
+        // Контейнер страницы описания
+        const descriptionPage = new StackPanel();
+        descriptionPage.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        // Заголовок
+        const header = new TextBlock();
+        header.text = name;
+        header.color = "white";
+        header.fontSize = 24;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        descriptionPage.addControl(header);
+    
+        // Текст описания
+        const descriptionText = new TextBlock();
+        descriptionText.text = description;
+        descriptionText.color = "white";
+        descriptionText.fontSize = 18;
+        descriptionText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        descriptionPage.addControl(descriptionText);
+    
+        // Изображение, если задано
+        if (image) {
+            const imageControl = new Image("projectImage", "models/image14.png");
+            imageControl.width = "80%"; // Строковое значение
+            imageControl.height = "200px"; // Строковое значение
+            descriptionPage.addControl(imageControl);
+        }
+    
+        // Видео, если задано
+        if (video) {
+            const videoControl = new Rectangle();
+            videoControl.height = "200px";
+            videoControl.width = "80%";
+    
+            const videoElement = document.createElement("video");
+            videoElement.src = video;
+            videoElement.controls = true;
+            videoElement.style.width = "100%";
+            videoElement.style.height = "100%";
+    
+            videoControl.onPointerEnterObservable.add(() => {
+                document.body.appendChild(videoElement);
+            });
+    
+            videoControl.onPointerOutObservable.add(() => {
+                document.body.removeChild(videoElement);
+            });
+    
+            descriptionPage.addControl(videoControl);
+        }
+    
+        // Смена текущей страницы
+        this.replacePage(descriptionPage);
+    }
+
+    private replacePage(newPage: StackPanel): void {
+        // Убедитесь, что `mainContainer` определен
+        if (this.mainContainer) {
+            // Удаляем все элементы
+            this.mainContainer.getChildren().forEach(child => {
+                this.mainContainer.removeControl(child);
+            });
+    
+            // Добавляем новую страницу
+            newPage.name = "currentPage";
+            this.mainContainer.addControl(newPage);
+        }
+    }
+
+    private createProjectCell(name: string, onClick: () => void): Button {
+        const button = Button.CreateSimpleButton(name, name);
+        button.width = "200px";
+        button.height = "40px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(onClick);
+        return button;
+    }
+    
+РЕЗЕРВ Planshet.ts
+import { AdvancedDynamicTexture, Rectangle, Button, TextBlock, StackPanel, Control, Image } from "@babylonjs/gui";
+import * as BABYLON from "babylonjs";
+
+export class Planshet {
+    private guiTexture: AdvancedDynamicTexture;
+    private container: Rectangle;
+    private pages: StackPanel[] = [];
+    private currentPageIndex: number = 0;
+    private isVisible: boolean = false;
+    private navPanel: StackPanel | null = null;
+    private popups: Rectangle[] = [];  // Массив для хранения всплывающих окон
+    private mainContainer: AdvancedDynamicTexture;
+
+    constructor(private scene: BABYLON.Scene) {
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.container = this.createContainer();
+        this.guiTexture.addControl(this.container);
+        this.mainContainer = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.initializePages();
+    }
+
+    private createContainer(): Rectangle {
+        const container = new Rectangle();
+        container.width = "50%";
+        container.height = "70%";
+        container.background = "black";
+        container.thickness = 2;
+        container.color = "white";
+        container.isVisible = false;
+        return container;
+    }
+
+    private initializePages() {
+        this.pages = [
+            this.createPage("Добро пожаловать на главный экран!", 24),
+            this.createProjectsPage(),
+            this.createPage("Текущий проект: TotalStationWork\nОписание: Этот проект включает в себя работу с тотальными станциями для измерения расстояний и углов.", 20),
+            this.createPage("Конец презентации!", 20),
+        ];
+    }
+
+    private createPage(content: string, fontSize: number): StackPanel {
+        const page = new StackPanel();
+        const text = new TextBlock();
+        text.text = content;
+        text.color = "white";
+        text.fontSize = fontSize;
+        page.addControl(text);
+        return page;
+    }
+
+    private createProjectsPage(): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const headerContainer = new StackPanel();
+        headerContainer.height = "80px";
+
+        const header = new TextBlock();
+        header.text = "Выберите проект, чтобы увидеть описание:";
+        header.color = "white";
+        header.fontSize = 18;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        headerContainer.addControl(header);
+        page.addControl(headerContainer);
+
+        const projectsContainer = new StackPanel();
+        projectsContainer.paddingTop = "5px";
+
+        // Массив проектов
+        const projects = [
+            {
+                id: "project1",
+                name: "TotalStationWork",
+                description: "Работа с тотальными станциями для измерения расстояний и углов.",
+                image: "models/image14.png",
+                video: "path/to/total_station_work.mp4",
+            },
+            {
+                id: "project2",
+                name: "TotalStation",
+                description: "Программное обеспечение для обработки данных с тотальной станции.",
+                image: "path/to/total_station.jpg",
+                video: null,
+            },
+        ];
+        
+        projects.forEach(({ id, name, description, image, video }) => {
+            const cell = this.createProjectCell(id, name, description, image, video );
+            projectsContainer.addControl(cell);
+        });
+
+        page.addControl(projectsContainer);
+
+        return page;
+    }
+
+    private createProjectCell(id: string, name: string, description: string, image?: string, video?: string | null): Rectangle {
+    // Создаем новый элемент Rectangle для представления ячейки
+    const cell = new Rectangle();
+    cell.width = "80%";  // Устанавливаем ширину ячейки
+    cell.height = "30px";  // Устанавливаем высоту ячейки
+    cell.color = "white";  // Устанавливаем цвет фона ячейки
+    cell.background = "blue";  // Устанавливаем фоновый цвет ячейки
+    cell.paddingTop = "2px";  // Уменьшаем отступы сверху
+    cell.paddingBottom = "2px";  // Уменьшаем отступы снизу
+    cell.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;  // Выравниваем по горизонтали
+    cell.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;  // Выравниваем по вертикали
+
+    // Добавляем текст с именем проекта в ячейку
+    const cellText = new TextBlock();
+    cellText.text = name;
+    cellText.color = "white";
+    cellText.fontSize = 14;  // Уменьшаем размер шрифта
+    cellText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;  // Выравниваем текст по горизонтали
+    cellText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;  // Выравниваем текст по вертикали
+    cell.addControl(cellText);
+
+    // Если изображение существует, добавляем его в ячейку
+    if (image) {
+        const projectImage = new Image("project-image", image);
+        projectImage.width = "50px";  // Устанавливаем начальный размер изображения
+        projectImage.height = "50px";  // Устанавливаем начальную высоту изображения
+        projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;  // Выравниваем изображение по вертикали
+        projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;  // Выравниваем изображение по горизонтали
+        
+        // Обработчик клика по изображению
+        let isExpanded = false;
+        
+        projectImage.onPointerClickObservable.add(() => {
+            if (!isExpanded) {
+                // Разворачиваем изображение
+                projectImage.width = "100%";  // Устанавливаем размер для расширенного состояния
+                projectImage.height = "70%";  // Высота изображения для расширенного состояния
+                projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+                projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+                isExpanded = true;
+            } else {
+                // Свертываем изображение
+                projectImage.width = "50px";  // Устанавливаем начальный размер изображения
+                projectImage.height = "50px";  // Высота изображения для свернутого состояния
+                projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+                projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+                isExpanded = false;
+            }
+        });
+        
+        cell.addControl(projectImage);
+    }
+
+    // Обработчик клика по ячейке для отображения проекта
+    cell.onPointerClickObservable.add(() => {
+        // Создаем всплывающее окно с описанием проекта
+        const projectWindow = new Rectangle();
+        projectWindow.width = "80%";  // Устанавливаем ширину окна такого же, как у планшета
+        projectWindow.height = "100%";  // Устанавливаем высоту окна такого же, как у планшета
+        projectWindow.color = "white";
+        projectWindow.background = "black";
+        projectWindow.cornerRadius = 10;
+        projectWindow.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        projectWindow.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        // Добавляем изображение проекта в окно
+        if (image) {
+            const projectImage = new Image("project-window-image", image);
+            projectImage.width = "100%";  // Устанавливаем размер изображения в окне
+            projectImage.height = "70%";  // Высота изображения
+            projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+            projectWindow.addControl(projectImage);
+        }
+
+        // Добавляем текстовое описание проекта в окно
+        const projectDescription = new TextBlock();
+        projectDescription.text = `${name}\n${description}`;
+        projectDescription.color = "white";
+        projectDescription.fontSize = 16;
+        projectDescription.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        projectDescription.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        projectWindow.addControl(projectDescription);
+
+        // Добавляем кнопку закрытия в окно
+        const closeProjectButton = Button.CreateSimpleButton(`close-${id}-project`, "X");
+        closeProjectButton.width = "20px";
+        closeProjectButton.height = "20px";
+        closeProjectButton.color = "white";
+        closeProjectButton.background = "red";
+        closeProjectButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        closeProjectButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        closeProjectButton.top = "-10px";  // Немного поднимаем кнопку вверх
+        closeProjectButton.onPointerClickObservable.add(() => {
+            projectWindow.isVisible = false; // Закрытие окна с проектом
+        });
+
+        projectWindow.addControl(closeProjectButton);
+
+        // Добавляем окно с описанием на экран
+        this.guiTexture.addControl(projectWindow);
+    });
+
+    return cell;
+}
+
+    
+    
+    
+
+
+    private openProjectWindow(name: string, description: string) {
+        const popup = new Rectangle();
+        popup.width = "60%";
+        popup.height = "60%";
+        popup.background = "black";
+        popup.color = "white";
+        popup.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        popup.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        popup.alpha = 0.9;
+
+        const header = new TextBlock();
+        header.text = `Проект: ${name}`;
+        header.color = "white";
+        header.fontSize = 18;
+        header.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        popup.addControl(header);
+
+        const content = new TextBlock();
+        content.text = description;
+        content.color = "white";
+        content.fontSize = 16;
+        content.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        content.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        popup.addControl(content);
+
+        const closeButton = this.createCloseButton(popup);
+        popup.addControl(closeButton);
+
+        this.guiTexture.addControl(popup);
+        this.popups.push(popup);  // Сохраняем всплывающее окно для дальнейшего управления
+    }
+
+    private createCloseButton(popup: Rectangle): Button {
+        const closeButton = Button.CreateSimpleButton("close", "X");
+        closeButton.width = "30px";
+        closeButton.height = "30px";
+        closeButton.color = "white";
+        closeButton.background = "red";
+        closeButton.top = "-15px";
+        closeButton.left = "calc(100% - 30px)";
+        closeButton.onPointerClickObservable.add(() => {
+            this.closePopup(popup);
+        });
+        return closeButton;
+    }
+
+    private closePopup(popup: Rectangle) {
+        popup.isVisible = false;
+        this.popups = this.popups.filter(p => p !== popup);  // Убираем всплывающее окно из списка
+    }
+
+    public toggle() {
+        this.isVisible = !this.isVisible;
+        this.container.isVisible = this.isVisible;
+        if (this.isVisible) {
+            this.updatePage();
+        }
+    }
+
+    private navigate(direction: number) {
+        const newIndex = this.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < this.pages.length) {
+            this.currentPageIndex = newIndex;
+            this.updatePage();
+        }
+    }
+
+    private updatePage() {
+        this.container.clearControls();
+
+        if (!this.navPanel) {
+            this.navPanel = this.createNavigationPanel();
+        }
+
+        const navContainer = this.createNavContainer();
+        navContainer.addControl(this.navPanel);
+
+        this.container.addControl(navContainer);
+        this.container.addControl(this.pages[this.currentPageIndex]);
+    }
+
+    private createNavigationPanel(): StackPanel {
+        const panel = new StackPanel();
+        panel.isVertical = false;
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        panel.width = "100%";
+
+        const prevButton = this.createNavButton("prev", "Previous", () => this.navigate(-1));
+        const nextButton = this.createNavButton("next", "Next", () => this.navigate(1));
+
+        panel.addControl(prevButton);
+        panel.addControl(nextButton);
+
+        return panel;
+    }
+
+    private createNavButton(id: string, label: string, callback: () => void): Button {
+        const button = Button.CreateSimpleButton(id, label);
+        button.width = "80px";
+        button.height = "30px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(callback);
+        return button;
+    }
+
+    private createNavContainer(): Rectangle {
+        const container = new Rectangle();
+        container.height = "60px";
+        container.width = "100%";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        container.thickness = 0;
+        return container;
+    }
+}
+
+№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№№
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { AdvancedDynamicTexture, Rectangle, Button, TextBlock, StackPanel, Control, Image } from "@babylonjs/gui";
+import * as BABYLON from "babylonjs";
+
+export class Planshet {
+    private guiTexture: AdvancedDynamicTexture;
+    private container: Rectangle;
+    private pages: StackPanel[] = [];
+    private currentPageIndex: number = 0;
+    private isVisible: boolean = false;
+    private navPanel: StackPanel | null = null;
+    private popups: Rectangle[] = [];  // Массив для хранения всплывающих окон
+    private mainContainer: AdvancedDynamicTexture;
+
+    constructor(private scene: BABYLON.Scene) {
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.container = this.createContainer();
+        this.guiTexture.addControl(this.container);
+        this.mainContainer = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.initializePages();
+    }
+
+    private createContainer(): Rectangle {
+        const container = new Rectangle();
+        container.width = "50%";
+        container.height = "70%";
+        container.background = "black";
+        container.thickness = 2;
+        container.color = "white";
+        container.isVisible = false;
+        return container;
+    }
+
+    private initializePages() {
+        this.pages = [
+            this.createPage("Добро пожаловать на главный экран!", 24),
+            this.createProjectsPage(),
+            this.createPage("Текущий проект: TotalStationWork\nОписание: Этот проект включает в себя работу с тотальными станциями для измерения расстояний и углов.", 20),
+            this.createPage("Конец презентации!", 20),
+        ];
+    }
+
+    private createPage(content: string, fontSize: number): StackPanel {
+        const page = new StackPanel();
+        const text = new TextBlock();
+        text.text = content;
+        text.color = "white";
+        text.fontSize = fontSize;
+        page.addControl(text);
+        return page;
+    }
+
+    private createProjectsPage(): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        // Контейнер для заголовка
+        const headerContainer = new StackPanel();
+        headerContainer.height = "80px";
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const header = new TextBlock();
+        header.text = "Выберите проект, чтобы увидеть описание:";
+        header.color = "white";
+        header.fontSize = 18;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+        headerContainer.addControl(header);
+        page.addControl(headerContainer);
+    
+        // Контейнер для проектов
+        const projectsContainer = new StackPanel();
+        projectsContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        projectsContainer.paddingTop = "5px"; // Добавляем отступ сверху
+    
+        // Массив проектов
+        const projects = [
+            {
+                id: "project1",
+                name: "TotalStationWork",
+                description: "Работа с тотальными станциями для измерения расстояний и углов.",
+                image: "models/image14.png",
+                video: "path/to/total_station_work.mp4",
+            },
+            {
+                id: "project2",
+                name: "TotalStation",
+                description: "Программное обеспечение для обработки данных с тотальной станции.",
+                image: "path/to/total_station.jpg",
+                video: null,
+            },
+        ];
+        
+        projects.forEach(({ id, name, description, image, video }) => {
+            const cell = this.createProjectCell(id, name, description, image, video);
+            projectsContainer.addControl(cell);
+        });
+    
+        page.addControl(projectsContainer);
+    
+        return page;
+    }
+    
+
+    private createProjectCell(id: string, name: string, description: string, image?: string, video?: string | null): Rectangle {
+        const cell = new Rectangle();
+        cell.width = "80%";
+        cell.height = "30px";
+        cell.color = "white";
+        cell.background = "blue";
+        cell.paddingTop = "2px";
+        cell.paddingBottom = "2px";
+        cell.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cell.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const cellText = new TextBlock();
+        cellText.text = name;
+        cellText.color = "white";
+        cellText.fontSize = 14;
+        cellText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cellText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        cell.addControl(cellText);
+    
+        // Если есть изображение, добавляем его во всплывающее окно планшета
+        if (image) {
+            cell.onPointerClickObservable.add(() => {
+                // Создаем всплывающее окно
+                const popup = new Rectangle();
+                popup.width = "80%";
+                popup.height = "80%";
+                popup.color = "white";
+                popup.background = "black";
+                popup.cornerRadius = 10;
+                popup.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+                popup.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+                // Добавляем изображение во всплывающее окно
+                const projectImage = new Image("image", image);
+                projectImage.width = "30%";
+                projectImage.height = "30%";
+                projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT; // Расположение в левом нижнем углу
+        projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+    
+                // Логика увеличения/уменьшения изображения
+                let isExpanded = false;
+                projectImage.onPointerClickObservable.add(() => {
+                    if (!isExpanded) {
+                        projectImage.width = "100%";
+                        projectImage.height = "100%";
+                    } else {
+                        projectImage.width = "30%";
+                        projectImage.height = "30%";
+                    }
+                    isExpanded = !isExpanded;
+                });
+    
+                popup.addControl(projectImage);
+    
+                // Кнопка закрытия окна
+                const closeButton = this.createCloseButton(popup);
+                popup.addControl(closeButton);
+    
+                this.guiTexture.addControl(popup); // Добавляем окно на планшет
+            });
+        }
+    
+        return cell;
+    }
+    
+
+    
+    
+    
+
+
+    /*private openProjectWindow(name: string, description: string) {
+        const popup = new Rectangle();
+        popup.width = "60%";
+        popup.height = "60%";
+        popup.background = "black";
+        popup.color = "white";
+        popup.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        popup.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        popup.alpha = 0.9;
+
+        const header = new TextBlock();
+        header.text = `Проект: ${name}`;
+        header.color = "white";
+        header.fontSize = 18;
+        header.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        popup.addControl(header);
+
+        const content = new TextBlock();
+        content.text = description;
+        content.color = "white";
+        content.fontSize = 16;
+        content.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        content.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        popup.addControl(content);
+
+        const closeButton = this.createCloseButton(popup);
+        popup.addControl(closeButton);
+
+        this.guiTexture.addControl(popup);
+        this.popups.push(popup);  // Сохраняем всплывающее окно для дальнейшего управления
+    }*/
+
+        private createCloseButton(popup: Rectangle): Button {
+            const closeButton = Button.CreateSimpleButton("close", "X");
+            closeButton.width = "30px";
+            closeButton.height = "30px";
+            closeButton.color = "white";
+            closeButton.background = "red";
+            closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT; // Выравниваем по правому краю
+            closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP; // Выравниваем по верхнему краю
+            closeButton.paddingRight = "10px"; // Отступ от правого края
+            closeButton.paddingTop = "10px"; // Отступ от верхнего края
+        
+            closeButton.onPointerClickObservable.add(() => {
+                popup.isVisible = false;
+                this.guiTexture.removeControl(popup); // Убираем всплывающее окно
+            });
+        
+            return closeButton;
+        }
+
+    public toggle() {
+        this.isVisible = !this.isVisible;
+        this.container.isVisible = this.isVisible;
+        if (this.isVisible) {
+            this.updatePage();
+        }
+    }
+
+    private navigate(direction: number) {
+        const newIndex = this.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < this.pages.length) {
+            this.currentPageIndex = newIndex;
+            this.updatePage();
+        }
+    }
+
+    private updatePage() {
+        this.container.clearControls();
+
+        if (!this.navPanel) {
+            this.navPanel = this.createNavigationPanel();
+        }
+
+        const navContainer = this.createNavContainer();
+        navContainer.addControl(this.navPanel);
+
+        this.container.addControl(navContainer);
+        this.container.addControl(this.pages[this.currentPageIndex]);
+    }
+
+    private createNavigationPanel(): StackPanel {
+        const panel = new StackPanel();
+        panel.isVertical = false;
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        panel.width = "100%";
+
+        const prevButton = this.createNavButton("prev", "Previous", () => this.navigate(-1));
+        const nextButton = this.createNavButton("next", "Next", () => this.navigate(1));
+
+        panel.addControl(prevButton);
+        panel.addControl(nextButton);
+
+        return panel;
+    }
+
+    private createNavButton(id: string, label: string, callback: () => void): Button {
+        const button = Button.CreateSimpleButton(id, label);
+        button.width = "80px";
+        button.height = "30px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(callback);
+        return button;
+    }
+
+    private createNavContainer(): Rectangle {
+        const container = new Rectangle();
+        container.height = "60px";
+        container.width = "100%";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        container.thickness = 0;
+        return container;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { AdvancedDynamicTexture, Rectangle, Button, TextBlock, StackPanel, Control, Image } from "@babylonjs/gui";
+import * as BABYLON from "babylonjs";
+
+export class Planshet {
+    private guiTexture: AdvancedDynamicTexture;
+    private container: Rectangle;
+    private pages: StackPanel[] = [];
+    private currentPageIndex: number = 0;
+    private isVisible: boolean = false;
+    private navPanel: StackPanel | null = null;
+    private popups: Rectangle[] = [];  // Массив для хранения всплывающих окон
+    private pageDescriptions: string[] = [];  // Массив для хранения описаний страниц
+    
+    constructor(private scene: BABYLON.Scene) {
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.container = this.createContainer();
+        this.guiTexture.addControl(this.container);
+        this.initializePages();
+    }
+
+    private createContainer(): Rectangle {
+        const container = new Rectangle();
+        container.width = "50%";
+        container.height = "70%";
+        container.background = "black";
+        container.thickness = 2;
+        container.color = "white";
+        container.isVisible = false;
+        return container;
+    }
+
+    private initializePages() {
+        this.pageDescriptions = [
+            "Добро пожаловать на главный экран!",
+            "Текущий проект: TotalStationWork\nОписание: Этот проект включает в себя работу с тотальными станциями для измерения расстояний и углов.",
+            "Конец презентации!"
+        ];
+
+        this.pages = [
+            this.createPage(this.pageDescriptions[0], 24),
+            this.createProjectsPage(),
+            this.createPage(this.pageDescriptions[1], 20),
+            this.createPage(this.pageDescriptions[2], 20),
+        ];
+    }
+    
+    private createPage(content: string, fontSize: number): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const headerContainer = new StackPanel();
+        headerContainer.height = "80px";
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const text = new TextBlock();
+        text.text = content;
+        text.color = "white";
+        text.fontSize = fontSize;
+        text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        text.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        text.paddingTop = "10px";
+
+        page.addControl(text);
+        page.addControl(headerContainer);
+        return page;
+    }
+    
+    private createProjectsPage(): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const headerContainer = new StackPanel();
+        headerContainer.height = "80px";
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const header = new TextBlock();
+        header.text = "Выберите проект, чтобы увидеть описание:";
+        header.color = "white";
+        header.fontSize = 18;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        headerContainer.addControl(header);
+        page.addControl(headerContainer);
+
+        const projectsContainer = new StackPanel();
+        projectsContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        projectsContainer.paddingTop = "5px";
+
+        const projects = [
+            {
+                id: "project1",
+                name: "TotalStationWork",
+                description: "Работа с тотальными станциями для измерения расстояний и углов.",
+                image: "models/image14.png",
+                video: "path/to/total_station_work.mp4",
+            },
+            {
+                id: "project2",
+                name: "TotalStation",
+                description: "Программное обеспечение для обработки данных с тотальной станции.",
+                image: "path/to/total_station.jpg",
+                video: null,
+            },
+        ];
+
+        projects.forEach(({ id, name, description, image, video }) => {
+            const cell = this.createProjectCell(id, name, description, image, video);
+            projectsContainer.addControl(cell);
+        });
+
+        page.addControl(projectsContainer);
+
+        return page;
+    }
+
+    private createProjectCell(id: string, name: string, description: string, image?: string, video?: string | null): Rectangle {
+        const cell = new Rectangle();
+        cell.width = "80%";
+        cell.height = "30px";
+        cell.color = "white";
+        cell.background = "blue";
+        cell.paddingTop = "2px";
+        cell.paddingBottom = "2px";
+        cell.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cell.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const cellText = new TextBlock();
+        cellText.text = name;
+        cellText.color = "white";
+        cellText.fontSize = 14;
+        cellText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cellText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        cell.addControl(cellText);
+
+        if (description) {
+            cell.onPointerClickObservable.add(() => {
+                const popup = this.createPopup(description, image);
+                this.guiTexture.addControl(popup);
+            });
+        }
+
+        return cell;
+    }
+
+    private createPopup(description: string, image?: string): Rectangle {
+        const popup = new Rectangle();
+        popup.width = "80%";
+        popup.height = "80%";
+        popup.color = "white";
+        popup.background = "black";
+        popup.cornerRadius = 10;
+        popup.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        popup.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        const projectDescription = new TextBlock();
+        projectDescription.text = description;
+        projectDescription.color = "white";
+        projectDescription.fontSize = 16;
+        projectDescription.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        projectDescription.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        popup.addControl(projectDescription);
+
+        if (image) {
+            const projectImage = new Image("image", image);
+            projectImage.width = "30%";
+            projectImage.height = "30%";
+            projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+            projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+
+            let isExpanded = false;
+            projectImage.onPointerClickObservable.add(() => {
+                if (!isExpanded) {
+                    projectImage.width = "100%";
+                    projectImage.height = "100%";
+                } else {
+                    projectImage.width = "50%";
+                    projectImage.height = "50%";
+                }
+                isExpanded = !isExpanded;
+            });
+
+            popup.addControl(projectImage);
+        }
+
+        const closeButton = this.createCloseButton(popup);
+        popup.addControl(closeButton);
+
+        return popup;
+    }
+
+    private createCloseButton(popup: Rectangle): Button {
+        const closeButton = Button.CreateSimpleButton("close", "X");
+        closeButton.width = "30px";
+        closeButton.height = "30px";
+        closeButton.color = "white";
+        closeButton.background = "red";
+        closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        closeButton.paddingRight = "10px";
+        closeButton.paddingTop = "10px";
+
+        closeButton.onPointerClickObservable.add(() => {
+            popup.isVisible = false;
+            this.guiTexture.removeControl(popup);
+        });
+
+        return closeButton;
+    }
+
+    public toggle() {
+        this.isVisible = !this.isVisible;
+        this.container.isVisible = this.isVisible;
+        if (this.isVisible) {
+            this.updatePage();
+        }
+    }
+
+    private navigate(direction: number) {
+        const newIndex = this.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < this.pages.length) {
+            this.currentPageIndex = newIndex;
+            this.updatePage();
+        }
+    }
+
+    private updatePage() {
+        this.container.clearControls();
+
+        if (!this.navPanel) {
+            this.navPanel = this.createNavigationPanel();
+        }
+
+        const navContainer = this.createNavContainer();
+        navContainer.addControl(this.navPanel);
+
+        this.container.addControl(navContainer);
+        this.container.addControl(this.pages[this.currentPageIndex]);
+    }
+
+    private createNavigationPanel(): StackPanel {
+        const panel = new StackPanel();
+        panel.isVertical = false;
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        panel.width = "100%";
+
+        const prevButton = this.createNavButton("prev", "Previous", () => this.navigate(-1));
+        const nextButton = this.createNavButton("next", "Next", () => this.navigate(1));
+
+        panel.addControl(prevButton);
+        panel.addControl(nextButton);
+
+        return panel;
+    }
+
+    private createNavButton(id: string, label: string, callback: () => void): Button {
+        const button = Button.CreateSimpleButton(id, label);
+        button.width = "80px";
+        button.height = "30px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(callback);
+        return button;
+    }
+
+    private createNavContainer(): Rectangle {
+        const container = new Rectangle();
+        container.height = "60px";
+        container.width = "100%";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        container.thickness = 0;
+        return container;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { AdvancedDynamicTexture, Rectangle, Button, TextBlock, StackPanel, Control, Image } from "@babylonjs/gui";
+import * as BABYLON from "babylonjs";
+
+export class Planshet {
+    private guiTexture: AdvancedDynamicTexture;
+    private container: Rectangle;
+    private pages: StackPanel[] = [];
+    private currentPageIndex: number = 0;
+    private isVisible: boolean = false;
+    private navPanel: StackPanel | null = null;
+    private popups: Rectangle[] = [];  // Массив для хранения всплывающих окон
+    private pageDescriptions: string[] = [];  // Массив для хранения описаний страниц
+    
+    constructor(private scene: BABYLON.Scene) {
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+        this.container = this.createContainer();
+        this.guiTexture.addControl(this.container);
+        this.initializePages();
+    }
+
+    private createContainer(): Rectangle {
+        const container = new Rectangle();
+        container.width = "50%"; // Ширина контейнера
+        container.height = "70%"; // Высота контейнера
+        container.background = "black";
+        container.thickness = 2;
+        container.color = "white";
+        container.isVisible = false;
+        return container;
+    }
+    
+    private initializePages() {
+        this.pageDescriptions = [
+            "Добро пожаловать на главный экран!",
+            "Текущий проект: TotalStationWork\nОписание: Этот проект включает в себя работу с тотальными станциями для измерения расстояний и углов.",
+            "Конец презентации!"
+        ];
+    
+        this.pages = [
+            this.createPage(this.pageDescriptions[0], 24),
+            this.createProjectsPage(),
+            this.createPage(this.pageDescriptions[1], 20),
+            this.createPage(this.pageDescriptions[2], 20),
+        ];
+    }
+    
+    private createPage(content: string, fontSize: number): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const headerContainer = new StackPanel();
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        headerContainer.paddingTop = 10; // Добавляем отступ сверху
+    
+        const text = new TextBlock();
+        text.text = content;
+        text.color = "white";
+        text.fontSize = fontSize;
+        text.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        text.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        text.paddingTop = "10px";
+        text.width = "90%"; // Устанавливаем максимальную ширину текста
+        text.textWrapping = true; // Разворачивание текста по ширине
+    
+        // Рассчитаем высоту контейнера для текста
+        const lineHeight = fontSize + 4; // Дополнительные отступы
+        const textLines = content.split('\n').length;
+        const maxTextHeight = lineHeight * textLines + 60; // Увеличиваем еще больше дополнительную высоту для отступов
+        headerContainer.height = `${Math.min(maxTextHeight, 400)}px`; // Ограничиваем максимальную высоту контейнера
+    
+        page.addControl(text);
+        page.addControl(headerContainer);
+        return page;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    private createProjectsPage(): StackPanel {
+        const page = new StackPanel();
+        page.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const headerContainer = new StackPanel();
+        headerContainer.height = "80px";
+        headerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    
+        const header = new TextBlock();
+        header.text = "Выберите проект, чтобы увидеть описание:";
+        header.color = "white";
+        header.fontSize = 18;
+        header.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        header.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+        headerContainer.addControl(header);
+        page.addControl(headerContainer);
+    
+        const projectsContainer = new StackPanel();
+        projectsContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        projectsContainer.paddingTop = "5px";
+    
+        const projects = [
+            {
+                id: "project1",
+                name: "TotalStationWork",
+                description: "Работа с тотальными станциями для измерения расстояний и углов.",
+                image: "models/image14.png",
+                video: "path/to/total_station_work.mp4",
+            },
+            {
+                id: "project2",
+                name: "TotalStation",
+                description: "Программное обеспечение для обработки данных с тотальной станции.",
+                image: "path/to/total_station.jpg",
+                video: null,
+            },
+        ];
+    
+        projects.forEach(({ id, name, description, image, video }) => {
+            const cell = this.createProjectCell(id, name, description, image, video);
+            projectsContainer.addControl(cell);
+        });
+    
+        page.addControl(projectsContainer);
+    
+        return page;
+    }
+    
+
+    private createProjectCell(id: string, name: string, description: string, image?: string, video?: string | null): Rectangle {
+        const cell = new Rectangle();
+        cell.width = "80%";
+        cell.height = "30px";
+        cell.color = "white";
+        cell.background = "blue";
+        cell.paddingTop = "2px";
+        cell.paddingBottom = "2px";
+        cell.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cell.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+        const cellText = new TextBlock();
+        cellText.text = name;
+        cellText.color = "white";
+        cellText.fontSize = 14;
+        cellText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        cellText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        cell.addControl(cellText);
+
+        if (description) {
+            cell.onPointerClickObservable.add(() => {
+                const popup = this.createPopup(description, image);
+                this.guiTexture.addControl(popup);
+            });
+        }
+
+        return cell;
+    }
+
+    private createPopup(description: string, image?: string): Rectangle {
+        const popup = new Rectangle();
+        popup.width = "80%";
+        popup.height = "80%";
+        popup.color = "white";
+        popup.background = "black";
+        popup.cornerRadius = 10;
+        popup.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        popup.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+        const projectDescription = new TextBlock();
+        projectDescription.text = description;
+        projectDescription.color = "white";
+        projectDescription.fontSize = 16;
+        projectDescription.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        projectDescription.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        popup.addControl(projectDescription);
+
+        if (image) {
+            const projectImage = new Image("image", image);
+            projectImage.width = "30%";
+            projectImage.height = "30%";
+            projectImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+            projectImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+
+            let isExpanded = false;
+            projectImage.onPointerClickObservable.add(() => {
+                if (!isExpanded) {
+                    projectImage.width = "100%";
+                    projectImage.height = "100%";
+                } else {
+                    projectImage.width = "50%";
+                    projectImage.height = "50%";
+                }
+                isExpanded = !isExpanded;
+            });
+
+            popup.addControl(projectImage);
+        }
+
+        const closeButton = this.createCloseButton(popup);
+        popup.addControl(closeButton);
+
+        return popup;
+    }
+
+    private createCloseButton(popup: Rectangle): Button {
+        const closeButton = Button.CreateSimpleButton("close", "X");
+        closeButton.width = "30px";
+        closeButton.height = "30px";
+        closeButton.color = "white";
+        closeButton.background = "red";
+        closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        closeButton.paddingRight = "10px";
+        closeButton.paddingTop = "10px";
+
+        closeButton.onPointerClickObservable.add(() => {
+            popup.isVisible = false;
+            this.guiTexture.removeControl(popup);
+        });
+
+        return closeButton;
+    }
+
+    public toggle() {
+        this.isVisible = !this.isVisible;
+        this.container.isVisible = this.isVisible;
+        if (this.isVisible) {
+            this.updatePage();
+        }
+    }
+
+    private navigate(direction: number) {
+        const newIndex = this.currentPageIndex + direction;
+        if (newIndex >= 0 && newIndex < this.pages.length) {
+            this.currentPageIndex = newIndex;
+            this.updatePage();
+        }
+    }
+
+    private updatePage() {
+        this.container.clearControls();
+
+        if (!this.navPanel) {
+            this.navPanel = this.createNavigationPanel();
+        }
+
+        const navContainer = this.createNavContainer();
+        navContainer.addControl(this.navPanel);
+
+        this.container.addControl(navContainer);
+        this.container.addControl(this.pages[this.currentPageIndex]);
+    }
+
+    private createNavigationPanel(): StackPanel {
+        const panel = new StackPanel();
+        panel.isVertical = false;
+        panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        panel.width = "100%";
+
+        const prevButton = this.createNavButton("prev", "Previous", () => this.navigate(-1));
+        const nextButton = this.createNavButton("next", "Next", () => this.navigate(1));
+
+        panel.addControl(prevButton);
+        panel.addControl(nextButton);
+
+        return panel;
+    }
+
+    private createNavButton(id: string, label: string, callback: () => void): Button {
+        const button = Button.CreateSimpleButton(id, label);
+        button.width = "80px";
+        button.height = "30px";
+        button.color = "white";
+        button.background = "gray";
+        button.onPointerClickObservable.add(callback);
+        return button;
+    }
+
+    private createNavContainer(): Rectangle {
+        const container = new Rectangle();
+        container.height = "60px";
+        container.width = "100%";
+        container.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        container.thickness = 0;
+        return container;
+    }
+}
