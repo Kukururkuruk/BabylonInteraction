@@ -337,12 +337,14 @@ BetonTrigger(): void {
 
     // Углы вращения по оси Y (пример из кода)
     const rotationXValues = [
-        Math.PI ,   // 90 градусов
-        Math.PI/ 2,       // 180 градусов
-        Math.PI / 3,   // 60 градусов
-        -Math.PI / 3   // -60 градусов
+        2 * -Math.PI / 3,       // 180 градусов
+        -Math.PI / 2,   // 60 градусов
+        -Math.PI / 3,   // -60 градусов
+        Math.PI 
     ];
 
+
+    
     const secondTriggerZone = this.triggerManager.setupZoneTrigger(
         clickZonePosition,
         () => {
@@ -357,12 +359,14 @@ BetonTrigger(): void {
                     () => {
                         if (this.beam2) {
                             // Привязываем клик к beam2
+                            const imageMeshes = this.modelLoader.getMeshes("image") || [];
+                            imageMeshes[1].isVisible = true
                             this.triggerManager.setupClickableMesh(this.beam2, () => {
                                 this.clickFour++;
                                 this.clickCount++;
 
                                 // Логика вращения второй модели
-                                const imageMeshes = this.modelLoader.getMeshes("image") || [];
+                                
                                 if (imageMeshes.length > 1) {
                                     const targetMesh = imageMeshes[1]; // Предполагается, что это нужный меш
                                     const rotationIndex = (this.clickFour - 1) % rotationXValues.length;

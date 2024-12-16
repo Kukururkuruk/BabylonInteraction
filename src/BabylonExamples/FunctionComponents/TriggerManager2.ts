@@ -23,6 +23,7 @@ import {
   TransformNode,
   GlowLayer,
   AxesViewer,
+  KeyboardEventTypes,
 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
@@ -88,8 +89,6 @@ export class TriggerManager2 {
 
    measurementLine: LinesMesh | null = null;
 
-   private dynamicLine: LinesMesh | null = null;
-   private glowLayer: GlowLayer | null = null;
   
   
     constructor(
@@ -517,6 +516,47 @@ export class TriggerManager2 {
   activateLaserMode(): void {
     const camera = this.scene.activeCamera as FreeCamera;
 
+    camera.detachControl();
+    camera.inputs.clear(); // Удаляем все входы
+    camera.inputs.addMouse(); // Добавляем только вращение мышью
+    camera.attachControl(this.canvas, true);
+    const originalFov = camera.fov;
+
+    // Обработка нажатия клавиши Q
+    let isZoomedIn = false;
+    this.scene.onKeyboardObservable.add((kbInfo) => {
+        if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+            if (kbInfo.event.key === "q" || kbInfo.event.key === "Q") {
+                if (isZoomedIn) {
+                    // Если камера уже уменьшена, восстанавливаем оригинальный FOV
+                    camera.fov = originalFov;
+                } else {
+                    // Уменьшаем FOV камеры
+                    camera.fov /= 2;
+                }
+                // Переключаем флаг
+                isZoomedIn = !isZoomedIn;
+            }
+        }
+    });
+
+
+        // Ограничение угла поворота камеры по оси Y (вправо-влево)
+        const maxRotation = Math.PI;  // Максимальный угол 90 градусов
+        const minRotation = 0; // Минимальный угол -90 градусов
+    
+        this.scene.onBeforeRenderObservable.add(() => {
+            // Ограничиваем вращение камеры по оси Y
+            const euler = camera.rotation;
+            if (euler.y > maxRotation) {
+                euler.y = maxRotation;
+            }
+            if (euler.y < minRotation) {
+                euler.y = minRotation;
+            }
+            camera.rotation = euler; // Применяем ограничение угла
+        });
+
     // Сфера пересечения
     const pointSize = 0.05;
     this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
@@ -559,14 +599,7 @@ export class TriggerManager2 {
         }
     };
 
-    const page3 = this.dialogPage.createNumericInputPage("Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже.", "Штрина проезжей части", 11,11.20,() => {
-      this.exitLaserMode(); // Завершаем режим лазера
-      const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
-        window.location.href = '/ВыборИнструмента';
-      })
-      this.guiManager.CreateDialogBox([page4])
-    })
-    this.guiManager.CreateDialogBox([page3])
+
 
     this.scene.registerBeforeRender(() => {
         const origin = camera.globalPosition.clone();
@@ -607,6 +640,18 @@ export class TriggerManager2 {
             }
         }
     });
+
+        const page3 = this.dialogPage.createNumericInputPage("Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже.", "Штрина проезжей части", 11,11.20,() => {
+        this.removeAdditionalSpheres();
+        this.disableCameraMovement();
+
+        this.scene.render();
+      const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
+        window.location.href = '/ВыборИнструмента';
+      })
+      this.guiManager.CreateDialogBox([page4])
+    })
+    this.guiManager.CreateDialogBox([page3])
 }
 
 
@@ -621,9 +666,9 @@ export class TriggerManager2 {
     private createAdditionalSpheres(): void {
         // Координаты сфер
         const sphereCoordinates = [
-            new Vector3(-1.00, 8.32, -3.6),
-            new Vector3(-0.98, 8.09, -3.6),
-            new Vector3(-0.81, 9.08, -3.6)
+            new Vector3(-1.00, 8.32, -3.58),
+            new Vector3(-0.98, 8.09, -3.58),
+            new Vector3(-0.81, 9.08, -3.58)
         ];
 
         // Общие настройки для всех сфер
@@ -747,41 +792,36 @@ export class TriggerManager2 {
     }
 
 // Метод для выхода из режима лазера
-    exitLaserMode(): void {
-        // Очистка центрального куба и луча
-        if (this.centralCube) {
-            this.centralCube.dispose();
-            this.centralCube = null;
-        }
-        if (this.redRay) {
-            this.redRay.dispose();
-            this.redRay = null;
-        }
-        if (this.intersectionPoint) {
-            this.intersectionPoint.dispose();
-            this.intersectionPoint = null;
-        }
+exitLaserMode(): void {
+  // Очистка динамической линии и её подсветки
+  if (this.glowLayer) {
+      this.glowLayer.dispose(); // Удаляем GlowLayer
+      this.glowLayer = null;
+  }
+  if (this.dynamicLine) {
+      this.dynamicLine.dispose(); // Удаляем линию
+      this.dynamicLine = null;
+  }
 
-        // Очистка дополнительных сфер
-        this.removeAdditionalSpheres();
+  // Очистка сферы пересечения
+  if (this.intersectionPoint) {
+      this.intersectionPoint.dispose(); // Удаляем точку пересечения
+      this.intersectionPoint = null;
+  }
 
-        // Удаление кнопки "Завершить"
-        this.removeFinishButton();
+  // Очистка дополнительных сфер
+  this.removeAdditionalSpheres();
 
-        // Удаление сообщения
-        this.removeMessage();
-        this.removeAngle();
-        this.scene.render();
+  // Удаление кнопки "Завершить" (если есть)
+  this.removeFinishButton();
 
-        // Восстановление управления камерой
-        const camera = this.scene.activeCamera as FreeCamera;
-        camera.detachControl();
-        camera.inputs.clear();
-        camera.inputs.addKeyboard();
-        camera.inputs.addMouse();
-        camera.attachControl(this.canvas, true);
-        this.setupCameraKeys(camera);
-    }
+  // Удаление сообщения
+  this.removeMessage();
+  this.removeAngle();
+
+  this.scene.render();
+}
+
 
 // Метод для удаления дополнительных сфер
     private removeAdditionalSpheres(): void {

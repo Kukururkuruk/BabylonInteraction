@@ -45,7 +45,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
     });
       
       this.CreateController();
-      this.createLogCameraButton()
+      // this.createLogCameraButton()
 
       this.DistanceTrigger();
         this.engine.runRenderLoop(() => {
@@ -196,6 +196,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
             () => {
                 if (!this.zoneTriggered) {
                     this.zoneTriggered = true;
+                    this.triggerManager.disableCameraMovement();
 
                         // const page2 = this.dialogPage.addText("Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование».  Принцип работы показан в видеоролике:")
                         // this.guiManager.CreateDialogBox([page2])

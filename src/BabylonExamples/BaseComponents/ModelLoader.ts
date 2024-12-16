@@ -278,8 +278,9 @@ export class ModelLoader {
             mesh.scaling = new Vector3(0.5, 0.5, 0.5);
             mesh.parent = result.meshes[2];
             mesh.position = new Vector3(0, 6.5, -10.22);
-            mesh.rotation = new Vector3(0, Math.PI / 2, 0); // Начальное вращение
+            mesh.rotation = new Vector3(0, Math.PI, 0); // Начальное вращение
         });
+        image.meshes[1].isVisible = false
 
         // Сохранение мешей второй модели под отдельным ключом
         this.loadedMeshes["image"] = image.meshes;
@@ -302,6 +303,7 @@ addGUIToTool(mesh, texts): void {
         // Создаём AdvancedDynamicTexture для меша
         const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
         guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
+        mesh.position.z -= 0.001; // Смещаем меш вперед на 1 единицу
 
         // Создаём Grid для размещения 4 прямоугольников
         const grid = new Grid();
@@ -335,6 +337,7 @@ addGUIToTool(mesh, texts): void {
 
             const textBlock = new TextBlock();
             textBlock.text = texts[i] || ``;
+            textBlock.fontFamily = 'MyCustomFont';
             textBlock.color = "white";
             textBlock.fontSize = 18;
             textBlock.textWrapping = true;
