@@ -38,13 +38,17 @@ export class DialogPage {
         // if (this.currentPageBox) {
         //     this.advancedTexture.removeControl(this.currentPageBox);
         //   }
-        this.scrollViewer.clearControls();
+        this.pageContainer.clearControls();
 
-        const innerContainer = new Rectangle();
-        innerContainer.width = "55%";
-        innerContainer.height = "85%";
-        innerContainer.thickness = 0;
-        // innerContainer.background = 'red'
+        // Создаем ScrollViewer и добавляем его в pageContainer
+        const scrollViewer = new ScrollViewer();
+        scrollViewer.width = "60%";
+        scrollViewer.height = "75%";
+        scrollViewer.paddingRight = "-1.5%"
+        scrollViewer.paddingBottom = "5%"
+        scrollViewer.barSize = 7
+        // scrollViewer.background = 'red'
+        scrollViewer.thickness = 0;
 
         const dialogText = new TextBlock();
         dialogText.text = "";
@@ -53,7 +57,7 @@ export class DialogPage {
         dialogText.fontFamily = "Segoe UI";
         dialogText.resizeToFit = true;
         dialogText.textWrapping = TextWrapping.WordWrap;
-        dialogText.width = "60%";
+        dialogText.width = "100%";
         dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
 
         // dialogText.paddingTop = "10%";
@@ -62,8 +66,8 @@ export class DialogPage {
         // dialogText.paddingBottom = "7%";
 
         // Добавляем dialogText в ScrollViewer
-        innerContainer.addControl(dialogText);
-        this.scrollViewer.addControl(innerContainer);
+        scrollViewer.addControl(dialogText);
+        this.pageContainer.addControl(scrollViewer);
 
         let currentIndex = 0;
 
@@ -77,9 +81,9 @@ export class DialogPage {
                     onComplete();
                 }
             }
-        }, 30);
+        }, 20);
 
-        return dialogText;
+        return scrollViewer;
     }
 
     cluePage(content: string): TextBlock {
@@ -318,9 +322,10 @@ export class DialogPage {
         });
 
         const innerContainer = new Rectangle();
-        innerContainer.width = "55%";
-        innerContainer.height = "85%";
+        innerContainer.width = "60%";
+        innerContainer.height = "75%";
         innerContainer.thickness = 0;
+        innerContainer.paddingBottom = "5%"
         // innerContainer.background = 'red'
     
         const dialogText = new TextBlock();
@@ -330,9 +335,9 @@ export class DialogPage {
         dialogText.fontFamily = "Segoe UI";
         dialogText.resizeToFit = true;
         dialogText.textWrapping = true;
-        dialogText.width = "90%";
+        dialogText.width = "100%";
         dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        dialogText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        dialogText.top = "-25%"
     
         innerContainer.addControl(dialogText);
     
@@ -342,7 +347,7 @@ export class DialogPage {
         // Для каждого кликабельного слова создадим кнопку
         clickableWords.forEach((obj, index) => {
             const btn = Button.CreateSimpleButton("wordBtn" + index, obj.word);
-            btn.fontSize = "4.5%";
+            btn.fontSize = "4%";
             btn.width = obj.width ?? "90px";
             btn.height = "19px";
             btn.color = "#212529";
@@ -482,28 +487,61 @@ export class DialogPage {
     
         // Количество колонок
         const cols = 2;
-        const rows = Math.ceil(items.length / cols);
     
+        // Определяем минимальное количество элементов
+        const minItems = items.length < 3 ? 3 : items.length;
+    
+        // Рассчитываем количество строк
+        const rows = Math.ceil(minItems / cols);
+    
+        /**
+         * Заполняет массив до необходимого количества элементов.
+         * @param items Исходный массив элементов.
+         * @param minItems Минимальное количество элементов.
+         * @returns Новый массив с добавленными пустыми объектами при необходимости.
+         */
+        function fillItems(items: { thumbnailUrl: string; videoUrl: string; name?: string; }[], minItems: number): { thumbnailUrl: string; videoUrl: string; name?: string; }[] {
+            const filledItems = [...items];
+            while (filledItems.length < minItems) {
+                filledItems.push({
+                    thumbnailUrl: "", // Пустая ссылка на изображение
+                    videoUrl: "",     // Пустая ссылка на видео
+                    name: "",         // Пустое имя
+                });
+            }
+            return filledItems;
+        }
+    
+        // Заполняем массив до необходимого количества элементов
+        const filledItems = fillItems(items, rows * cols);
+    
+        // Создаем внутренний контейнер
         const innerContainer = new Rectangle();
-        innerContainer.width = "55%";
-        innerContainer.height = "85%";
+        innerContainer.width = "60%";
+        innerContainer.height = "75%";
+        innerContainer.paddingBottom = "5%";
         innerContainer.thickness = 0;
         innerContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         innerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     
+        // Создаем основную сетку
         const grid = new Grid();
         grid.width = "100%";
         grid.height = "100%";
+        // grid.background = "red"; // Для отладки можно оставить
     
+        // Определение столбцов
         for (let c = 0; c < cols; c++) {
             grid.addColumnDefinition(1 / cols);
         }
     
+        // Определение строк
         for (let r = 0; r < rows; r++) {
             grid.addRowDefinition(1 / rows);
         }
     
-        items.forEach((item, index) => {
+        // Проходим по всем заполненным элементам
+        filledItems.forEach((item, index) => {
             const row = Math.floor(index / cols);
             const col = index % cols;
     
@@ -514,43 +552,61 @@ export class DialogPage {
             imgContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
             imgContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
     
-            const innerGrid = new Grid();
-            innerGrid.width = "100%";
-            innerGrid.thickness = 0;
+            // Проверяем, является ли элемент пустым
+            const isEmpty = !item.thumbnailUrl && !item.videoUrl && !item.name;
     
-            // Две строки: под миниатюру и под подпись
-            innerGrid.addRowDefinition(0.8); // миниатюра занимает 80% высоты
-            innerGrid.addRowDefinition(0.2); // подпись занимает 20%
-            innerGrid.addColumnDefinition(1);
+            if (!isEmpty) {
+                const innerGrid = new Grid();
+                innerGrid.width = "100%";
+                innerGrid.height = "100%";
+                innerGrid.thickness = 0;
     
-            // Миниатюра - это Image
-            const thumbImage = new Image("thumb" + index, item.thumbnailUrl);
-            thumbImage.width = "100%";
-            thumbImage.height = "100%";
-            thumbImage.stretch = Image.STRETCH_UNIFORM;
+                // Определяем строки внутри innerGrid: изображение и текст
+                innerGrid.addRowDefinition(4); // Изображение занимает 4 части
+                innerGrid.addRowDefinition(1); // Текст занимает 1 часть
+                innerGrid.addColumnDefinition(1);
     
-            thumbImage.onPointerUpObservable.add(() => {
-                this.showVideo(item.videoUrl, advancedTexture, camera);
-            });
+                // Создаем Image
+                const thumbImage = new Image("thumb" + index, item.thumbnailUrl);
+                thumbImage.width = "100%";
+                thumbImage.height = "100%";
+                thumbImage.stretch = Image.STRETCH_UNIFORM;
     
-            innerGrid.addControl(thumbImage, 0, 0);
+                // Добавляем обработчик клика только если есть видео
+                if (item.videoUrl) {
+                    thumbImage.onPointerUpObservable.add(() => {
+                        this.showVideo(item.videoUrl, advancedTexture, camera);
+                    });
+                }
     
-            const nameText = new TextBlock();
-            nameText.text = item.name || "";
-            nameText.color = "#212529";
-            nameText.fontSize = 14;
-            nameText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-            nameText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-            innerGrid.addControl(nameText, 1, 0);
+                innerGrid.addControl(thumbImage, 0, 0);
     
-            imgContainer.addControl(innerGrid);
+                // Создаем TextBlock
+                const nameText = new TextBlock();
+                nameText.text = item.name || "";
+                nameText.color = "#212529";
+                nameText.fontSize = 14;
+                nameText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+                nameText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+                // Не задаем высоту, чтобы текст занимал минимально необходимое пространство
+    
+                innerGrid.addControl(nameText, 1, 0);
+    
+                imgContainer.addControl(innerGrid);
+            } else {
+                // Если элемент пустой, делаем контейнер невидимым
+                imgContainer.isVisible = false;
+            }
+    
             grid.addControl(imgContainer, row, col);
         });
     
         innerContainer.addControl(grid);
         this.pageContainer.addControl(innerContainer);
-        return innerContainer
+        return innerContainer;
     }
+    
+    
     
 
     private showVideo(videoUrl: string, advancedTexture: AdvancedDynamicTexture, camera: FreeCamera): void {
@@ -582,7 +638,7 @@ export class DialogPage {
         videoMaterial.emissiveColor = new Color3(1, 1, 1);
     
         // Создаём плоскость для отображения видео
-        this.videoMesh = MeshBuilder.CreatePlane("videoPlane", { width: 1.5, height: 1 }, this.scene);
+        this.videoMesh = MeshBuilder.CreatePlane("videoPlane", { width: 0.8, height: 0.5 }, this.scene);
         this.videoMesh.material = videoMaterial;
         // this.videoMesh.scaling.x *= -1
         this.videoMesh.scaling.y *= -1
@@ -593,7 +649,7 @@ export class DialogPage {
     
             // Устанавливаем позицию плоскости относительно камеры
             // Например, перед камерой на 2 единицы
-            this.videoMesh.position = new Vector3(0, 0, 1.5);
+            this.videoMesh.position = new Vector3(0, 0, 1);
     
             // Опционально: ориентируем плоскость, чтобы она всегда смотрела в ту же сторону, что и камера
             this.videoMesh.rotation = new Vector3(0, 0, 0);
@@ -604,13 +660,13 @@ export class DialogPage {
         // Создаём кнопку "Пропустить" в Babylon GUI
         this.skipButtonGui = Button.CreateSimpleButton("skipButton", "Пропустить");
         this.skipButtonGui.width = "150px";
-        this.skipButtonGui.height = "40px";
+        this.skipButtonGui.height = "50px";
         this.skipButtonGui.color = "white";
-        this.skipButtonGui.background = "red";
-        this.skipButtonGui.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        this.skipButtonGui.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        this.skipButtonGui.paddingRight = "20px";
-        this.skipButtonGui.paddingBottom = "20px";
+        this.skipButtonGui.background = "gray";
+        this.skipButtonGui.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this.skipButtonGui.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        this.skipButtonGui.top = "26.8%";
+        this.skipButtonGui.left = "19.5%";
     
         this.skipButtonGui.onPointerUpObservable.add(() => {
             this.hideVideo();
@@ -701,6 +757,97 @@ export class DialogPage {
         fullImage.source = imageUrl;
         overlay.isVisible = true;
     }
+
+    createNumericInputPage(
+        headerText: string, 
+        gridLabelText: string, 
+        minVal: number, 
+        maxVal: number, 
+        onValidInput: () => void
+    ): void {
+        // Очищаем текущий контейнер страницы
+        this.pageContainer.clearControls();
+        
+        // Создаём общий контейнер для этой страницы
+        const innerContainer = new Rectangle();
+        innerContainer.width = "60%";
+        innerContainer.height = "75%";
+        innerContainer.thickness = 0;
+        innerContainer.paddingBottom = "5%";
+        // innerContainer.background = "white"; // При необходимости можно задать фон
+    
+        // Верхний текстовый блок
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = headerText;
+        headerTextBlock.color = "#212529";
+        headerTextBlock.fontSize = "4.5%";
+        headerTextBlock.fontFamily = "Segoe UI";
+        headerTextBlock.textWrapping = TextWrapping.WordWrap;
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        headerTextBlock.paddingBottom = "5%";
+        innerContainer.addControl(headerTextBlock);
+    
+        // Создаём Grid с одной строкой и двумя колонками для текстблока и поля ввода
+        const grid = new Grid();
+        grid.width = "100%";
+        grid.height = "10%";
+        // grid.background = "red"
+        grid.addColumnDefinition(0.7);
+        grid.addColumnDefinition(0.3);
+        grid.addRowDefinition(1);
+    
+        // Текст в первой ячейке
+        const labelTextBlock = new TextBlock();
+        labelTextBlock.text = gridLabelText;
+        labelTextBlock.color = "black";
+        labelTextBlock.fontSize = "40%";
+        labelTextBlock.textWrapping = TextWrapping.WordWrap;
+        labelTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        labelTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        grid.addControl(labelTextBlock, 0, 0);
+    
+        // Поле ввода во второй ячейке
+        const inputField = new InputText();
+        inputField.width = "90%";
+        inputField.height = "70%";
+        inputField.color = "white";
+        inputField.background = "grey";
+        inputField.text = ""; 
+        inputField.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        grid.addControl(inputField, 0, 1);
+    
+        innerContainer.addControl(grid);
+    
+        // Кнопка снизу страницы
+        const actionButton = Button.CreateSimpleButton("actionBtn", "Проверить");
+        actionButton.width = "150px";
+        actionButton.height = "50px";
+        actionButton.color = "white";
+        actionButton.background = "gray";
+        actionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        actionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        actionButton.top = "-20%";
+    
+        // Обработчик нажатия на кнопку
+        actionButton.onPointerUpObservable.add(() => {
+            const userValue = parseFloat(inputField.text.trim());
+    
+            // Проверяем, является ли введённое значение числом и попадает ли оно в диапазон
+            if (!isNaN(userValue) && userValue >= minVal && userValue <= maxVal) {
+                // Если в диапазоне - вызываем переданную функцию
+                onValidInput(userValue);
+            } else {
+                // Если не в диапазоне - выводим сообщение о неверной длине
+                actionButton.textBlock!.text = "не верная длина";
+            }
+        });
+    
+        innerContainer.addControl(actionButton);
+        this.pageContainer.addControl(innerContainer);
+        return innerContainer
+    }
+    
 }
 
 // Это работает, в addText мы ретерним не текст а контейнер, вот почему

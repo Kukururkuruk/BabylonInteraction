@@ -88,7 +88,9 @@ export class TriggerManager2 {
 
    measurementLine: LinesMesh | null = null;
 
-   glowLayer: GlowLayer
+   private dynamicLine: LinesMesh | null = null;
+   private glowLayer: GlowLayer | null = null;
+  
   
     constructor(
       scene: Scene,
@@ -540,6 +542,8 @@ export class TriggerManager2 {
                 glowLayer = new GlowLayer("glow", this.scene);
                 glowLayer.intensity = 1;
             }
+            glowLayer.addExcludedMesh(line); 
+            glowLayer.addExcludedMesh(this.rangefinderMesh); 
             glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
                 if (mesh === line) {
                     result.r = 0;
@@ -555,6 +559,15 @@ export class TriggerManager2 {
         }
     };
 
+    const page3 = this.dialogPage.createNumericInputPage("Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже.", "Штрина проезжей части", 11,11.20,() => {
+      this.exitLaserMode(); // Завершаем режим лазера
+      const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
+        window.location.href = '/ВыборИнструмента';
+      })
+      this.guiManager.CreateDialogBox([page4])
+    })
+    this.guiManager.CreateDialogBox([page3])
+
     this.scene.registerBeforeRender(() => {
         const origin = camera.globalPosition.clone();
         const forward = camera.getDirection(Vector3.Forward());
@@ -567,18 +580,14 @@ export class TriggerManager2 {
             this.intersectionPoint.position.copyFrom(hit.pickedPoint);
             this.intersectionPoint.isVisible = true;
 
-// Предположим, что у вас есть ссылка на меш дальномера
-const rangefinderMesh = this.rangefinderMesh;
+            // Получаем позицию дальномера
+            const rangefinderPosition = this.rangefinderMesh.absolutePosition;
 
-// Получаем направление вперёд относительно меша (по умолчанию Vector3.Forward() = (0,0,1))
-const forwardDirection = rangefinderMesh.getDirection(new Vector3(0.7, 0, 0));
+            // Определяем, на сколько единиц смещать точку
+            const offsetDistance = 1.4; // например, 0.5 единицы вперед
 
-// Определяем, на сколько единиц вперёд сместить точку. 
-// Например, на 0.5 единиц вперёд от текущей позиции меша.
-const offsetDistance = 0.5;
-
-// Получаем стартовую точку как позицию меша + смещённый вперёд вектор
-const start = rangefinderMesh.getAbsolutePosition().add(forwardDirection.scale(offsetDistance));
+            // Получаем стартовую точку как позицию дальномера + смещенный вектор вперед
+            const start = rangefinderPosition.add(forward.scale(offsetDistance));
 
             dynamicLine = createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, dynamicLine);
 
@@ -599,6 +608,7 @@ const start = rangefinderMesh.getAbsolutePosition().add(forwardDirection.scale(o
         }
     });
 }
+
 
 
 

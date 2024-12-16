@@ -82,6 +82,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
       this.camera.minZ = 0.45;
       this.camera.speed = 0.55;
+      this.camera.inertia = 0.6;
       this.camera.angularSensibility = 4000;
       this.camera.rotation.y = -Math.PI/2
       this.camera.rotation.x = Math.PI / 12
@@ -155,15 +156,15 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
             { 
                 word: "здесь", 
                 imageUrl: "../models/image2.png",
-                top: "180px",
-                left: "112px",
+                top: "110px",
+                left: "110px",
                 width: "50px"
             },
             { 
                 word: "схеме", 
                 imageUrl: "../models/image1.png",
-                top: "290px",
-                left: "143px",
+                top: "189px",
+                left: "260px",
                 width: "50px"
             }
         ];
@@ -185,8 +186,8 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
           { 
             thumbnailUrl: "../models/image2.png", 
             videoUrl: "../models/film_1var_1_2K.mp4",
-            name: "Изображение",
-          }
+            name: "Принцип работы",
+          },
         ];
 
         const firstZonePosition = new Vector3(-10.622146207334794, 8.8, -3.6);
@@ -199,7 +200,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
                         // const page2 = this.dialogPage.addText("Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование».  Принцип работы показан в видеоролике:")
                         // this.guiManager.CreateDialogBox([page2])
 
-                        const page1 = this.dialogPage.addText("Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование».  Принцип работы показан в видеоролике на второй странице")
+                        const page1 = this.dialogPage.addText("Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование». Принцип работы показан в видеоролике на второй странице. Для для начала воспроизведения кликните по картинке")
                         const pageZoomable = this.dialogPage.addZoomableImagePage(clickablImage, this.guiTexture);
                         const pageClickable = this.dialogPage.addClickableWordsPage(
                           "Установите дальномер в правильном положение, для измерения ширины проезжей части. Схема барьерного ограждения изображена здесь. Ширина проезжей части измеряется по двум крайним точкам барьерного ограждения, как показано на схеме",
@@ -225,9 +226,6 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
                             new Vector3(-0.0975716378981855, -0.9512389923294013, 0)
                         );
                         this.triggerManager.createRadioButtons(() => {
-
-                            const page3 = this.dialogPage.addText("Куда нужно направить дальнометр")
-                            this.guiManager.CreateDialogBox([page3])
                             this.rangefinderMeshes.forEach((mesh) => {
                               mesh.isVisible = true
                             })
