@@ -99,42 +99,42 @@ export class TextureScene {
         try {
             this.engine.displayLoadingUI();
 
-            await this.modelLoader.loadRangeModel()
-            const rangefinderMeshes = this.modelLoader.getMeshes('range') || [];
-            console.log(rangefinderMeshes);
+            // await this.modelLoader.loadRangeModel()
+            // const rangefinderMeshes = this.modelLoader.getMeshes('range') || [];
+            // console.log(rangefinderMeshes);
             
 
-            await this.modelLoader.addGUIRange(this.camera, rangefinderMeshes)
+            // await this.modelLoader.addGUIRange(this.camera, rangefinderMeshes)
 
-            // // Загрузка инструментов
-            // const { meshes: tools } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_FR_LP.glb", this.scene);
+            // Загрузка инструментов
+            const { meshes: tools } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_FR_LP.glb", this.scene);
 
-            // // Проверка количества мешей
-            // console.log(`Загружено инструментов: ${tools.length}`);
-            // if (tools.length < 3) {
-            //     console.warn("Недостаточно мешей в tools. Ожидается минимум 3.");
-            // }
+            // Проверка количества мешей
+            console.log(`Загружено инструментов: ${tools.length}`);
+            if (tools.length < 3) {
+                console.warn("Недостаточно мешей в tools. Ожидается минимум 3.");
+            }
 
-            // // Позиционирование и масштабирование инструментов
-            // tools.forEach((mesh, index) => {
-            //     mesh.position = new Vector3(0, 2.5, -4);
-            //     mesh.scaling = new Vector3(0.5, 0.5, 0.5);
+            // Позиционирование и масштабирование инструментов
+            tools.forEach((mesh, index) => {
+                mesh.position = new Vector3(0, 2.5, -4);
+                mesh.scaling = new Vector3(0.5, 0.5, 0.5);
 
-            //     // Инвертирование масштаба по оси X для tools[1] и tools[2]
-            //     if (index === 1) {
-            //         mesh.scaling.x = -0.5;
-            //     }
-            // });
+                // Инвертирование масштаба по оси X для tools[1] и tools[2]
+                if (index === 1) {
+                    mesh.scaling.x = -0.5;
+                }
+            });
 
-            // console.log("Модели успешно загружены.");
+            console.log("Модели успешно загружены.");
 
-            // // Добавление GUI к tools[2], если он существует
-            // if (tools.length >= 3) {
-            //     const texts = ["1234"];
-            //     this.addGUIToTool(tools[2], texts);
-            // } else {
-            //     console.warn("tools[2] не существует. GUI не добавлен.");
-            // }
+            // Добавление GUI к tools[2], если он существует
+            if (tools.length >= 3) {
+                const texts = ["1234"];
+                this.addGUIToTool(tools[2], texts);
+            } else {
+                console.warn("tools[2] не существует. GUI не добавлен.");
+            }
 
             this.engine.hideLoadingUI();
         } catch (error) {
