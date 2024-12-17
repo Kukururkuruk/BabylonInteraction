@@ -77,6 +77,21 @@ export class ModelLoader {
     }
   }
 
+  public async loadMLabModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Laboratory_01.glb",
+        this.scene
+      );
+      this.loadedMeshes["lab"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }
+
   private async loadSignModel(): Promise<void> {
     try {
       const result = await SceneLoader.ImportMeshAsync(
@@ -91,6 +106,7 @@ export class ModelLoader {
       throw error;
     }
   }
+
 
 
   public async loadRangeModel(): Promise<void> {
@@ -223,7 +239,7 @@ export class ModelLoader {
 
   // Устанавливаем позицию
   textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
-}
+  }
 
 
 
@@ -288,91 +304,104 @@ export class ModelLoader {
         console.error("Ошибка при загрузке моделей:", error);
         throw error;
     }
-}
+  }
 
-addGUIToTool(mesh, texts): void {
-    if (!mesh) {
-        console.error("Меш не существует. GUI не может быть добавлен.");
-        return;
-    }
+  addGUIToTool(mesh, texts): void {
+      if (!mesh) {
+          console.error("Меш не существует. GUI не может быть добавлен.");
+          return;
+      }
 
-    try {
-        const guiPlane = mesh.clone("guiPlane");
-        guiPlane.scaling.x = -0.04;
+      try {
+          const guiPlane = mesh.clone("guiPlane");
+          guiPlane.scaling.x = -0.04;
 
-        // Создаём AdvancedDynamicTexture для меша
-        const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
-        guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
-        mesh.position.z -= 0.001; // Смещаем меш вперед на 1 единицу
+          // Создаём AdvancedDynamicTexture для меша
+          const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
+          guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
+          mesh.position.z -= 0.001; // Смещаем меш вперед на 1 единицу
 
-        // Создаём Grid для размещения 4 прямоугольников
-        const grid = new Grid();
-        grid.width = "40%";
-        grid.height = "25px";
-        grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        grid.top = "-40px";
-        grid.left = "-85px";
+          // Создаём Grid для размещения 4 прямоугольников
+          const grid = new Grid();
+          grid.width = "40%";
+          grid.height = "25px";
+          grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          grid.top = "-40px";
+          grid.left = "-85px";
 
-        // Одна строка и четыре колонки
-        grid.addRowDefinition(1);
-        grid.addColumnDefinition(0.25);
-        grid.addColumnDefinition(0.25);
-        grid.addColumnDefinition(0.25);
-        grid.addColumnDefinition(0.25);
+          // Одна строка и четыре колонки
+          grid.addRowDefinition(1);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
 
-        guiTexture.addControl(grid);
+          guiTexture.addControl(grid);
 
-        this.textBlocks = []; // Очищаем/инициализируем массив
+          this.textBlocks = []; // Очищаем/инициализируем массив
 
-        for (let i = 0; i < 4; i++) {
-            const rect = new Rectangle();
-            rect.width = "100%";
-            rect.height = "100%";
-            rect.color = "white";
-            rect.background = "rgba(0, 0, 0, 0.5)";
-            rect.thickness = 0;
-            rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-            rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          for (let i = 0; i < 4; i++) {
+              const rect = new Rectangle();
+              rect.width = "100%";
+              rect.height = "100%";
+              rect.color = "white";
+              rect.background = "rgba(0, 0, 0, 0.5)";
+              rect.thickness = 0;
+              rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+              rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
-            const textBlock = new TextBlock();
-            textBlock.text = texts[i] || ``;
-            textBlock.fontFamily = 'MyCustomFont';
-            textBlock.color = "white";
-            textBlock.fontSize = 18;
-            textBlock.textWrapping = true;
-            textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-            textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+              const textBlock = new TextBlock();
+              textBlock.text = texts[i] || ``;
+              textBlock.fontFamily = 'MyCustomFont';
+              textBlock.color = "white";
+              textBlock.fontSize = 18;
+              textBlock.textWrapping = true;
+              textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+              textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
-            rect.addControl(textBlock);
-            grid.addControl(rect, 0, i);
+              rect.addControl(textBlock);
+              grid.addControl(rect, 0, i);
 
-            // Сохраняем ссылки на textBlock
-            this.textBlocks.push(textBlock);
-        }
+              // Сохраняем ссылки на textBlock
+              this.textBlocks.push(textBlock);
+          }
 
-    } catch (error) {
-        console.error("Ошибка при добавлении GUI к мешу:", error);
-    }
-}
-
+      } catch (error) {
+          console.error("Ошибка при добавлении GUI к мешу:", error);
+      }
+  }
 // Метод для обновления текста в нужной ячейке (0 - первая ячейка, 1 - вторая и т.д.)
-public updateCellText(index: number, newValue: string): void {
-    if (this.textBlocks[index]) {
-        this.textBlocks[index].text = newValue;
-    } else {
-        console.warn(`Ячейка с индексом ${index} не найдена.`);
-    }
-}
-
+  public updateCellText(index: number, newValue: string): void {
+      if (this.textBlocks[index]) {
+          this.textBlocks[index].text = newValue;
+      } else {
+          console.warn(`Ячейка с индексом ${index} не найдена.`);
+      }
+  }
 // Метод для сброса всех значений
-public resetAllCells(): void {
-    for (let tb of this.textBlocks) {
-        tb.text = "";
+  public resetAllCells(): void {
+      for (let tb of this.textBlocks) {
+          tb.text = "";
+      }
+  }
+
+
+
+  public async loadGeoModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Geodetic_Milestone.glb",
+        this.scene
+      );
+      this.loadedMeshes["geo"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
     }
-}
-
-
+  }
 
 
 
