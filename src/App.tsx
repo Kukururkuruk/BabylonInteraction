@@ -16,6 +16,7 @@ import BabylonBook2 from './components/BabylonBook2';
 import BabylonTest2 from './components/BabylonTest2';
 import BabylonTexture from './components/BabylonTexture';
 import BabylonLabotary from './components/BabylonLabotary/BabylonLabotary';
+import BabylonLabotaryPC from './components/BabylonLabotary/BabylonLabotaryPC';
 
 
 const App: React.FC = () => {
@@ -38,6 +39,7 @@ const App: React.FC = () => {
         <Route path='/Производительность' element={<BabylonTest2 />} />
         <Route path='/texture' element={<BabylonTexture />} />
         <Route path='/ЛабИнструменты' element={<BabylonLabotary />} />
+        <Route path='/ЛабКомпьютер' element={<BabylonLabotaryPC />} />
       </Routes>
     </Router>
   );

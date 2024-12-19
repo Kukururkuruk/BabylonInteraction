@@ -388,12 +388,12 @@ export class ModelLoader {
 
 
 
-  public async loadGeoModel(): Promise<void> {
+  /*public async loadGeoModel(): Promise<void> {
     try {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Geodetic_Milestone.glb",
+        "lowpoly_workplace.glb",
         this.scene
       );
       this.loadedMeshes["geo"] = result.meshes;
@@ -401,7 +401,7 @@ export class ModelLoader {
       console.error("Ошибка при загрузке модели карты:", error);
       throw error;
     }
-  }
+  }*/
 
 
 

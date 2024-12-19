@@ -29,6 +29,7 @@ const Main: React.FC = () => {
         </div>
         <div className="column">
           <button><Link to="/ЛабИнструменты">Просмотр инструментов</Link></button>
+          <button><Link to="/ЛабКомпьютер">Просмотр Компьютера</Link></button>
         </div>
       </div>
     </div>
