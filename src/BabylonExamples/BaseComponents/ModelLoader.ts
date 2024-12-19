@@ -243,68 +243,96 @@ export class ModelLoader {
 
 
 
-  public async loadUltranModel(camera: FreeCamera): Promise<void> {
+  public async loadUltraModel(): Promise<void> {
     try {
-        // Загрузка первой модели
-        const result = await SceneLoader.ImportMeshAsync(
-            "",
-            "./models/",
-            "UltrasonicTester_FR_LP.glb",
-            this.scene
-        );
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "UltrasonicTester_FR_LP.glb",
+        this.scene
+      );
+      this.loadedMeshes["ultra"] = result.meshes;
 
-        result.meshes.forEach((mesh) => {
-            mesh.scaling = new Vector3(0.04, 0.04, 0.04);
-            mesh.parent = camera;
-            mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI / 6);
-            const offset = new Vector3(-0.55, -0.5, 0.86);
-            mesh.position = offset;
-        });
-
-        // Инверсия масштабирования для некоторых мешей
-        if (result.meshes.length > 1) {
-            result.meshes[1].scaling.x = -0.04;
-        }
-
-        // Добавление GUI к tools[2], если он существует
-        if (result.meshes.length >= 3) {
-            const texts = ["", "", "", ""];
-            this.addGUIToTool(result.meshes[2], texts);
-        } else {
-            console.warn("tools[2] не существует. GUI не добавлен.");
-        }
-
-        console.log("UltrasonicTester_FR_LP.glb meshes:", result.meshes);
-
-        // Сохранение мешей первой модели
-        this.loadedMeshes["ultra"] = result.meshes;
-
-        // Загрузка второй модели
-        const image = await SceneLoader.ImportMeshAsync(
-            "",
-            "./models/",
-            "SM_Tilt_sign_LP.glb",
-            this.scene
-        );
-
-        console.log("SM_Tilt_sign_LP.glb meshes:", image.meshes);
-
-        // Настройка второй модели
-        image.meshes.forEach((mesh) => {
-            mesh.scaling = new Vector3(0.5, 0.5, 0.5);
-            mesh.parent = result.meshes[2];
-            mesh.position = new Vector3(0, 6.5, -10.22);
-            mesh.rotation = new Vector3(0, Math.PI, 0); // Начальное вращение
-        });
-        image.meshes[1].isVisible = false
-
-        // Сохранение мешей второй модели под отдельным ключом
-        this.loadedMeshes["image"] = image.meshes;
     } catch (error) {
-        console.error("Ошибка при загрузке моделей:", error);
-        throw error;
+      console.error("Ошибка при загрузке UltrasonicTester_FR_LP.glb:", error);
+      throw error;
     }
   }
+  
+  public async loadUltranModel(camera: FreeCamera): Promise<void> {
+    try {
+      const meshes = this.loadedMeshes["ultra"];
+      if (!meshes || meshes.length === 0) {
+        console.error("Модель UltrasonicTester_FR_LP.glb не загружена или содержит пустые меши.");
+        return;
+      }
+  
+      // Настройка мешей первой модели
+      meshes.forEach((mesh) => {
+        mesh.scaling = new Vector3(0.04, 0.04, 0.04);
+        mesh.parent = camera;
+        mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI / 6);
+        const offset = new Vector3(-0.55, -0.5, 0.86);
+        mesh.position = offset;
+      });
+  
+      // Инверсия масштабирования для второго меша, если он существует
+      if (meshes.length > 1) {
+        meshes[1].scaling.x = -0.04;
+      }
+  
+      // Добавление GUI к третьему мешу, если он существует
+      if (meshes.length >= 3) {
+        const texts = ["", "", "", ""];
+        this.addGUIToTool(meshes[2], texts);
+      } else {
+        console.warn("meshes[2] не существует. GUI не добавлен.");
+      }
+  
+      console.log("UltrasonicTester_FR_LP.glb meshes настроены:", meshes);
+  
+      // Загрузка и настройка второй модели
+      await this.loadSMTiltSignModel(meshes[2]);
+  
+      console.log("UltrasonicTester_FR_LP.glb и SM_Tilt_sign_LP.glb успешно настроены.");
+    } catch (error) {
+      console.error("Ошибка при настройке UltrasonicTester_FR_LP.glb:", error);
+      throw error;
+    }
+  }
+  
+  private async loadSMTiltSignModel(parentMesh: AbstractMesh): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "SM_Tilt_sign_LP.glb",
+        this.scene
+      );
+  
+      console.log("SM_Tilt_sign_LP.glb meshes успешно загружен:", result.meshes);
+  
+      result.meshes.forEach((mesh) => {
+        mesh.scaling = new Vector3(0.5, 0.5, 0.5);
+        mesh.parent = parentMesh;
+        mesh.position = new Vector3(0, 6.5, -10.22);
+        mesh.rotation = new Vector3(0, Math.PI, 0); // Начальное вращение
+      });
+  
+      if (result.meshes.length > 1) {
+        result.meshes[1].isVisible = false;
+      } else {
+        console.warn("SM_Tilt_sign_LP.glb содержит недостаточно мешей для скрытия.");
+      }
+  
+      // Сохранение мешей второй модели под отдельным ключом
+      this.loadedMeshes["image"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке SM_Tilt_sign_LP.glb:", error);
+      throw error;
+    }
+  }
+  
 
   addGUIToTool(mesh, texts): void {
       if (!mesh) {

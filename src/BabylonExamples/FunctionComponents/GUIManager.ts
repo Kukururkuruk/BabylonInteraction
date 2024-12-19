@@ -35,6 +35,7 @@ export class GUIManager {
   private nondialogAnimation: Animation;
   private dialogContainer: Rectangle;
   private currentDialogBox: Rectangle | null = null;
+  private hideButton: Button
   private clickSound: Sound;
   dialogVisible: boolean = true;
 
@@ -492,6 +493,7 @@ export class GUIManager {
 
       if (this.currentDialogBox) {
         this.advancedTexture.removeControl(this.currentDialogBox);
+        this.advancedTexture.removeControl(this.hideButton)
       }
       // Флаг для видимости окна диалога
       this.dialogVisible = true;
@@ -598,15 +600,15 @@ export class GUIManager {
 
 
       // Создаем кнопку для скрытия диалогового окна
-      const hideButton = Button.CreateSimpleButton("hideButton", "Скрыть планшет");
-      hideButton.width = "150px";
-      hideButton.height = "50px";
-      hideButton.color = "white";
-      hideButton.background = "gray";
-      hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-      hideButton.top = "-10px";
-      this.advancedTexture.addControl(hideButton);
+      this.hideButton = Button.CreateSimpleButton("hideButton", "Скрыть планшет");
+      this.hideButton.width = "150px";
+      this.hideButton.height = "50px";
+      this.hideButton.color = "white";
+      this.hideButton.background = "gray";
+      this.hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      this.hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      this.hideButton.top = "-10px";
+      this.advancedTexture.addControl(this.hideButton);
 
       // Анимация появления и исчезновения диалогового окна
       this.dialogAnimation = new Animation(
@@ -618,7 +620,7 @@ export class GUIManager {
       );
 
       // Обработка события клика по кнопке
-      hideButton.onPointerUpObservable.add(() => {
+      this.hideButton.onPointerUpObservable.add(() => {
         this.dialogVisible = !this.dialogVisible;
           this.updateDialogAnimation(this.dialogVisible, this.dialogContainer);
           if (this.WASDContainer) {
