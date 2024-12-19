@@ -79,18 +79,30 @@ export class ModelLoader {
 
   public async loadMLabModel(): Promise<void> {
     try {
-      const result = await SceneLoader.ImportMeshAsync(
-        "",
-        "./models/",
-        "Laboratory_01.glb",
-        this.scene
-      );
-      this.loadedMeshes["lab"] = result.meshes;
+        const result = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "Laboratory_01.glb",
+            this.scene
+        );
+
+        // Сохраняем загруженные меши
+        this.loadedMeshes["lab"] = result.meshes;
+
+        // Включаем столкновения для каждого меша
+        result.meshes.forEach(mesh => {
+            if (mesh instanceof Mesh) { // Проверяем, что это Mesh
+                mesh.checkCollisions = true;
+
+                // Логируем меши для отладки
+                console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
+            }
+        });
     } catch (error) {
-      console.error("Ошибка при загрузке модели карты:", error);
-      throw error;
+        console.error("Ошибка при загрузке модели карты:", error);
+        throw error;
     }
-  }
+}
 
   private async loadSignModel(): Promise<void> {
     try {
