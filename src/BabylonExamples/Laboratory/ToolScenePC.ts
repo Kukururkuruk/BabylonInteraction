@@ -290,52 +290,68 @@ SwitchToScreenMode(screenMesh: Mesh): void {
     }
 }
 
-// Анимация открытия двери
+// Вызов анимации при нажатии на дверь
 openDoor(doorMesh: BABYLON.AbstractMesh): void {
   this.isDoorOpen = true;
 
-  // Установка пивотной точки на середину двери
-  doorMesh.setPivotPoint(new BABYLON.Vector3(0, 0.5, 0));
+  // Проверка точки вращения
+  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
 
-  // Создание и запуск анимации
-  BABYLON.Animation.CreateAndStartAnimation(
-    "doorOpenAnimation",        // Имя анимации
-    doorMesh,                   // Меш, который будет анимирован
-    "rotation.y",                // Атрибут для анимации
-    30,                         // Частота кадров анимации
-    30,                         // Количество кадров анимации
-    doorMesh.rotation.y,        // Начальное значение
-    doorMesh.rotation.y + Math.PI / 2, // Конечное значение (поворот на 90 градусов)
-    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT, // Цикл анимации
-    undefined,                   // Начальная интерполяция
-    () => {                      // Колбэк по завершении анимации
-      console.log("Анимация открытия завершена.");
-    }
+  const animation = new BABYLON.Animation(
+      "OpenDoor",
+      "rotation.y",
+      30, // 30 кадров анимации
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
+
+  const keys = [
+      { frame: 0, value: doorMesh.rotation.y },
+      { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 }, // Поворот на 90 градусов
+  ];
+
+  animation.setKeys(keys);
+
+  doorMesh.animations = [];
+  doorMesh.animations.push(animation);
+
+  // Запуск анимации
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      console.log("Анимация открытия двери завершена.");
+  });
+
+  console.log("Дверь открывается.");
 }
 
-// Анимация закрытия двери
 closeDoor(doorMesh: BABYLON.AbstractMesh): void {
   this.isDoorOpen = false;
 
-  // Установка пивотной точки на середину двери
-  doorMesh.setPivotPoint(new BABYLON.Vector3(0, 0.5, 0));
+  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
 
-  // Создание и запуск анимации
-  BABYLON.Animation.CreateAndStartAnimation(
-    "doorCloseAnimation",        // Имя анимации
-    doorMesh,                   // Меш, который будет анимирован
-    "rotation.y",                // Атрибут для анимации
-    30,                         // Частота кадров анимации
-    30,                         // Количество кадров анимации
-    doorMesh.rotation.y + Math.PI / 2, // Начальное значение (поворот на 90 градусов)
-    doorMesh.rotation.y,        // Конечное значение
-    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT, // Цикл анимации
-    undefined,                   // Начальная интерполяция
-    () => {                      // Колбэк по завершении анимации
-      console.log("Анимация закрытия завершена.");
-    }
+  const animation = new BABYLON.Animation(
+      "CloseDoor",
+      "rotation.y",
+      30, // 30 кадров анимации
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
+
+  const keys = [
+      { frame: 0, value: doorMesh.rotation.y },
+      { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 }, // Возврат в исходное положение
+  ];
+
+  animation.setKeys(keys);
+
+  doorMesh.animations = [];
+  doorMesh.animations.push(animation);
+
+  // Запуск анимации
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      console.log("Анимация закрытия двери завершена.");
+  });
+
+  console.log("Дверь закрывается.");
 }
 
 

@@ -97,6 +97,13 @@ export class ModelLoader {
                 // Логируем меши для отладки
                 console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
             }
+
+            // Переопределение точки вращения (pivot) для модели SM_Door
+            if (mesh.name === "SM_Door") {
+                mesh.position.y = 0; // Установить модель на плоскость
+                mesh.rotationQuaternion = null; // Очистить кватернион поворота, чтобы ручное управление работало нормально
+                console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
+            }
         });
     } catch (error) {
         console.error("Ошибка при загрузке модели карты:", error);
