@@ -307,7 +307,7 @@ export class ToolScene {
     this.initializeScene();
 
     this.CreateController();
-    // this.AddScreenshotButton();
+    this.AddScreenshotButton();
     // this.AddCameraPositionButton();
     // this.combinedMethod()
 
@@ -409,6 +409,8 @@ export class ToolScene {
   async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
+
+      
 
       await this.modelLoader.loadMLabModel();
       const lab = this.modelLoader.getMeshes('lab') || [];
@@ -658,13 +660,21 @@ export class ToolScene {
     );
     light.position = new Vector3(0, 20, 25);
     light.intensity = 1;
-    // Здесь можно добавить логику для генерации теней, если требуется
+    // // Здесь можно добавить логику для генерации теней, если требуется
+    // const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
+    // shadowGenerator.useContactHardeningShadow = true;
+    // shadowGenerator.contactHardeningLightSizeUVRatio = 0.05; // Настройте по желанию
+
+    // this.scene.meshes.forEach((mesh) => {
+    //   mesh.receiveShadows = true;
+    //   shadowGenerator.addShadowCaster(mesh);
+    // })
   }
 
   async initializeScene(): Promise<void> {
     try {
       await this.CreateEnvironment();
-      // await this.CreateShadows();
+      await this.CreateShadows();
       this.showToolSelectionDialog();
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);

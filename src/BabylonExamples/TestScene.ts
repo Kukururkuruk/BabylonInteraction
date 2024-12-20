@@ -16,6 +16,14 @@ import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 
+interface ZoneData {
+  position: Vector3,
+  name: string,
+  height: number,
+  dialogText: string,
+  route: string,
+}
+
 export class TestScene {
   scene: Scene;
   engine: Engine;
@@ -27,6 +35,8 @@ export class TestScene {
   private dialogPage: DialogPage;
   private markMeshes: AbstractMesh[] = [];
   private zoneSigns: AbstractMesh[] = [];
+  private zoneData: { [key: string]: ZoneData } = {};
+  private chosenArray: string[] = ['1','2','3','4']
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -41,7 +51,9 @@ export class TestScene {
   
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
-      this.setupTriggers();     
+      // this.setupTriggers();
+      this.createZoneObj()
+      this.chosenZon()     
     });
   
     this.CreateController();
@@ -344,6 +356,59 @@ export class TestScene {
     } else {
         console.error("markMeshes не загружены или пусты.");
     }
-}
+  }
+
+  createZoneObj(): void {
+    this.zoneData['1'] = {
+      position: new Vector3(-10.622146207334794, 8.8, -3.62),
+      name: 'firstZoneSign',
+      height: 6,
+      dialogText: 'Здесь тебя ждет обучение по использованию дальнометра. Нажми на кнопку для перемещения в зону теста.',
+      route: '/ДальнометрОбучение'
+    }
+    this.zoneData['2'] = {
+      position: new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421),
+      name: 'secondZoneSign',
+      height: -1,
+      dialogText: "Здесь тебя ждет использование бетонометра (я не помню как он называется). Нажми на кнопку для перемещения в зону теста.",
+      route: '/Бетонометр'
+    }
+  }
+
+  chosenZon(): void {
+    this.chosenArray.filter((el) => {
+      if(this.zoneData[el]) {
+        const markMeshTemplate = this.markMeshes[0]; // Используем первый mesh как шаблон
+        const zone = this.zoneData[el]
+
+        // Создаем массив для хранения ссылок на знаки в зонах
+        this.zoneSigns = [];
+
+        // --- Первый триггер-зона ---
+        const firstZonePosition = zone.position
+        const firstZoneSign = markMeshTemplate.clone(zone.name);
+        firstZoneSign.position = firstZonePosition.clone();
+        firstZoneSign.position.y = zone.height; 
+        firstZoneSign.isVisible = true;
+
+        this.scene.addMesh(firstZoneSign);
+        this.zoneSigns.push(firstZoneSign);
+
+        const firstTriggerZone = this.triggerManager.setupZoneTrigger(
+            firstZonePosition,
+            () => {
+              const page2 = this.dialogPage.addText(zone.dialogText);
+              this.guiManager.CreateDialogBox([page2]);
+                this.guiManager.createRouteButton(zone.route); 
+                if (firstZoneSign) {
+                    firstZoneSign.dispose();
+                }
+            },
+            undefined, 
+            2 
+        );
+      }
+    })
+  }
 
 }
