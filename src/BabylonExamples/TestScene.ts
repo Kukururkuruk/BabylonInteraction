@@ -36,7 +36,7 @@ export class TestScene {
   private markMeshes: AbstractMesh[] = [];
   private zoneSigns: AbstractMesh[] = [];
   private zoneData: { [key: string]: ZoneData } = {};
-  private chosenArray: string[] = ['1','2','3','4']
+  private chosenArray: string[] = ['1','2','4','6']
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -195,169 +195,6 @@ export class TestScene {
     });
   }
 
-  setupTriggers(): void {
-    // Проверяем, что markMeshes загружены
-    if (this.markMeshes && this.markMeshes.length > 0) {
-        const markMeshTemplate = this.markMeshes[0]; // Используем первый mesh как шаблон
-
-        // Создаем массив для хранения ссылок на знаки в зонах
-        this.zoneSigns = [];
-
-        // --- Первый триггер-зона ---
-        const firstZonePosition = new Vector3(-10.622146207334794, 8.8, -3.62);
-        const firstZoneSign = markMeshTemplate.clone("firstZoneSign");
-        firstZoneSign.position = firstZonePosition.clone();
-        firstZoneSign.position.y = 6; 
-        firstZoneSign.isVisible = true;
-
-        this.scene.addMesh(firstZoneSign);
-        this.zoneSigns.push(firstZoneSign);
-
-        const firstTriggerZone = this.triggerManager.setupZoneTrigger(
-            firstZonePosition,
-            () => {
-              const page2 = this.dialogPage.addText("Здесь тебя ждет обучение по использованию дальнометра. Нажми на кнопку для перемещения в зону теста.");
-              this.guiManager.CreateDialogBox([page2]);
-                console.log("Вошли в первую зону");
-                this.guiManager.createRouteButton('/ДальнометрОбучение'); 
-                if (firstZoneSign) {
-                    firstZoneSign.dispose();
-                }
-            },
-            undefined, 
-            2 
-        );
-
-        // --- Вторая триггер-зона ---
-        const secondZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-        const secondZoneSign = markMeshTemplate.clone("secondZoneSign");
-        secondZoneSign.position = secondZonePosition.clone();
-        secondZoneSign.position.y = -1;
-        secondZoneSign.isVisible = true;
-
-        this.scene.addMesh(secondZoneSign);
-        this.zoneSigns.push(secondZoneSign);
-
-        const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-            secondZonePosition,
-            () => {
-              const page3 = this.dialogPage.addText("Здесь тебя ждет использование бетонометра (я не помню как он называется). Нажми на кнопку для перемещения в зону теста.");
-              this.guiManager.CreateDialogBox([page3]);
-                console.log("Вошли во вторую зону");
-                this.guiManager.createRouteButton('/Бетонометр'); 
-                if (secondZoneSign) {
-                    secondZoneSign.dispose();
-                }
-            },
-            undefined, 
-            2 
-        );
-
-        // --- Третий триггер-зона ---
-        const thirdZonePosition = new Vector3(12.46, 2.0, 4.79);
-        const thirdZoneSign = markMeshTemplate.clone("thirdZoneSign");
-        thirdZoneSign.position = thirdZonePosition.clone();
-        thirdZoneSign.position.y = -1;
-        thirdZoneSign.isVisible = true;
-
-        this.scene.addMesh(thirdZoneSign);
-        this.zoneSigns.push(thirdZoneSign);
-
-        const thirdTriggerZone = this.triggerManager.setupZoneTrigger(
-            thirdZonePosition,
-            () => {
-              const page3 = this.dialogPage.addText("Здесь тебя ждет использование линейки и штангенциркуля. Нажми на кнопку для перемещения в зону теста.");
-              this.guiManager.CreateDialogBox([page3]);
-                console.log("Вошли в третью зону");
-                this.guiManager.createRouteButton('/full'); 
-                if (thirdZoneSign) {
-                    thirdZoneSign.dispose();
-                }
-            },
-            undefined, 
-            2 
-        );
-
-        // --- Четвертая триггер-зона ---
-        const fourthZonePosition = new Vector3(41.14320937858243, 2.670984252631138, -0.04211929133677441);
-        const fourthZoneSign = markMeshTemplate.clone("fourthZoneSign");
-        fourthZoneSign.position = fourthZonePosition.clone();
-        fourthZoneSign.position.y = -1;
-        fourthZoneSign.isVisible = true;
-
-        this.scene.addMesh(fourthZoneSign);
-        this.zoneSigns.push(fourthZoneSign);
-
-        const fourthTriggerZone = this.triggerManager.setupZoneTrigger(
-            fourthZonePosition,
-            () => {
-              const page4 = this.dialogPage.addText("Здесь тебя ждет использование дальнометра. Нажми на кнопку для перемещение в зону теста.");
-              this.guiManager.CreateDialogBox([page4]);
-                console.log("Вошли в четвертую зону");
-                this.guiManager.createRouteButton('/ДальнометрТест'); 
-                if (fourthZoneSign) {
-                    fourthZoneSign.dispose();
-                }
-            },
-            undefined, 
-            2 
-        );
-
-        // --- Пятая триггер-зона (camera5) ---
-        const fifthZonePosition = new Vector3(-14.60972728503516, 2.672766933441162, -0.2746599608322637);
-        const fifthZoneSign = markMeshTemplate.clone("fifthZoneSign");
-        fifthZoneSign.position = fifthZonePosition.clone();
-        fifthZoneSign.position.y = -1;
-        fifthZoneSign.isVisible = true;
-
-        this.scene.addMesh(fifthZoneSign);
-        this.zoneSigns.push(fifthZoneSign);
-
-        const fifthTriggerZone = this.triggerManager.setupZoneTrigger(
-            fifthZonePosition,
-            () => {
-                const page5 = this.dialogPage.addText("Здесь тебя ждет бейсик левел. Нажми на кнопку для перемещения в зону.");
-                this.guiManager.CreateDialogBox([page5]);
-                console.log("Вошли в пятую зону");
-                this.guiManager.createRouteButton('/УровеньПузырька'); 
-                if (fifthZoneSign) {
-                    fifthZoneSign.dispose();
-                }
-            },
-            undefined,
-            2 
-        );
-
-        // --- Шестая триггер-зона (camera6) ---
-        const sixthZonePosition = new Vector3(11.72647800945137, 9.42517840874411, -4.931777454799131);
-        const sixthZoneSign = markMeshTemplate.clone("sixthZoneSign");
-        sixthZoneSign.position = sixthZonePosition.clone();
-        sixthZoneSign.position.y = 6;
-        sixthZoneSign.isVisible = true;
-
-        this.scene.addMesh(sixthZoneSign);
-        this.zoneSigns.push(sixthZoneSign);
-
-        const sixthTriggerZone = this.triggerManager.setupZoneTrigger(
-            sixthZonePosition,
-            () => {
-                const page6 = this.dialogPage.addText("Здесь тебя ждет тотал стейшн. Нажми на кнопку для перемещения в зону.");
-                this.guiManager.CreateDialogBox([page6]);
-                console.log("Вошли в шестую зону");
-                this.guiManager.createRouteButton('/total'); 
-                if (sixthZoneSign) {
-                    sixthZoneSign.dispose();
-                }
-            },
-            undefined,
-            2 
-        );
-
-    } else {
-        console.error("markMeshes не загружены или пусты.");
-    }
-  }
-
   createZoneObj(): void {
     this.zoneData['1'] = {
       position: new Vector3(-10.622146207334794, 8.8, -3.62),
@@ -372,6 +209,34 @@ export class TestScene {
       height: -1,
       dialogText: "Здесь тебя ждет использование бетонометра (я не помню как он называется). Нажми на кнопку для перемещения в зону теста.",
       route: '/Бетонометр'
+    }
+    this.zoneData['3'] = {
+      position: new Vector3(12.46, 2.0, 4.79),
+      name: 'thirdZoneSign',
+      height: -1,
+      dialogText: "Здесь тебя ждет использование линейки и штангенциркуля. Нажми на кнопку для перемещения в зону теста.",
+      route: '/Штангенциркуль'
+    }
+    this.zoneData['4'] = {
+      position: new Vector3(41.14320937858243, 2.670984252631138, -0.04211929133677441),
+      name: 'fourthZoneSign',
+      height: -1,
+      dialogText: "Здесь тебя ждет использование дальнометра. Нажми на кнопку для перемещение в зону теста.",
+      route: '/ДальнометрТест'
+    }
+    this.zoneData['5'] = {
+      position: new Vector3(-14.60972728503516, 2.672766933441162, -0.2746599608322637),
+      name: 'fifthZoneSign',
+      height: -1,
+      dialogText: "Здесь тебя ждет бейсик левел. Нажми на кнопку для перемещения в зону.",
+      route: '/УровеньПузырька'
+    }
+    this.zoneData['6'] = {
+      position: new Vector3(11.72647800945137, 9.42517840874411, -4.931777454799131),
+      name: 'secondZoneSign',
+      height: 6,
+      dialogText: "Здесь тебя ждет тотал стейшн. Нажми на кнопку для перемещения в зону.",
+      route: '/Тахеометр'
     }
   }
 
@@ -397,14 +262,21 @@ export class TestScene {
         const firstTriggerZone = this.triggerManager.setupZoneTrigger(
             firstZonePosition,
             () => {
-              const page2 = this.dialogPage.addText(zone.dialogText);
-              this.guiManager.CreateDialogBox([page2]);
-                this.guiManager.createRouteButton(zone.route); 
+              const page2 = this.dialogPage.createStartPage(zone.dialogText, "Перейти", () => {
+                window.location.href = zone.route;
+              })
+              this.guiManager.CreateDialogBox([page2]); 
                 if (firstZoneSign) {
-                    firstZoneSign.dispose();
+                    firstZoneSign.dispose()
                 }
             },
-            undefined, 
+            () => {
+              const page3 = this.dialogPage.addText("Продолжайте осмотр")
+              this.guiManager.CreateDialogBox([page3]);
+              // if (firstZoneSign) {
+              //   firstZoneSign.visibility = 1;
+              // }
+            }, 
             2 
         );
       }
