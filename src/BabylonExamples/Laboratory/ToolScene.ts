@@ -679,7 +679,10 @@ export class ToolScene {
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
     } finally {
-      this.engine.hideLoadingUI();
+      this.scene.onReadyObservable.add(() => {
+        this.engine.hideLoadingUI();
+    })
+      
     }
   }
 
