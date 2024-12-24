@@ -15,6 +15,11 @@ import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 import { ModelLoader } from "../BaseComponents/ModelLoader";
 import * as BABYLON from "@babylonjs/core";
+import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Color3 } from "@babylonjs/core/Maths/math.color";
+import { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
+import { GUIManager } from "../FunctionComponents/GUIManager";
 
 
 export class ToolScenePC {
@@ -27,6 +32,8 @@ export class ToolScenePC {
   private originalCameraSettings?: { position: Vector3; target: Vector3 };
   private isScreenMode = false;
   private isDoorOpen: boolean = false; // Флаг состояния двери (открыта/закрыта)
+  private isScreenClicked: boolean = false; // Флаг клика на экран
+  private guiManager: GUIManager;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -36,7 +43,7 @@ export class ToolScenePC {
 
     this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
     this.modelLoader = new ModelLoader(this.scene);
-
+    this.guiManager = new GUIManager(this.scene);
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
     });
@@ -97,14 +104,56 @@ export class ToolScenePC {
         // Обработка экрана
         const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
         if (screenMesh) {
+            // Настройка кликабельности экрана
             screenMesh.checkCollisions = true;
             screenMesh.actionManager = new ActionManager(this.scene);
             screenMesh.actionManager.registerAction(
                 new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    console.log("Экран был нажат напрямую!");
                     this.activateScreenView(screenMesh);
                 })
             );
-            console.log("SM_0_Screen_1 настроен.");
+
+            // Добавление плоского меша на экран
+            const boundingInfo = screenMesh.getBoundingInfo();
+            const size = boundingInfo.boundingBox.extendSizeWorld;
+
+            // Уменьшаем размер плоского меша в 4 раза и помещаем его в левую часть экрана
+            const interactivePlane = MeshBuilder.CreatePlane(
+                "InteractivePlane",
+                { width: size.x * 2 / 4, height: size.y * 2 / 4 }, // Уменьшаем размер в 4 раза
+                this.scene
+            );
+
+            // Вычисляем позицию и поворот для плоского меша
+            const worldCenter = boundingInfo.boundingBox.centerWorld;
+            interactivePlane.position = new Vector3(
+                worldCenter.x - size.x / 2, // Сдвиг влево относительно центра
+                worldCenter.y,
+                worldCenter.z
+            );
+            interactivePlane.rotation = screenMesh.rotation.clone(); // Наследуем поворот от экрана
+            interactivePlane.isPickable = true;
+
+            // Создание материала с зеленой эмиссией
+            const greenMaterial = new StandardMaterial("GreenMaterial", this.scene);
+            greenMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
+            greenMaterial.emissiveColor = new Color3(0, 1, 0); // Свечение зеленого цвета
+            interactivePlane.material = greenMaterial;
+
+            // Добавление эффекта свечения
+            const glowLayer = new GlowLayer("GlowLayer", this.scene);
+            glowLayer.addIncludedOnlyMesh(interactivePlane); // Подсвечиваем только interactivePlane
+
+            // Действия при клике на плоский меш
+            interactivePlane.actionManager = new ActionManager(this.scene);
+            interactivePlane.actionManager.registerAction(
+                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    console.log("Плоский меш перед экраном был нажат!");
+                    this.isScreenClicked = true;
+                })
+            );
+            console.log("SM_0_Screen_1 и плоский меш настроены.");
         } else {
             console.warn("SM_0_Screen_1 не найден.");
         }
@@ -117,14 +166,19 @@ export class ToolScenePC {
             doorMesh.actionManager.registerAction(
                 new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
                     console.log("Дверь была нажата!");
-                    // Ваш дополнительный код для работы с дверью
 
-                     // Проверяем текущее состояние двери и переключаем
-            if (this.isDoorOpen) {
-              this.closeDoor(doorMesh);
-          } else {
-              this.openDoor(doorMesh);
-          }
+                    if (this.isScreenClicked) {
+                        console.log("Переход на другую страницу!");
+                        this.showRoutePage();
+                    } else {
+                        console.warn("Сначала нажмите на экран!");
+                    }
+
+                    if (this.isDoorOpen) {
+                        this.closeDoor(doorMesh);
+                    } else {
+                        this.openDoor(doorMesh);
+                    }
                 })
             );
             console.log("SM_Door настроен.");
@@ -138,6 +192,19 @@ export class ToolScenePC {
     } finally {
         this.engine.hideLoadingUI();
     }
+}
+
+private showRoutePage(): void {
+  const routeButton = Button.CreateSimpleButton("routeButton", "Перейти");
+  routeButton.width = "150px";
+  routeButton.height = "50px";
+  routeButton.color = "white";
+  routeButton.background = "green";
+
+  
+  this.guiManager.createRouteButton('/ТахеометрЗадание'); // Переход на карту
+  // Добавляем кнопку в GUI
+  this.guiTexture.addControl(routeButton);
 }
 
   AddScreenClickHandler(): void {
