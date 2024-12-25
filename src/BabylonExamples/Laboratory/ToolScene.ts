@@ -255,7 +255,11 @@ import {
   Ray,
   Tools,
   DirectionalLight,
-  ShadowGenerator
+  ShadowGenerator,
+  KeyboardEventTypes,
+  PBRMaterial,
+  Material,
+  GlowLayer
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
@@ -381,7 +385,7 @@ export class ToolScene {
     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
     scene.collisionsEnabled = true;
 
-    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    const hdrTexture = new HDRCubeTexture("/models/test_5.hdr", scene, 512);
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 1;
@@ -404,19 +408,69 @@ export class ToolScene {
     this.camera.keysLeft.push(65); // A
     this.camera.keysDown.push(83); // S
     this.camera.keysRight.push(68); // D
+        const originalFov = this.camera.fov;
+        let isZoomedIn = false;
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+                if (kbInfo.event.key === "q" || kbInfo.event.key === "Q") {
+                    if (isZoomedIn) {
+                        // Если камера уже уменьшена, восстанавливаем оригинальный FOV
+                        this.camera.fov = originalFov;
+                    } else {
+                        // Уменьшаем FOV камеры
+                        this.camera.fov /= 2;
+                    }
+                    // Переключаем флаг
+                    isZoomedIn = !isZoomedIn;
+                }
+            }
+        });
   }
 
   async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
 
-      
+      // const light = new DirectionalLight(
+      //   "dirLight",
+      //   new Vector3(-1, -1, -1),
+      //   this.scene
+      // );
+      // light.position = new Vector3(-20, 20, 20);
+      // light.intensity = 2;
+      // // // Здесь можно добавить логику для генерации теней, если требуется
+      // const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
+      // shadowGenerator.useContactHardeningShadow = true;
+      // shadowGenerator.contactHardeningLightSizeUVRatio = 0.3; // Настройте по желанию
+      // shadowGenerator.shadowMinZ = 0;  // Минимальная глубина для теней
+      // shadowGenerator.shadowMaxZ = 50; // Увеличь, если объекты находятся дальше
 
       await this.modelLoader.loadMLabModel();
       const lab = this.modelLoader.getMeshes('lab') || [];
-      lab.forEach((mesh) => {
+      
+      
+      const glowLayer = new GlowLayer("glow", this.scene); // Создаём GlowLayer
+      glowLayer.intensity = 1;
+      
+      lab.forEach((mesh, index) => {
         mesh.checkCollisions = false;
+      
+        if (index === 17 && mesh instanceof Mesh) {
+          const material = mesh.material;
+      
+          if (material && material instanceof PBRMaterial) {
+            material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND; // Убираем прозрачность
+            material.emissiveColor = new Color3(1, 1, 1);
+            material.emissiveIntensity = 2;
+      
+            // Убедимся, что у материала есть текстура эмиссии
+            if (material.emissiveTexture) {
+              glowLayer.addIncludedOnlyMesh(mesh); // Только этот меш будет светиться
+            }
+          }
+        }
       });
+      
       console.log(lab);
 
       // Загрузка ultra
@@ -655,26 +709,26 @@ export class ToolScene {
   private async CreateShadows(): Promise<void> {
     const light = new DirectionalLight(
       "dirLight",
-      new Vector3(-2, -1, 1),
+      new Vector3(-1, -1, -1),
       this.scene
     );
-    light.position = new Vector3(0, 20, 25);
-    light.intensity = 1;
+    light.position = new Vector3(0, 10, 10);
+    light.intensity = 2;
     // // Здесь можно добавить логику для генерации теней, если требуется
-    // const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
-    // shadowGenerator.useContactHardeningShadow = true;
-    // shadowGenerator.contactHardeningLightSizeUVRatio = 0.05; // Настройте по желанию
+    const shadowGenerator = new ShadowGenerator(2048, light); // 1024, 2048, 4096, 8192 
+    shadowGenerator.useContactHardeningShadow = true;
+    shadowGenerator.contactHardeningLightSizeUVRatio = 0.05; // Настройте по желанию
 
-    // this.scene.meshes.forEach((mesh) => {
-    //   mesh.receiveShadows = true;
-    //   shadowGenerator.addShadowCaster(mesh);
-    // })
+    this.scene.meshes.forEach((mesh) => {
+      mesh.receiveShadows = true;
+      shadowGenerator.addShadowCaster(mesh);
+    })
   }
 
   async initializeScene(): Promise<void> {
     try {
       await this.CreateEnvironment();
-      await this.CreateShadows();
+      // await this.CreateShadows();
       this.showToolSelectionDialog();
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);

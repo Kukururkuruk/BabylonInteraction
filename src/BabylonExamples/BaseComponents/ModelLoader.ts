@@ -82,7 +82,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Laboratory_Debug.gltf",
+        "Laboratory_01.gltf",
         this.scene
       );
       this.loadedMeshes["lab"] = result.meshes;

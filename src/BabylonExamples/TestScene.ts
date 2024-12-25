@@ -8,6 +8,10 @@ import {
   Tools,
   FreeCamera,
   AbstractMesh,
+  Animation,
+  HighlightLayer,
+  Color3,
+  Mesh,
 
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
@@ -143,6 +147,8 @@ export class TestScene {
       );
 
       this.markMeshes = assetContainer.meshes; // Сохраняем meshes из AssetContainer
+      console.log(this.markMeshes);
+      
   
       // Масштабируем шаблонный меш
       this.markMeshes.forEach((mesh) => {
@@ -250,32 +256,93 @@ export class TestScene {
         this.zoneSigns = [];
 
         // --- Первый триггер-зона ---
-        const firstZonePosition = zone.position
-        const firstZoneSign = markMeshTemplate.clone(zone.name);
-        firstZoneSign.position = firstZonePosition.clone();
-        firstZoneSign.position.y = zone.height; 
-        firstZoneSign.isVisible = true;
+        const ZonePosition = zone.position
+        const ZoneSign = markMeshTemplate.clone(zone.name, null);
+        if (!ZoneSign) {
+          console.error(`Failed to clone mesh for zone: ${zone.name}`);
+          return;
+        }
+        ZoneSign.position = ZonePosition.clone();
+        ZoneSign.position.y = zone.height; 
+        ZoneSign.isVisible = true;
 
-        this.scene.addMesh(firstZoneSign);
-        this.zoneSigns.push(firstZoneSign);
+        ZoneSign.getChildMeshes().forEach(child => {
+          child.isVisible = true;
 
-        const firstTriggerZone = this.triggerManager.setupZoneTrigger(
-            firstZonePosition,
+          
+        
+          // --- Добавляем покачивание вверх-вниз ---
+          const animationY = new Animation(
+            "bounceAnimation",            // Имя анимации
+            "position.y",                 // Свойство для анимации
+            30,                           // Частота кадров
+            Animation.ANIMATIONTYPE_FLOAT,  // Тип данных
+            Animation.ANIMATIONLOOPMODE_CYCLE // Цикличная анимация
+          );
+        
+          const keysY = [
+            { frame: 0, value: child.position.y },       // Начальная позиция
+            { frame: 30, value: child.position.y + 0.2 }, // Верхняя точка
+            { frame: 60, value: child.position.y },       // Возвращение в начальную позицию
+          ];
+        
+          animationY.setKeys(keysY);
+          child.animations.push(animationY);
+          this.scene.beginAnimation(child, 0, 60, true);
+        
+          // --- Добавляем сияние ---
+          // const highlightLayer = new HighlightLayer("hl1", this.scene);
+          
+          // if (child instanceof Mesh) {
+          //   highlightLayer.addMesh(child, Color3.Yellow());
+          // }
+        
+          // --- Альтернативный вариант сияния через emissiveColor ---
+          if (child.material) {
+            const emissiveAnimation = new Animation(
+              "emissiveAnimation",
+              "material.emissiveColor",
+              30,
+              Animation.ANIMATIONTYPE_COLOR3,
+              Animation.ANIMATIONLOOPMODE_CYCLE
+            );
+        
+            const keysEmissive = [
+              { frame: 0, value: new Color3(0.2, 0.2, 0) },  // Тусклый желтый
+              { frame: 30, value: new Color3(1, 1, 0) },      // Яркий желтый
+              { frame: 60, value: new Color3(0.2, 0.2, 0) },  // Возвращение в тусклый
+            ];
+        
+            emissiveAnimation.setKeys(keysEmissive);
+            child.animations.push(emissiveAnimation);
+            this.scene.beginAnimation(child, 0, 60, true);
+          }
+        });
+
+        this.scene.addMesh(ZoneSign);
+        this.zoneSigns.push(ZoneSign);
+
+        const TriggerZone = this.triggerManager.setupZoneTrigger(
+            ZonePosition,
             () => {
               const page2 = this.dialogPage.createStartPage(zone.dialogText, "Перейти", () => {
                 window.location.href = zone.route;
               })
               this.guiManager.CreateDialogBox([page2]); 
-                if (firstZoneSign) {
-                    firstZoneSign.dispose()
+                if (ZoneSign) {
+                    ZoneSign.getChildMeshes().forEach(child => {
+                      child.visibility = 0.2
+                    });
                 }
             },
             () => {
               const page3 = this.dialogPage.addText("Продолжайте осмотр")
               this.guiManager.CreateDialogBox([page3]);
-              // if (firstZoneSign) {
-              //   firstZoneSign.visibility = 1;
-              // }
+              if (ZoneSign) {
+                ZoneSign.getChildMeshes().forEach(child => {
+                  child.visibility = 1
+                });
+            }
             }, 
             2 
         );
