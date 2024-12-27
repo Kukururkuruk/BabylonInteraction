@@ -65,6 +65,11 @@ export class ToolScenePC {
     const scene = new Scene(this.engine);
     const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
 
+    // Настройка свойств освещения
+    hemiLight.intensity = 0.7;
+    hemiLight.diffuse = new Color3(1, 1, 1);
+    hemiLight.specular = new Color3(0.5, 0.5, 0.5);
+
     const framesPerSecond = 60;
     const gravity = -9.81;
     scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
@@ -361,31 +366,54 @@ SwitchToScreenMode(screenMesh: Mesh): void {
 openDoor(doorMesh: BABYLON.AbstractMesh): void {
   this.isDoorOpen = true;
 
-  // Проверка точки вращения
-  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
+  // Найти ручку двери
+  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
+  if (!doorHandleMesh) {
+      console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
+  }
 
-  const animation = new BABYLON.Animation(
+  // Анимация для двери
+  const doorAnimation = new BABYLON.Animation(
       "OpenDoor",
       "rotation.y",
-      30, // 30 кадров анимации
+      30,
       BABYLON.Animation.ANIMATIONTYPE_FLOAT,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
 
-  const keys = [
+  const doorKeys = [
       { frame: 0, value: doorMesh.rotation.y },
-      { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 }, // Поворот на 90 градусов
+      { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 },
   ];
-
-  animation.setKeys(keys);
-
+  doorAnimation.setKeys(doorKeys);
   doorMesh.animations = [];
-  doorMesh.animations.push(animation);
+  doorMesh.animations.push(doorAnimation);
+
+  // Анимация для ручки двери
+  if (doorHandleMesh) {
+      const handleAnimation = new BABYLON.Animation(
+          "MoveHandle",
+          "position.y",
+          30,
+          BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+
+      const handleKeys = [
+          { frame: 0, value: doorHandleMesh.position.y },
+          { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
+          { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
+      ];
+      handleAnimation.setKeys(handleKeys);
+      doorHandleMesh.animations = [];
+      doorHandleMesh.animations.push(handleAnimation);
+  }
 
   // Запуск анимации
-  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
-      console.log("Анимация открытия двери завершена.");
-  });
+  this.scene.beginAnimation(doorMesh, 0, 30, false);
+  if (doorHandleMesh) {
+      this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
+  }
 
   console.log("Дверь открывается.");
 }
@@ -393,30 +421,54 @@ openDoor(doorMesh: BABYLON.AbstractMesh): void {
 closeDoor(doorMesh: BABYLON.AbstractMesh): void {
   this.isDoorOpen = false;
 
-  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
+  // Найти ручку двери
+  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
+  if (!doorHandleMesh) {
+      console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
+  }
 
-  const animation = new BABYLON.Animation(
+  // Анимация для двери
+  const doorAnimation = new BABYLON.Animation(
       "CloseDoor",
       "rotation.y",
-      30, // 30 кадров анимации
+      30,
       BABYLON.Animation.ANIMATIONTYPE_FLOAT,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
 
-  const keys = [
+  const doorKeys = [
       { frame: 0, value: doorMesh.rotation.y },
-      { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 }, // Возврат в исходное положение
+      { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 },
   ];
-
-  animation.setKeys(keys);
-
+  doorAnimation.setKeys(doorKeys);
   doorMesh.animations = [];
-  doorMesh.animations.push(animation);
+  doorMesh.animations.push(doorAnimation);
+
+  // Анимация для ручки двери
+  if (doorHandleMesh) {
+      const handleAnimation = new BABYLON.Animation(
+          "MoveHandle",
+          "position.y",
+          30,
+          BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+
+      const handleKeys = [
+          { frame: 0, value: doorHandleMesh.position.y },
+          { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
+          { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
+      ];
+      handleAnimation.setKeys(handleKeys);
+      doorHandleMesh.animations = [];
+      doorHandleMesh.animations.push(handleAnimation);
+  }
 
   // Запуск анимации
-  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
-      console.log("Анимация закрытия двери завершена.");
-  });
+  this.scene.beginAnimation(doorMesh, 0, 30, false);
+  if (doorHandleMesh) {
+      this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
+  }
 
   console.log("Дверь закрывается.");
 }
