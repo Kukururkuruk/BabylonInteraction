@@ -10,3 +10,8 @@
 body {
   overflow: hidden;
 }
+
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('/models/lcdnormal.ttf') format('truetype');
+}

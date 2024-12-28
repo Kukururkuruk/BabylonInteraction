@@ -15,12 +15,14 @@ import {
     Space,
     Camera,
     Viewport,
+    PBRMaterial,
   } from "@babylonjs/core";
   import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { AdvancedDynamicTexture, Button, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
+import { ModelLoader } from "./BaseComponents/ModelLoader";
   
   export class BetoneScene {
     scene: Scene;
@@ -31,12 +33,16 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
     private triggerManager: TriggerManager2;
     private guiManager: GUIManager;
     private dialogPage: DialogPage;
+    private modelLoader: ModelLoader;
     private zoneTriggered: boolean = false;
     private targetMeshes2: AbstractMesh[];
     private beam2: AbstractMesh;
 
     private dynamicTexture: DynamicTexture;
     private ctx: CanvasRenderingContext2D;
+
+    private clickCount = 0; // Счётчик всех кликов для цикла
+    private clickFour = 0;  // Счётчик внутри цикла (каждый 4 клика)
 
   
     constructor(canvas: HTMLCanvasElement) {
@@ -49,6 +55,9 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
       this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
       this.dialogPage = new DialogPage()
+
+      // Инициализация загрузчика моделей
+        this.modelLoader = new ModelLoader(this.scene);
   
       this.CreateEnvironment().then(() => {
         this.engine.hideLoadingUI();
@@ -117,7 +126,7 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
       this.camera = new FreeCamera("camera", new Vector3(17, 2, 13), this.scene);
       this.camera.attachControl(this.canvas, true);
   
-      this.camera.applyGravity = false;
+      this.camera.applyGravity = true;
       this.camera.checkCollisions = true;
       this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
       this.camera.minZ = 0.45;
@@ -151,52 +160,48 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
           this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
           this.beam2 = this.targetMeshes2[1];
 
-          const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_LP2.glb", this.scene);
-          console.log(rangefinderMeshes);
 
-          rangefinderMeshes.forEach((mesh) => {
-              mesh.scaling = new Vector3(-0.05, 0.05, 0.05);
-              mesh.rotation.y = Math.PI / 2;
 
-              mesh.parent = this.camera;
-              const offset = new Vector3(-0.7, -0.6, 1.1);
-              mesh.position = offset;
+            await this.modelLoader.loadUltranModel(this.camera)
+            const rangefinderMeshes = this.modelLoader.getMeshes('ultra') || [];
+            console.log(rangefinderMeshes);
 
-              mesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
-              mesh.rotate(Axis.Z, Math.PI / 6, Space.LOCAL);
-          });
 
-          const thirdMesh = rangefinderMeshes[2];
-          const boundingInfo = thirdMesh.getBoundingInfo();
-          const boundingBox = boundingInfo.boundingBox;
-          const size = boundingBox.maximum.subtract(boundingBox.minimum);
-          const width = size.z;
-          const height = size.y;
+            
 
-          const planeWidth = width;
-          const planeHeight = height;
 
-          // Создание DynamicTexture
-          this.dynamicTexture = new DynamicTexture("DynamicTexture", { width: 512, height: 512 }, this.scene, false);
-          this.dynamicTexture.hasAlpha = true;
 
-          this.ctx = this.dynamicTexture.getContext();
-          const font = "bold 90px Arial";
-          this.ctx.font = font;
+        //   const thirdMesh = rangefinderMeshes[2];
+        //   const boundingInfo = thirdMesh.getBoundingInfo();
+        //   const boundingBox = boundingInfo.boundingBox;
+        //   const size = boundingBox.maximum.subtract(boundingBox.minimum);
+        //   const width = size.z;
+        //   const height = size.y;
 
-          const maxTextWidth = this.dynamicTexture.getSize().width + 100;
+        //   const planeWidth = width;
+        //   const planeHeight = height;
 
-          const textMaterial = new StandardMaterial("TextMaterial", this.scene);
-          textMaterial.diffuseTexture = this.dynamicTexture;
-          textMaterial.emissiveColor = new Color3(1, 1, 1);
-          textMaterial.backFaceCulling = false;
+        //   // Создание DynamicTexture
+        //   this.dynamicTexture = new DynamicTexture("DynamicTexture", { width: 512, height: 512 }, this.scene, false);
+        //   this.dynamicTexture.hasAlpha = true;
 
-          const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth - 0.5, height: 3.5 }, this.scene);
-          textPlane.material = textMaterial;
+        //   this.ctx = this.dynamicTexture.getContext();
+        //   const font = "bold 90px Arial";
+        //   this.ctx.font = font;
 
-          textPlane.parent = thirdMesh;
-          textPlane.rotation.x = -Math.PI / 2.3;
-          textPlane.position = new Vector3(0.015, 7, -9.5);
+        //   const maxTextWidth = this.dynamicTexture.getSize().width + 100;
+
+        //   const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+        //   textMaterial.diffuseTexture = this.dynamicTexture;
+        //   textMaterial.emissiveColor = new Color3(1, 1, 1);
+        //   textMaterial.backFaceCulling = false;
+
+        //   const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth - 0.5, height: 3.5 }, this.scene);
+        //   textPlane.material = textMaterial;
+
+        //   textPlane.parent = thirdMesh;
+        //   textPlane.rotation.x = -Math.PI / 2.3;
+        //   textPlane.position = new Vector3(0.015, 7, -9.5);
 
           console.log("Модели успешно загружены.");
       } catch (error) {
@@ -325,13 +330,21 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
 
 
 BetonTrigger(): void {
-
     const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-    let clickCount = 0;
     let clickCountText: TextBlock | null = null;
 
     const targetMeshForLaser2 = this.beam2;
 
+    // Углы вращения по оси Y (пример из кода)
+    const rotationXValues = [
+        2 * -Math.PI / 3,       // 180 градусов
+        -Math.PI / 2,   // 60 градусов
+        -Math.PI / 3,   // -60 градусов
+        Math.PI 
+    ];
+
+
+    
     const secondTriggerZone = this.triggerManager.setupZoneTrigger(
         clickZonePosition,
         () => {
@@ -344,14 +357,44 @@ BetonTrigger(): void {
                     "Нажми на кнопку для начала измерения.",
                     "Начать",
                     () => {
-
                         if (this.beam2) {
+                            // Привязываем клик к beam2
+                            const imageMeshes = this.modelLoader.getMeshes("image") || [];
+                            imageMeshes[1].isVisible = true
                             this.triggerManager.setupClickableMesh(this.beam2, () => {
-                                clickCount++;
+                                this.clickFour++;
+                                this.clickCount++;
+
+                                // Логика вращения второй модели
+                                
+                                if (imageMeshes.length > 1) {
+                                    const targetMesh = imageMeshes[1]; // Предполагается, что это нужный меш
+                                    const rotationIndex = (this.clickFour - 1) % rotationXValues.length;
+                                    targetMesh.rotation.y = rotationXValues[rotationIndex];
+                                    console.log(`Установлен rotation.y: ${rotationXValues[rotationIndex]} для clickFour: ${this.clickFour}`);
+                                } else {
+                                    console.warn("Меш 'image' или его второй элемент не найден.");
+                                }
+
+                                // Генерируем случайное число
                                 const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
 
-                                // Обновляем текст на динамической текстуре
-                                this.updateDynamicText(`\n${randomValue}`);
+                                // Определяем индекс ячейки для обновления
+                                const cellIndex = (this.clickCount - 1) % 4;
+
+                                // Если мы делаем пятый клик (или 9, 13 и т.д.), то сначала сбрасываем все ячейки
+                                if (cellIndex === 0 && this.clickCount > 1) {
+                                    this.modelLoader.resetAllCells();
+                                }
+
+                                // Обновляем нужную ячейку в GUI
+                                this.modelLoader.updateCellText(cellIndex, randomValue.toString());
+
+                                // Если 4 клика достигнуты, мы можем ввести дополнительную логику. Например:
+                                if (this.clickCount % 4 === 0) {
+                                    console.log("Заполнены все 4 ячейки, следующий клик начнет новый цикл.");
+                                }
+
                             });
 
                             this.triggerManager.activateLaserMode2(this.beam2);
@@ -362,7 +405,7 @@ BetonTrigger(): void {
                                 "Завершить",
                                 () => {
                                     const totalClicksMessage = new TextBlock();
-                                    totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
+                                    totalClicksMessage.text = `Вы произвели измерение ${this.clickCount} раз(а)`;
                                     totalClicksMessage.color = "white";
                                     totalClicksMessage.fontSize = 24;
                                     totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
@@ -378,7 +421,8 @@ BetonTrigger(): void {
                                         this.guiTexture.removeControl(clickCountText);
                                         clickCountText = null;
                                     }
-                                    clickCount = 0;
+                                    this.clickCount = 0;
+                                    this.clickFour = 0;
 
                                     if (this.beam2) {
                                         this.triggerManager.removeMeshAction(this.beam2);
@@ -412,6 +456,7 @@ BetonTrigger(): void {
         true
     );
 }
+
 
 
 }

@@ -11,9 +11,8 @@ const BabylonBeton: React.FC = () => {
   }, []);
 
   return (
-    <div>
-      <h3>Babylon Distance</h3>
-      <canvas ref={canvasRef} style={{ width: '90%', height: '90%' }}></canvas>
+    <div id="app">
+      <canvas ref={canvasRef} style={{ width: '95%', height: '95%' }}></canvas>
     </div>
   );
 };
