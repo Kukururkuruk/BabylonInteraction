@@ -81,9 +81,9 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       this.camera.checkCollisions = true;
       this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
       this.camera.minZ = 0.45;
-      this.camera.speed = 0.55;
-      this.camera.inertia = 0.6;
-      this.camera.angularSensibility = 4000;
+      this.camera.speed = 0.01;
+      this.camera.inertia = 0.01;
+      this.camera.angularSensibility = 250;
       this.camera.rotation.y = -Math.PI/2
       this.camera.rotation.x = Math.PI / 12
       this.camera.keysUp.push(87); // W
