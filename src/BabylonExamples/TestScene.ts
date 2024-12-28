@@ -61,8 +61,8 @@ export class TestScene {
     });
   
     this.CreateController();
-    this.AddScreenshotButton();
-    this.AddCameraPositionButton();
+    // this.AddScreenshotButton();
+    // this.AddCameraPositionButton();
 
     const page1 = this.dialogPage.addText("Привет, на этой карте расположены восклицательные знаки. У каждого знака тебя ждет задание на измерительный прибор. Подойди к знаку и следуй инструкциям.")
     this.guiManager.CreateDialogBox([page1]);
@@ -92,7 +92,7 @@ export class TestScene {
   }
 
   CreateController(): void {
-    const camera = new FreeCamera("camera", new Vector3(0, 15, -15), this.scene);
+    const camera = new FreeCamera("camera", new Vector3(5, 10, -25), this.scene);
     camera.attachControl(this.canvas, true);
     camera.applyGravity = true;
     camera.checkCollisions = true;
@@ -344,7 +344,7 @@ export class TestScene {
                 });
             }
             }, 
-            2 
+            3 
         );
       }
     })

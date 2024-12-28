@@ -108,13 +108,41 @@ export class ModelLoader {
   }
 
 
+  public async loadRangeCentrModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Rangefinder.gltf",
+        this.scene
+      );
+      this.loadedMeshes["rangeC"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }
+  public async loadUltraCentrModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "UltrasonicTester.gltf",
+        this.scene
+      );
+      this.loadedMeshes["ultraC"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }
 
   public async loadRangeModel(): Promise<void> {
     try {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Rangefinder_LP.glb",
+        "Rangefinder_LP.gltf",
         this.scene
       );
       this.loadedMeshes["range"] = result.meshes;
@@ -248,7 +276,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "UltrasonicTester_FR_LP.glb",
+        "UltrasonicTester_FR_LP.gltf",
         this.scene
       );
       this.loadedMeshes["ultra"] = result.meshes;
