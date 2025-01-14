@@ -162,6 +162,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
 
 
 
+            await this.modelLoader.loadUltraModel()
             await this.modelLoader.loadUltranModel(this.camera)
             const rangefinderMeshes = this.modelLoader.getMeshes('ultra') || [];
             console.log(rangefinderMeshes);
