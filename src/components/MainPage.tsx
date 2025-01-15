@@ -30,6 +30,7 @@ const Main: React.FC = () => {
         <div className="column">
           <button><Link to="/ЛабИнструменты">Просмотр инструментов</Link></button>
           <button><Link to="/ЛабКомпьютер">Просмотр Компьютера</Link></button>
+          <button><Link to="/ЛабДемо">Демо режим</Link></button>
         </div>
       </div>
     </div>
