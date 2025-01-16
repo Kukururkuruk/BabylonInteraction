@@ -15,7 +15,8 @@ import {
   PointerEventTypes,
   Animation,
   Tools,
-  Quaternion
+  Quaternion,
+  PointerDragBehavior
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture,   } from "@babylonjs/gui";
@@ -24,6 +25,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
 import * as BABYLON from "@babylonjs/core";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
+
 
 
 export class FullExample {
@@ -133,7 +135,7 @@ export class FullExample {
   
   
 
-  async CreateHandModel(): Promise<void> {
+  async CreateHandModel(): Promise<void> { 
     console.log("Загрузка модели штангенциркуля начата...");
     try {
         // Загрузка модели SM_Caliper.gltf
@@ -145,6 +147,13 @@ export class FullExample {
             // Привязываем основную модель из массива meshes
             this.handModel = meshes[0] as Mesh;
 
+            // Сохраняем исходные параметры для возвращения
+            this.tools['originalHandModelPosition'] = this.handModel.position.clone();
+            this.tools['originalHandModelRotation'] = this.handModel.rotation.clone();
+
+            // Включаем поведение вращения, масштабирования и перемещения для handModel
+            this.enableModelInteraction(this.handModel);
+
             // Ищем дочерний элемент SM_Nonius
             const noniusMesh = meshes.find(mesh => mesh.name === "SM_Nonius") as Mesh;
 
@@ -153,8 +162,8 @@ export class FullExample {
             } else {
                 console.log("Дочерний элемент SM_Nonius найден:", noniusMesh);
 
-                // Устанавливаем параметры для SM_Nonius
-                noniusMesh.position = new Vector3(0.01, 0, 0); // Смещение по оси X на 5 единиц
+                // Устанавливаем начальные параметры для SM_Nonius
+                noniusMesh.position = new Vector3(0, 0, 0); // Смещение по оси X
                 noniusMesh.rotation = new Vector3(0, 0, 0);
                 noniusMesh.scaling = new Vector3(1, 1, 1);
                 noniusMesh.isVisible = true;
@@ -167,6 +176,9 @@ export class FullExample {
                 };
 
                 console.log("Параметры SM_Nonius установлены.");
+
+                // Включаем управление масштабированием по колесику мыши для SM_Nonius
+                this.enableNoniusScaling(noniusMesh);
             }
 
             // Устанавливаем параметры для основной модели
@@ -179,10 +191,77 @@ export class FullExample {
         } else {
             console.error("Ошибка: модель штангенциркуля не найдена в файле.");
         }
+
+        // Пример события для обработки нажатия клавиши Esc и сброса позиции
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+      // Устанавливаем модель в принудительную позицию
+      this.resetModelPosition();
+  }
+});
     } catch (error) {
         console.error("Ошибка при загрузке модели штангенциркуля:", error);
     }
 }
+
+// Функция для включения управления вращением, масштабированием и перемещением модели
+enableModelInteraction(model: Mesh): void {
+    // Поведение для перетаскивания модели мышкой
+    const dragBehavior = new PointerDragBehavior({
+        dragPlaneNormal: new Vector3(0, 0, 1), // Плоскость для вращения вдоль оси Z
+    });
+    model.addBehavior(dragBehavior);
+}
+
+// Функция для управления масштабированием SM_Nonius по колесику мыши
+enableNoniusScaling(noniusMesh: Mesh): void {
+    // Добавим обработчик события колесика мыши для независимого масштабирования SM_Nonius
+    this.scene.onPointerObservable.add((event) => {
+        if (event.type === PointerEventTypes.POINTERWHEEL) {
+            const wheelEvent = event.event as WheelEvent; // Преобразуем в WheelEvent
+            const delta = wheelEvent.deltaY > 0 ? -0.01 : 0.01; // Шаг изменения
+            noniusMesh.position.x += delta; // Изменяем позицию по оси X с шагом 0.01 или -0.01 в зависимости от направления прокрутки
+
+            console.log("Новое значение SM_Nonius по оси X:", noniusMesh.position.x);
+        }
+    });
+}
+
+// Функция для сброса модели штангенциркуля в исходное положение и включения видимости
+resetModelPosition(): void {
+  // Заданные координаты
+  const forcedPosition = new BABYLON.Vector3(13.2, 6.29004, 4.66996);
+  
+  if (this.handModel) {
+      // Принудительно устанавливаем позицию основной модели
+      this.handModel.position = forcedPosition.clone();
+      console.log("Модель установлена в принудительную позицию:", this.handModel.position);
+
+      // Восстанавливаем видимость модели
+      this.handModel.isVisible = true;
+      console.log("Модель сделана видимой.");
+
+      // Восстанавливаем дочернюю модель SM_Nonius, если она существует
+      const noniusMesh = this.tools['noniusModel']?.mesh;
+      if (noniusMesh) {
+          // Устанавливаем начальные параметры для SM_Nonius
+          noniusMesh.position = new Vector3(0, 0, 0); // Смещение по оси X
+          noniusMesh.rotation = new Vector3(0, 0, 0);
+          noniusMesh.scaling = new Vector3(1, 1, 1);
+          noniusMesh.isVisible = true;
+          console.log("Дочерний элемент SM_Nonius возвращен в принудительное положение:", noniusMesh.position);
+      } else {
+          console.warn("Дочерний элемент SM_Nonius не найден.");
+      }
+
+      // Отключаем взаимодействие с моделью, если необходимо
+      this.handModel.getBehaviorByName('dragBehavior')?.detach();
+      console.log("Взаимодействие с моделью отключено.");
+  } else {
+      console.warn("Модель не найдена.");
+  }
+}
+
 
 
 
