@@ -34,6 +34,8 @@ export class ToolScenePC {
   private isDoorOpen: boolean = false; // Флаг состояния двери (открыта/закрыта)
   private isScreenClicked: boolean = false; // Флаг клика на экран
   private guiManager: GUIManager;
+  private isCooldown: boolean = false; // Флаг для проверки на задержку
+
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -364,6 +366,9 @@ SwitchToScreenMode(screenMesh: Mesh): void {
 
 // Вызов анимации при нажатии на дверь
 openDoor(doorMesh: BABYLON.AbstractMesh): void {
+  if (this.isCooldown) return; // Прерываем выполнение, если идет задержка
+  this.isCooldown = true; // Включаем задержку
+
   this.isDoorOpen = true;
 
   // Найти ручку двери
@@ -416,9 +421,17 @@ openDoor(doorMesh: BABYLON.AbstractMesh): void {
   }
 
   console.log("Дверь открывается.");
+
+  // Устанавливаем задержку в 2 секунды перед следующим кликом
+  setTimeout(() => {
+      this.isCooldown = false; // Разрешаем следующий клик
+  }, 2000);
 }
 
 closeDoor(doorMesh: BABYLON.AbstractMesh): void {
+  if (this.isCooldown) return; // Прерываем выполнение, если идет задержка
+  this.isCooldown = true; // Включаем задержку
+
   this.isDoorOpen = false;
 
   // Найти ручку двери
@@ -471,7 +484,13 @@ closeDoor(doorMesh: BABYLON.AbstractMesh): void {
   }
 
   console.log("Дверь закрывается.");
+
+  // Устанавливаем задержку в 2 секунды перед следующим кликом
+  setTimeout(() => {
+      this.isCooldown = false; // Разрешаем следующий клик
+  }, 2000);
 }
+
 
 
   AddScreenshotButton(): void {

@@ -49,6 +49,11 @@ export class ModelLoader {
     "SM_PipeWater_LP",                  // Водосточная система
     "SM_GridDrainageSmall_LP",          // Дождеприемник
     // Добавьте дополнительные одиночные меши по необходимости
+
+          "SM_0_SpanStructureBeam_1_Armature_R",
+          "SM_0_SpanStructureBeam_1_Cable_R",
+          "SM_0_SpanStructureBeam_2_Armature_L",
+          "SM_0_SpanStructureBeam_2_Cable_L"
   ];
 
   constructor(scene: Scene) {
@@ -379,6 +384,42 @@ export class ModelLoader {
       throw error;
     }
   }
+  
+  public async loadTestCubeModel(): Promise<void> { 
+    try {
+        // Загрузка модели TestCube.gltf
+        const result = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "TestCube.gltf",
+            this.scene
+        );
+
+        // Сохранение загруженных мешей
+        this.loadedMeshes["TestCube"] = result.meshes;
+
+        // Настройка мешей модели TestCube
+        const meshes = this.loadedMeshes["TestCube"];
+        if (meshes.length === 0) {
+            console.error("TestCube.gltf не содержит мешей.");
+            return;
+        }
+
+        // Применение масштабирования и позиции
+        meshes.forEach((mesh) => {
+            mesh.isVisible = true;
+            mesh.scaling = new Vector3(0.1, 0.1, 0.1);
+            const offset = new Vector3(-0.55, -0.5, 0.86);
+            mesh.position = offset;
+            mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI / 6);
+        });
+
+        console.log("TestCube.gltf успешно загружен и настроен:", meshes);
+    } catch (error) {
+        console.error("Ошибка при загрузке TestCube.gltf", error);
+        throw error;
+    }
+}
   
 
   addGUIToTool(mesh, texts): void {
