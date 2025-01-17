@@ -182,9 +182,9 @@ export class FullExample {
             }
 
             // Устанавливаем параметры для основной модели
-            this.handModel.position = new Vector3(13.2, 6.29004, 4.66996);
-            this.handModel.scaling = new Vector3(1.5, 1.5, 1.5);
-            this.handModel.rotation = new Vector3(0, -Math.PI / 2, 3 * -Math.PI / 2);
+            this.handModel.position = new Vector3(13.2, 6.41004, 4.85 );
+            this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
+            this.handModel.rotation = new Vector3(0, Math.PI / 2, Math.PI);
             this.handModel.isVisible = true;
 
             console.log("Модель штангенциркуля загружена и параметры установлены.");
@@ -220,8 +220,9 @@ enableNoniusScaling(noniusMesh: Mesh): void {
         if (event.type === PointerEventTypes.POINTERWHEEL) {
             const wheelEvent = event.event as WheelEvent; // Преобразуем в WheelEvent
             const delta = wheelEvent.deltaY > 0 ? -0.01 : 0.01; // Шаг изменения
-            noniusMesh.position.x += delta; // Изменяем позицию по оси X с шагом 0.01 или -0.01 в зависимости от направления прокрутки
-
+            
+           // Обновляем позицию с ограничением
+            noniusMesh.position.x = Math.max(-0.16, Math.min(0.16, noniusMesh.position.x + delta));
             console.log("Новое значение SM_Nonius по оси X:", noniusMesh.position.x);
         }
     });
@@ -230,7 +231,7 @@ enableNoniusScaling(noniusMesh: Mesh): void {
 // Функция для сброса модели штангенциркуля в исходное положение и включения видимости
 resetModelPosition(): void {
   // Заданные координаты
-  const forcedPosition = new BABYLON.Vector3(13.2, 6.29004, 4.66996);
+  const forcedPosition = new BABYLON.Vector3(13.2, 6.41004, 4.85);
   
   if (this.handModel) {
       // Принудительно устанавливаем позицию основной модели
@@ -286,74 +287,115 @@ resetModelPosition(): void {
 
   private highlightSpecificMeshes(): void {
     const meshNames = [
-      "SM_0_SpanStructureBeam_1_Armature_R",
-      "SM_0_SpanStructureBeam_1_Cable_R",
-      "SM_0_SpanStructureBeam_2_Armature_L",
-      "SM_0_SpanStructureBeam_2_Cable_L"
+        "SM_0_SpanStructureBeam_1_Armature_R",
+        "SM_0_SpanStructureBeam_1_Cable_R",
+        "SM_0_SpanStructureBeam_2_Armature_L",
+        "SM_0_SpanStructureBeam_2_Cable_L"
     ];
-  
+
     const meshesToHighlight = meshNames
-      .map(name => this.scene.getMeshByName(name))
-      .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Приводим к типу Mesh
-  
+        .map(name => this.scene.getMeshByName(name))
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Приводим к типу Mesh
+
     let isZoomed = false; // Флаг для отслеживания состояния камеры
-    const initialPosition = new Vector3(13.7, 6.3, 5.0); // Положение камеры из CreateController
-    const targetPosition = new Vector3(12.92, 6.25168, 5.04164); // Целевая позиция камеры
-  
+    const initialCameraPosition = new Vector3(13.7, 6.3, 5.0); // Положение камеры из CreateController
+    const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164); // Целевая позиция камеры
+
+    const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0); // Начальная позиция Caliper
+    const targetCaliperPosition = new Vector3(12.4467, 6.24097, 4.97655); // Целевая позиция Caliper
+
     meshesToHighlight.forEach(mesh => {
-      // Добавляем подсветку
-      this.highlightLayer.addMesh(mesh, Color3.FromHexString("#FF0000"));
-  
-      // Делаем меш кликабельным
-      mesh.isPickable = true;
-  
-      // Добавляем обработчик клика на каждый меш
-      mesh.actionManager = new ActionManager(this.scene);
-      mesh.actionManager.registerAction(new ExecuteCodeAction(
-        ActionManager.OnPickTrigger,
-        () => {
-          console.log(`${mesh.name} был кликнут!`);
-  
-          // Получаем активную камеру
-          const camera = this.scene.activeCamera;
-          if (camera && camera instanceof FreeCamera) {
-            const currentPosition = camera.position.clone(); // Текущая позиция камеры
-            const endPosition = isZoomed ? initialPosition : targetPosition; // Определяем конечную позицию
-  
-            // Если камера уже в целевой позиции, не запускаем анимацию
-            if (currentPosition.equals(endPosition)) return;
-  
-            // Создаем анимацию перемещения камеры
-            const animation = new Animation(
-              "cameraMove",
-              "position",
-              30, // Частота кадров анимации
-              Animation.ANIMATIONTYPE_VECTOR3,
-              Animation.ANIMATIONLOOPMODE_CONSTANT
-            );
-  
-            // Ключевые кадры для анимации
-            const keys = [
-              { frame: 0, value: currentPosition },  // Начальная позиция камеры
-              { frame: 60, value: endPosition }      // Конечная позиция камеры
-            ];
-  
-            animation.setKeys(keys); // Устанавливаем ключевые кадры
-  
-            // Добавляем анимацию камеры и запускаем
-            camera.animations = []; // Сбрасываем предыдущие анимации
-            camera.animations.push(animation);
-            this.scene.beginAnimation(camera, 0, 60, false); // Запускаем анимацию
-  
-            // Переключаем состояние
-            isZoomed = !isZoomed;
-          }
-        }
-      ));
+        // Добавляем подсветку
+        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#FF0000"));
+
+        // Делаем меш кликабельным
+        mesh.isPickable = true;
+
+        // Добавляем обработчик клика на каждый меш
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(new ExecuteCodeAction(
+            ActionManager.OnPickTrigger,
+            () => {
+                console.log(`${mesh.name} был кликнут!`);
+
+                // Логика перемещения камеры
+                const camera = this.scene.activeCamera;
+                if (camera && camera instanceof FreeCamera) {
+                    const currentCameraPosition = camera.position.clone(); // Текущая позиция камеры
+                    const endCameraPosition = isZoomed ? initialCameraPosition : targetCameraPosition;
+
+                    // Если камера уже в целевой позиции, не запускаем анимацию
+                    if (currentCameraPosition.equals(endCameraPosition)) return;
+
+                    // Создаем анимацию перемещения камеры
+                    const cameraAnimation = new Animation(
+                        "cameraMove",
+                        "position",
+                        30, // Частота кадров анимации
+                        Animation.ANIMATIONTYPE_VECTOR3,
+                        Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+
+                    // Ключевые кадры для анимации камеры
+                    const cameraKeys = [
+                        { frame: 0, value: currentCameraPosition },
+                        { frame: 60, value: endCameraPosition }
+                    ];
+
+                    cameraAnimation.setKeys(cameraKeys);
+
+                    // Применяем анимацию к камере
+                    camera.animations = [];
+                    camera.animations.push(cameraAnimation);
+                    this.scene.beginAnimation(camera, 0, 60, false);
+                }
+
+                // Логика перемещения SM_Caliper
+                const endCaliperPosition = isZoomed ? initialCaliperPosition : targetCaliperPosition;
+                this.moveCaliperWithAnimation(endCaliperPosition);
+
+                // Переключаем состояние
+                isZoomed = !isZoomed;
+            }
+        ));
     });
-  }
+}
   
-  
+  // Функция для перемещения SM_Caliper.gltf с анимацией
+moveCaliperWithAnimation(targetPosition: Vector3): void {
+    if (!this.handModel) {
+        console.warn("Модель SM_Caliper.gltf не найдена.");
+        return;
+    }
+
+    // Создаем анимацию для перемещения
+    const animation = new BABYLON.Animation(
+        "moveCaliperAnimation",
+        "position",
+        60, // Количество кадров в секунду
+        BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+
+    // Начальная и конечная позиции
+    const keys = [
+        { frame: 0, value: this.handModel.position.clone() }, // Начальная позиция
+        { frame: 60, value: targetPosition }, // Конечная позиция через 1 секунду (60 кадров)
+    ];
+
+    animation.setKeys(keys);
+
+    // Применяем анимацию к модели
+    this.handModel.animations = [];
+    this.handModel.animations.push(animation);
+
+    // Запускаем анимацию
+    this.scene.beginAnimation(this.handModel, 0, 60, false);
+
+    console.log("Анимация перемещения SM_Caliper запущена к:", targetPosition);
+}
+
+
   
 
 
