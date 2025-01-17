@@ -632,10 +632,10 @@ export class DemoScene {
     light.position = new Vector3(-20, 20, 20);
     light.intensity = 2;
 
-    const hdrTexture = new HDRCubeTexture("/models/test_5.hdr", scene, 512);
+    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
-    scene.environmentIntensity = 1;
+    scene.environmentIntensity = 0.5;
 
     return scene;
   }
@@ -1147,7 +1147,9 @@ export class DemoScene {
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
     } finally {
-      this.engine.hideLoadingUI();
+      this.scene.onReadyObservable.add(() => {
+        this.engine.hideLoadingUI();
+    })
     }
   }
 
