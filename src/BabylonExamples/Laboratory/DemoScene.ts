@@ -546,9 +546,9 @@ import {
   GlowLayer,
   SceneLoader,
   DynamicTexture,
-  ActionManager // Добавить
+  ActionManager
 } from "@babylonjs/core";
-import { ExecuteCodeAction } from "@babylonjs/core/Actions"; // Добавить
+import { ExecuteCodeAction } from "@babylonjs/core/Actions";
 
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
@@ -592,9 +592,11 @@ export class DemoScene {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
 
-    // NEW: Флаги, чтобы не запускать одно и то же повторно
-    private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
-    private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
+  // NEW: Флаги, чтобы не запускать одно и то же повторно
+  private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
+  private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
+
+  private rangefinderMeshes: AbstractMesh[] = [];
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -612,11 +614,6 @@ export class DemoScene {
 
     this.CreateController();
     this.utilities.AddScreenshotButton();
-    // this.utilities.AddCameraPositionButton();
-    // this.utilities.combinedMethod()
-
-    // УБРАНО: this.BetonTrigger(); 
-    // Теперь BetonTrigger() вызывается только по клику на меш SM_0_Wall_R
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -676,21 +673,23 @@ export class DemoScene {
     });
   }
 
+  /**
+   * Переносим сюда ВСЮ логику загрузки моделей: и "lab", и "dist".
+   */
   async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
-
-      // 1) ЗАГРУЗКА LAB
+  
+      // 1) Загружаем основную сцену (Lab)
       await this.modelLoader.loadMLabModel();
       const lab = this.modelLoader.getMeshes("lab") || [];
 
-      // GlowLayer для LAB
+      // Пример работы со светящимися материалами
       const glowLayer = new GlowLayer("glow", this.scene);
       glowLayer.intensity = 1;
 
       lab.forEach((mesh) => {
         mesh.checkCollisions = false;
-        // Пример для SM_0_Tools_Desk
         if (mesh.name === "SM_0_Tools_Desk" && mesh instanceof Mesh) {
           const material = mesh.material;
           if (material && material instanceof PBRMaterial) {
@@ -704,54 +703,69 @@ export class DemoScene {
         }
       });
 
-      lab.forEach((mesh) => {
-        // --- Клик по стене => BetonTrigger() ---
-        if (mesh.name === "SM_0_Wall_R") {
-          mesh.actionManager = new ActionManager(this.scene);
-          mesh.actionManager.registerAction(
-            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-              // Проверяем, не вызывали ли уже
-              if (this.isBetonTriggered) return;
-              this.isBetonTriggered = true;
+      // -------------------------------------------
+      // ПРАВКИ ДЛЯ ПЕРВОГО ВОПРОСА:
+      // Делим логику так, чтобы:
+      // - При клике на SM_0_Wall_R отключался SM_0_Tools_Desk
+      // - При клике на SM_0_Tools_Desk отключался SM_0_Wall_R
+      // - Убираем курсор-«палец» (hoverCursor = "default")
+      // -------------------------------------------
+      
+      // Ищем нужные меши в lab
+      const meshWall = lab.find((m) => m.name === "SM_0_Wall_R");
+      const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
 
-              this.BetonTrigger();
-            })
-          );
-        }
+      // Настраиваем кликабельность для стены (если найдена)
+      if (meshWall) {
+        meshWall.isPickable = true;
+        meshWall.actionManager = new ActionManager(this.scene);
+        meshWall.actionManager.hoverCursor = "default"; // убрать «палец» при наведении
 
-        // --- Клик по столу => initToolHandling() ---
-        if (mesh.name === "SM_0_Tools_Desk") {
-          mesh.actionManager = new ActionManager(this.scene);
-          mesh.actionManager.registerAction(
-            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-              // Проверяем, не кликали ли уже
-              if (this.isToolDeskClicked) return;
-              this.isToolDeskClicked = true;
+        meshWall.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            // Если уже запущен бетон-триггер - ничего не делаем
+            if (this.isBetonTriggered) return;
 
-              this.initToolHandling();
-            })
-          );
-        }
-      });
+            // Активируем "бетон"
+            this.isBetonTriggered = true;
+            this.BetonTrigger(); // запуск вашей логики
+
+            // Отключаем "стол" (чтобы нельзя было кликать)
+            if (meshDesk) {
+              meshDesk.isPickable = false;   
+              meshDesk.actionManager = null; // убираем actionManager
+            }
+          })
+        );
+      }
+
+      // Настраиваем кликабельность для стола (если найден)
+      if (meshDesk) {
+        meshDesk.isPickable = true;
+        meshDesk.actionManager = new ActionManager(this.scene);
+        meshDesk.actionManager.hoverCursor = "default"; // убрать «палец» при наведении
+
+        meshDesk.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            // Если уже нажимали на стол - ничего не делаем
+            if (this.isToolDeskClicked) return;
+
+            this.isToolDeskClicked = true;
+            this.initToolHandling(); // запуск вашей логики
+
+            // Отключаем "стену"
+            if (meshWall) {
+              meshWall.isPickable = false;
+              meshWall.actionManager = null;  
+            }
+          })
+        );
+      }
+      // -------------------------------------------
 
       console.log("Основные модели (LAB) успешно загружены.");
-    } catch (error) {
-      console.error("Ошибка при загрузке моделей:", error);
-    }
-  }
-
-  /**
-   * Метод, который будет вызываться по клику на SM_0_Tools_Desk.
-   * Здесь:
-   *  - инициализируем логику по загрузке dist и rangefinder (бывшая часть CreateEnvironment),
-   *  - регистрируем onPointerDown / onPointerUp / onPointerMove (бывшие в constructor),
-   *  - определяем методы работы с инструментами (getToolNameByMesh, returnCurrentTool и т.п.).
-   */
-  private async initToolHandling(): Promise<void> {
-    // ---------------------
-    // 1) ДОГРУЖАЕМ "dist" (часть из CreateEnvironment после // Загрузка dist)
-    // ---------------------
-    try {
+  
+      // 2) Загружаем инструмент dist (rangeC)
       await this.modelLoader.loadRangeCentrModel();
       const dist = this.modelLoader.getMeshes("rangeC") || [];
       dist.forEach((mesh, index) => {
@@ -760,13 +774,17 @@ export class DemoScene {
           mesh.position = new Vector3(3.56, 0.95, 1.99);
           mesh.rotation = new Vector3(0, Math.PI, Math.PI / 2);
           if (!mesh.rotationQuaternion) {
-            mesh.rotationQuaternion = Quaternion.FromEulerAngles(mesh.rotation.x, mesh.rotation.y, mesh.rotation.z);
+            mesh.rotationQuaternion = Quaternion.FromEulerAngles(
+              mesh.rotation.x,
+              mesh.rotation.y,
+              mesh.rotation.z
+            );
           }
         }
       });
       const distAbsolutePositions = dist.map((m) => m.getAbsolutePosition().clone());
       const distWorldRotQuats = dist.map((m) => m.rotationQuaternion!.clone());
-
+  
       this.tools["dist"] = {
         meshes: dist,
         originalAbsolutePositions: distAbsolutePositions,
@@ -779,18 +797,41 @@ export class DemoScene {
         frontPosition: new Vector3(0, 0, 0.9),
         frontRotation: new Vector3(Math.PI, Math.PI / 2, 0),
       };
-
-      console.log("Модели 'dist' и 'rangefinder' успешно догружены (initToolHandling).");
-    } catch (e) {
-      console.error("Ошибка при догрузке 'dist' / 'rangefinder':", e);
+      console.log("Модели 'dist' успешно загружены (CreateEnvironment).");
+  
+      // 3) Загружаем Rangefinder_LP.glb (раньше это было в BetonTrigger)
+      try {
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Rangefinder_LP.glb", this.scene);
+        this.rangefinderMeshes = meshes;
+        this.rangefinderMeshes.forEach((mesh) => {
+          mesh.position = new Vector3(0,-1,0);
+        });
+        console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
+      } catch (err) {
+        console.error("Ошибка при загрузке Rangefinder_LP.glb:", err);
+      }
+    } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+    } finally {
+      this.engine.hideLoadingUI();
     }
+  }
+  
 
-    // ---------------------
-    // 2) Регистрируем события мыши onPointerDown, onPointerUp, onPointerMove
-    //    (Вместо того, чтобы делать это в constructor)
-    // ---------------------
+  /**
+   * Метод, который вызывается по клику на SM_0_Tools_Desk.
+   * Здесь только регистрируем события onPointerDown / onPointerUp / onPointerMove
+   * и используем уже загруженные модели из this.tools.
+   */
+  private async initToolHandling(): Promise<void> {
+    this.triggerManager.disableCameraMovement();
+    this.camera.position = new Vector3(-2.0532259325547524, 1.5075, 1.9956260534309331);
+    this.camera.rotation = new Vector3(0.1571380321207439, -1.5679675730797253, 0);
+    this.showToolSelectionDialog();
+
+    // Регистрируем события мыши onPointerDown, onPointerUp, onPointerMove
     this.scene.onPointerDown = (evt, pickInfo) => {
-      // Правая кнопка — перемещаем инструмент
+      // Правая кнопка => перемещаем инструмент
       if (evt.button === 2) {
         if (pickInfo.hit && pickInfo.pickedMesh) {
           const clickedTool = this.getToolNameByMesh(pickInfo.pickedMesh);
@@ -803,7 +844,7 @@ export class DemoScene {
           }
         }
       } else if (evt.button === 0) {
-        // Левая кнопка — вращаем, если инструмент перед камерой
+        // Левая кнопка => вращаем, если инструмент перед камерой
         if (this.currentToolName && this.tools[this.currentToolName].isFront) {
           this.isRotating = true;
           this.lastPointerX = evt.clientX;
@@ -847,16 +888,8 @@ export class DemoScene {
         });
       }
     };
-
-    // ---------------------
-    // 3) Методы для работы с инструментами:
-    //    (перенесены из тела класса в виде приватных вложенных функций
-    //     либо можно оставить их "обычными" приватными методами класса)
-    // ---------------------
   }
 
-  // Оставляем эти методы приватными в самом классе,
-  // но помним, что они вызываются из initToolHandling (и обработчиков мыши).
   private getToolNameByMesh(mesh: AbstractMesh): string | null {
     for (const toolName in this.tools) {
       if (this.tools[toolName].meshes.includes(mesh)) {
@@ -871,8 +904,6 @@ export class DemoScene {
     const toolData = this.tools[this.currentToolName];
 
     if (toolData.isFront) {
-      this.camera.attachControl(this.canvas, true);
-
       toolData.meshes.forEach((mesh, index) => {
         mesh.setParent(null);
         mesh.setAbsolutePosition(toolData.originalAbsolutePositions[index].clone());
@@ -892,8 +923,6 @@ export class DemoScene {
     toolData.isFront = !toolData.isFront;
     if (toolData.isFront) {
       this.currentToolName = toolName;
-      this.camera.detachControl();
-
       const pos = toolData.frontPosition || this.defaultFrontPosition;
       const rot = toolData.frontRotation || this.defaultFrontRotation;
 
@@ -907,8 +936,6 @@ export class DemoScene {
         toolData.onFrontCallback();
       }
     } else {
-      this.camera.attachControl(this.canvas, true);
-
       toolData.meshes.forEach((mesh, index) => {
         mesh.setParent(null);
         mesh.setAbsolutePosition(toolData.originalAbsolutePositions[index].clone());
@@ -930,140 +957,209 @@ export class DemoScene {
 
   private showToolSelectionDialog(): void {
     const startPage = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
-    this.guiManager.CreateDialogBox([startPage]);
+    const endPage = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
+      const page4 = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
+      this.guiManager.CreateDialogBox([page4]);
+      this.triggerManager.enableCameraMovement();
+      this.isToolDeskClicked = false;
+      // Удаляем обработчик кликов
+      this.scene.onPointerDown = undefined;
+
+      // ------------------------------------------------------
+      // Возвращаем стену в кликабельное состояние (если нужно)
+      // ------------------------------------------------------
+      const labMeshes = this.modelLoader.getMeshes("lab") || [];
+      const meshWall = labMeshes.find((m) => m.name === "SM_0_Wall_R");
+      if (meshWall) {
+        meshWall.isPickable = true;
+        meshWall.actionManager = new ActionManager(this.scene);
+        meshWall.actionManager.hoverCursor = "default";
+        meshWall.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            if (!this.isBetonTriggered) {
+              this.isBetonTriggered = true;
+              this.BetonTrigger();
+
+              // Отключаем стол
+              const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
+              if (meshDesk) {
+                meshDesk.isPickable = false;
+                meshDesk.actionManager = null;
+              }
+            }
+          })
+        );
+      }
+    });
+    this.guiManager.CreateDialogBox([startPage, endPage]);
   }
 
-  public async BetonTrigger(): Promise<void> {
+  public BetonTrigger(): void {
     // Показываем диалог перед началом
     const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
     this.guiManager.CreateDialogBox([page1]);
-
-    // NEW: Подгружаем Rangefinder_LP.glb
-    try {
-      // Загрузка новой модели Rangefinder_LP.glb
-      const { meshes: rangefinderMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Rangefinder_LP.glb", this.scene);
-
-      // Пример позиционирования и "динамического текста"
-      rangefinderMeshes.forEach((mesh) => {
-        // Отзеркаливание по оси Z и масштабирование
-        mesh.scaling = new Vector3(3, 3, -3);
-        mesh.rotation.y = Math.PI / 3;
-        // Родитель = камера
-        mesh.parent = this.camera;
-        const offset = new Vector3(-0.7, -0.5, 1.1);
-        mesh.position = offset;
-      });
-
-      // Допустим, хотим работать именно с 3-м мешем
-      const thirdMesh = rangefinderMeshes[2];
-      const boundingInfo = thirdMesh.getBoundingInfo();
-      const boundingBox = boundingInfo.boundingBox;
-      const size = boundingBox.maximum.subtract(boundingBox.minimum);
-      const width = size.z;
-      const height = size.y;
-
-      // DynamicTexture
-      const planeWidth = width;
-      const planeHeight = height;
-      const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
-      dynamicTexture.hasAlpha = true;
-
-      const font = "bold 90px Arial";
-      const ctx = dynamicTexture.getContext();
-      ctx.font = font;
-      const maxTextWidth = dynamicTexture.getSize().width - 100;
-
-      function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
-        const lines: string[] = [];
-        const paragraphs = text.split("\n");
-        paragraphs.forEach((paragraph) => {
-          const words = paragraph.split(" ");
-          let currentLine = "";
-          words.forEach((word) => {
-            const testLine = currentLine + word + " ";
-            const metrics = context.measureText(testLine);
-            const testWidth = metrics.width;
-            if (testWidth > maxWidth && currentLine !== "") {
-              lines.push(currentLine.trim());
-              currentLine = word + " ";
-            } else {
-              currentLine = testLine;
-            }
-          });
-          lines.push(currentLine.trim());
-        });
-        return lines;
-      }
-
-      function updateDynamicText(newText: string) {
-        ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
-        ctx.font = font;
-        const lines = wrapText(ctx, newText, maxTextWidth);
-        const lineHeight = 90;
-        lines.forEach((line, index) => {
-          ctx.fillStyle = "white";
-          ctx.fillText(line, 50, 100 + index * lineHeight);
-        });
-        dynamicTexture.update();
-      }
-
-      eventEmitter.on("updateTextPlane", (newText: string) => {
-        updateDynamicText(newText);
-      });
-      eventEmitter.on("updateAngleText", (newText: string) => {
-        updateDynamicText(newText);
-      });
-
-      const textMaterial = new StandardMaterial("TextMaterial", this.scene);
-      textMaterial.diffuseTexture = dynamicTexture;
-      textMaterial.emissiveColor = new Color3(1, 1, 1);
-      textMaterial.backFaceCulling = false;
-
-      const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
-      textPlane.material = textMaterial;
-      textPlane.parent = thirdMesh;
-      textPlane.rotation.y = -Math.PI / 2;
-      textPlane.scaling = new Vector3(-1, 1, 1);
-      textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0);
-
-      console.log("Rangefinder_LP.glb загружен и настроен");
-    } catch (err) {
-      console.error("Ошибка при загрузке Rangefinder_LP.glb:", err);
+  
+    if (!this.rangefinderMeshes || this.rangefinderMeshes.length === 0) {
+      console.error("RangefinderMeshes не загружены. Проверьте CreateEnvironment().");
+      return;
     }
+  
+    this.rangefinderMeshes.forEach((mesh) => {
+      mesh.scaling = new Vector3(3, 3, -3);
+      mesh.rotation.y = Math.PI / 3;
+      mesh.parent = this.camera;
+      const offset = new Vector3(-0.7, -0.5, 1.1);
+      mesh.position = offset;
+    });
+  
+    const thirdMesh = this.rangefinderMeshes[2];
+    const boundingInfo = thirdMesh.getBoundingInfo();
+    const boundingBox = boundingInfo.boundingBox;
+    const size = boundingBox.maximum.subtract(boundingBox.minimum);
+    const width = size.z;
+    const height = size.y;
+  
+    const planeWidth = width;
+    const planeHeight = height;
+    const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+    dynamicTexture.hasAlpha = true;
+  
+    const font = "bold 90px Arial";
+    const ctx = dynamicTexture.getContext();
+    ctx.font = font;
+    const maxTextWidth = dynamicTexture.getSize().width - 100;
+  
+    function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
+      const lines: string[] = [];
+      const paragraphs = text.split("\n");
+      paragraphs.forEach((paragraph) => {
+        const words = paragraph.split(" ");
+        let currentLine = "";
+        words.forEach((word) => {
+          const testLine = currentLine + word + " ";
+          const metrics = context.measureText(testLine);
+          const testWidth = metrics.width;
+          if (testWidth > maxWidth && currentLine !== "") {
+            lines.push(currentLine.trim());
+            currentLine = word + " ";
+          } else {
+            currentLine = testLine;
+          }
+        });
+        lines.push(currentLine.trim());
+      });
+      return lines;
+    }
+  
+    function updateDynamicText(newText: string) {
+      ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+      ctx.font = font;
+      const lines = wrapText(ctx, newText, maxTextWidth);
+      const lineHeight = 90;
+      lines.forEach((line, index) => {
+        ctx.fillStyle = "white";
+        ctx.fillText(line, 50, 100 + index * lineHeight);
+      });
+      dynamicTexture.update();
+    }
+  
+    eventEmitter.on("updateTextPlane", (newText: string) => {
+      updateDynamicText(newText);
+    });
+    eventEmitter.on("updateAngleText", (newText: string) => {
+      updateDynamicText(newText);
+    });
+  
+    const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+    textMaterial.diffuseTexture = dynamicTexture;
+    textMaterial.emissiveColor = new Color3(1, 1, 1);
+    textMaterial.backFaceCulling = false;
+  
+    const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+    textPlane.material = textMaterial;
+    textPlane.parent = thirdMesh;
+    textPlane.rotation.y = -Math.PI / 2;
+    textPlane.scaling = new Vector3(-1, 1, 1);
+    textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0);
+  
+    console.log("Rangefinder_LP.glb успешно инициализирован в BetonTrigger.");
+  
+    const page2 = this.dialogPage.addText(
+      "Вам нужно измерить длину конструкций... Кликните правой кнопкой, чтобы начать измерение и т.д."
+    );
+    const page3 = this.dialogPage.addInputGrid("Конструкции", ["Ширина двери", "Высота стола", "Шкаф", "Что-то еще"]);
+  
+    // Активируем режим измерения
+    this.triggerManager.distanceMode();
+    this.triggerManager.enableDistanceMeasurement();
+  
+    // Кнопка "Завершить"
+    const page4 = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
+      const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+      this.guiManager.CreateDialogBox([page4]);
+      this.triggerManager.disableDistanceMeasurement();
+      this.triggerManager.exitDisLaserMode2();
+      this.isBetonTriggered = false;
+      this.rangefinderMeshes.forEach((mesh) => {
+        mesh.position = new Vector3(0, -1, 0);
+      });
 
-    // Дальше - ваша логика работы с BetonTrigger
-      const page2 = this.dialogPage.addText(
-        "Вам нужно измерить длину конструкций... Кликните правой кнопкой, чтобы начать измерение и т.д."
-      );
-      const page3 = this.dialogPage.addInputGrid("Конструкции", ["Ширина двери", "Высота стола", "Шкаф", "Что-то еще"]);
-      
+      // --------------------------------
+      // Возвращаем стол обратно в работу
+      // --------------------------------
+      const labMeshes = this.modelLoader.getMeshes("lab") || [];
+      const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
+      if (meshDesk) {
+        meshDesk.isPickable = true;
+        meshDesk.actionManager = new ActionManager(this.scene);
+        meshDesk.actionManager.hoverCursor = "default";
 
-      this.triggerManager.distanceMode();
-      this.triggerManager.enableDistanceMeasurement();
-      const page4 = this.dialogPage.createStartPage('Для завершения нажмите на кнопку', 'Завершить', () => {
-        const page4 = this.dialogPage.addText("Отлично, теперь нажмите на кнопку для перехода на основную карту");
-        this.guiManager.CreateDialogBox([page4]);
-        this.triggerManager.disableDistanceMeasurement();
-        this.triggerManager.exitDisLaserMode2();
-        this.isBetonTriggered = false
-        
-      })
+        meshDesk.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            if (!this.isToolDeskClicked) {
+              this.isToolDeskClicked = true;
+              this.initToolHandling();
 
-      this.guiManager.CreateDialogBox([page2, page3, page4]);
+              // Отключаем стену
+              const meshWall = labMeshes.find((m) => m.name === "SM_0_Wall_R");
+              if (meshWall) {
+                meshWall.isPickable = false;
+                meshWall.actionManager = null;
+              }
+            }
+          })
+        );
+      }
+    });
+  
+    this.guiManager.CreateDialogBox([page2, page3, page4]);
   }
 
   async initializeScene(): Promise<void> {
     try {
       await this.CreateEnvironment();
-      // Выводим диалог, что можно выбрать инструмент
-      this.showToolSelectionDialog();
+      // По умолчанию (можете менять логику):
+      // this.showToolSelectionDialog();
+      // Или сразу показывать другой текст, если нужно
+      const page4 = this.dialogPage.addText("Сцена загружена. Можете кликать на стену или стол.");
+      this.guiManager.CreateDialogBox([page4]);
+
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
     } finally {
       this.engine.hideLoadingUI();
     }
   }
+
+  // Заглушка, чтобы не было ошибок со ссылкой this.textMessages
+  private textMessages = {
+    showMessage: (msg: string) => {
+      console.log("TextMessage:", msg);
+    },
+  };
 }
+
+
 
   
   
