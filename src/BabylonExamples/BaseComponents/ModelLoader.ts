@@ -21,6 +21,9 @@ export class ModelLoader {
   public meshGroups = [
     { groupName: "SpanStructureBeam_L_7", baseName: "SM_0_SpanStructureBeam_L_7" },
     { groupName: "SpanStructureBeam_L_4", baseName: "SM_0_SpanStructureBeam_L_4" },
+    { groupName: "Drain_UP_2", baseName: "SM_Drain_UP_2" },
+    { groupName: "Drain_Down_2", baseName: "SM_Drain_Down_2" },
+    { groupName: "Drain_2", baseName: "SM_Drain_2" },
     // Добавьте дополнительные группы по необходимости
   ];
 
@@ -42,10 +45,8 @@ export class ModelLoader {
     "SM_0_TransitionPlate8M_LP_L_primitive0", // Плита переходная
     "SM_0_PlotMonolithic",              // Плита над балками
     "SM_0_SupportLight_LP_Down_L",      // Фонари
-    "SM_0_Landscape_Gravel_LP",         // Водосточный монолит
     "SM_HalfPipe_LP",                   // Подвесной лоток
-    "SM_ConcreteTray_UP",               // Лоток верхняя часть
-    "SM_ConcreteTelescopicTray",        // Откосной лоток
+    "SM_Drain_Half_Pipe_2",        // Откосной лоток
     "SM_PipeWater_LP",                  // Водосточная система
     "SM_GridDrainageSmall_LP",          // Дождеприемник
     // Добавьте дополнительные одиночные меши по необходимости
@@ -67,7 +68,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Map_1_MOD.gltf",
+        "Map_1_MOD_V_4.gltf",
         this.scene
       );
       this.loadedMeshes["map"] = result.meshes;
