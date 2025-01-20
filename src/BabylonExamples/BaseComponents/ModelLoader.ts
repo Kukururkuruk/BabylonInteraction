@@ -96,14 +96,14 @@ export class ModelLoader {
                 mesh.checkCollisions = true;
 
                 // Логируем меши для отладки
-                console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
+                // console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
             }
 
             // Переопределение точки вращения (pivot) для модели SM_Door
             if (mesh.name === "SM_Door") {
                 mesh.position.y = 0; // Установить модель на плоскость
                 mesh.rotationQuaternion = null; // Очистить кватернион поворота, чтобы ручное управление работало нормально
-                console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
+                // console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
             }
         });
     } catch (error) {

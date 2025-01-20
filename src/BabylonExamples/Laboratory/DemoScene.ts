@@ -546,12 +546,14 @@ import {
   GlowLayer,
   SceneLoader,
   DynamicTexture,
-  ActionManager
+  ActionManager,
+  VideoTexture,
+  Texture
 } from "@babylonjs/core";
 import { ExecuteCodeAction } from "@babylonjs/core/Actions";
 
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
+import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, ScrollViewer, TextBlock, TextWrapping } from "@babylonjs/gui";
 import { TriggerManager2 } from "../FunctionComponents/TriggerManager2";
 import { ModelLoader } from "../BaseComponents/ModelLoader";
 import { GUIManager } from "../FunctionComponents/GUIManager";
@@ -580,6 +582,7 @@ export class DemoScene {
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
   private utilities: BabylonUtilities;
+  private currentDialogBox: Rectangle | null = null;
 
   private tools: { [key: string]: ToolData } = {};
 
@@ -791,10 +794,10 @@ export class DemoScene {
         originalWorldRotationQuaternions: distWorldRotQuats,
         isFront: false,
         onFrontCallback: () => {
-          const distPage = this.dialogPage.addText("Это вот штука дальномер");
-          this.guiManager.CreateDialogBox([distPage]);
+          this.guiManager.DeleteDialogBox()
+          this.createFileBox()
         },
-        frontPosition: new Vector3(0, 0, 0.9),
+        frontPosition: new Vector3(-0.3, 0, 0.9),
         frontRotation: new Vector3(Math.PI, Math.PI / 2, 0),
       };
       console.log("Модели 'dist' успешно загружены (CreateEnvironment).");
@@ -993,6 +996,136 @@ export class DemoScene {
     });
     this.guiManager.CreateDialogBox([startPage, endPage]);
   }
+
+  private createFileBox(): void {
+      // Удаляем старый диалог, если есть
+      if (this.currentDialogBox) {
+          this.guiTexture.removeControl(this.currentDialogBox);
+      }
+
+      // ------------------------
+      // Создаём контейнер
+      // ------------------------
+      const dialogContainer = new Rectangle("dialogContainer");
+      dialogContainer.width = "50%";
+      dialogContainer.height = "100%";
+      dialogContainer.thickness = 0;
+      dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      dialogContainer.top = "0%";
+      dialogContainer.left = "3%";
+      dialogContainer.zIndex = 1; // Ниже мы поднимем другие элементы выше, если нужно
+      this.guiTexture.addControl(dialogContainer);
+
+      this.currentDialogBox = dialogContainer;
+
+      // ------------------------
+      // Фоновое изображение
+      // ------------------------
+      const dialogImage = new Image("dialogImage", "/models/filefolder.png");
+      dialogImage.width = "100%";
+      dialogImage.height = "100%";
+      // Можно явно выставить zIndex
+      dialogImage.zIndex = 1;
+      dialogContainer.addControl(dialogImage);
+
+      // ------------------------
+      // Скролл с текстом
+      // ------------------------
+      const scrollViewer = new ScrollViewer("dialogScroll");
+      scrollViewer.width = "60%";
+      scrollViewer.height = "40%";
+      scrollViewer.barSize = 7;
+      scrollViewer.background = "red";
+      scrollViewer.thickness = 0;
+      scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      scrollViewer.left = "2%";
+      scrollViewer.top = "5%";
+      scrollViewer.zIndex = 2; // Чуть выше фонового изображения
+
+      const dialogText = new TextBlock("dialogText");
+      dialogText.text = "sdf";
+      dialogText.color = "#212529";
+      dialogText.fontSize = "4.5%";
+      dialogText.fontFamily = "Segoe UI";
+      dialogText.resizeToFit = true;
+      dialogText.textWrapping = TextWrapping.WordWrap;
+      dialogText.width = "100%";
+      dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+
+      scrollViewer.addControl(dialogText);
+      dialogContainer.addControl(scrollViewer);
+
+      // ------------------------
+      // HTMLVideoElement
+      // ------------------------
+      const videoElement = document.createElement("video");
+      videoElement.src = "/models/film_1var_1_2K.mp4"; // Замените на корректный путь к вашему видео
+      videoElement.autoplay = true;
+      videoElement.loop = true;
+      videoElement.muted = true;
+      videoElement.setAttribute("playsinline", "");
+
+      // Попробуем запустить видео программно
+      videoElement.play().catch((err) => {
+          console.log("Не удалось автоматически запустить видео:", err);
+      });
+
+      // Для отладки можно подписаться на события:
+      videoElement.addEventListener("play", () => console.log("play event fired"));
+      videoElement.addEventListener("canplay", () => console.log("canplay event fired"));
+      videoElement.addEventListener("playing", () => console.log("playing event fired"));
+      videoElement.addEventListener("error", () => {
+          console.log("Video error!", videoElement.error);
+      });
+
+      // ------------------------
+      // Контейнер для видео
+      // ------------------------
+      const videoRect = new Rectangle("videoRect");
+      videoRect.width = "60%";
+      videoRect.height = "40%";
+      videoRect.thickness = 0;
+      videoRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      videoRect.left = "2%";
+      videoRect.paddingBottom = "5%";
+      // Поднимаем выше скролла
+      videoRect.zIndex = 3;
+
+      // На время отладки можно добавить фон, чтобы видеть область видео:
+      // videoRect.background = "rgba(0, 255, 0, 0.2)";
+
+      // ------------------------
+      // GUI.Image, используя videoElement
+      // ------------------------
+      const videoGUI = new Image("videoGUI", null);
+      // Принудительно кастуем, чтобы TS не жаловался
+      videoGUI.domImage = videoElement as unknown as HTMLImageElement;
+      // Растягиваем видеокадр по всему контейнеру:
+      videoGUI.stretch = Image.STRETCH_FILL;
+      // Если хотите соотношение сторон, меняйте STRETCH_UNIFORM или другие варианты
+      // videoGUI.stretch = Image.STRETCH_UNIFORM;
+
+      // Добавляем в контейнер
+      videoRect.addControl(videoGUI);
+      dialogContainer.addControl(videoRect);
+
+      // ------------------------
+      // Принудительное обновление каждый кадр
+      // ------------------------
+      this.scene.onBeforeRenderObservable.add(() => {
+          // Если видео готово и не на паузе, сбрасываем кеш и перерисовываем
+          if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA && !videoElement.paused) {
+              // 1) Сбрасываем внутренний кэш изображения
+              (videoGUI as any)._imageDataCache = null;
+
+              // 2) Говорим текстуре GUI «перерисовать» на следующий кадр
+              this.guiTexture.markAsDirty();
+          }
+      });
+  }
+
+
 
   public BetonTrigger(): void {
     // Показываем диалог перед началом

@@ -633,6 +633,12 @@ export class GUIManager {
       });
 
     }
+    DeleteDialogBox(): void {
+      if (this.currentDialogBox) {
+        this.advancedTexture.removeControl(this.currentDialogBox);
+        this.advancedTexture.removeControl(this.hideButton)
+      }
+    }
 
 
     updateNonDialogAnimation(visible: boolean, targetObject: Rectangle) {
