@@ -69,7 +69,7 @@ export class FullExample {
     });
     this.CreateController();
     
-    this.setupZoomEffect(); // Инициализация зума
+    //this.setupZoomEffect(); // Инициализация зума
 
     this.engine.runRenderLoop(() => {
       this.scene.render();
@@ -125,7 +125,7 @@ export class FullExample {
       this.highlightSpecificMeshes(); // Подсвечиваем заранее указанные объекты
   
       // Настройка мешей типа "broken" и "whole"
-      this.setupBrokenMeshes(map);
+      //this.setupBrokenMeshes(map);
       this.setupWholeMeshes(map);
   
     } catch (error) {
@@ -163,7 +163,7 @@ export class FullExample {
                 console.log("Дочерний элемент SM_Nonius найден:", noniusMesh);
 
                 // Устанавливаем начальные параметры для SM_Nonius
-                noniusMesh.position = new Vector3(0, 0, 0); // Смещение по оси X
+                noniusMesh.position = new Vector3(-0.03, 0, 0); // Смещение по оси X
                 noniusMesh.rotation = new Vector3(0, 0, 0);
                 noniusMesh.scaling = new Vector3(1, 1, 1);
                 noniusMesh.isVisible = true;
@@ -184,7 +184,7 @@ export class FullExample {
             // Устанавливаем параметры для основной модели
             this.handModel.position = new Vector3(13.2, 6.41004, 4.85 );
             this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
-            this.handModel.rotation = new Vector3(0, Math.PI / 2, Math.PI);
+            this.handModel.rotation = new Vector3(0, Math.PI / 2, -Math.PI / 2);
             this.handModel.isVisible = true;
 
             console.log("Модель штангенциркуля загружена и параметры установлены.");
@@ -219,7 +219,7 @@ enableNoniusScaling(noniusMesh: Mesh): void {
     this.scene.onPointerObservable.add((event) => {
         if (event.type === PointerEventTypes.POINTERWHEEL) {
             const wheelEvent = event.event as WheelEvent; // Преобразуем в WheelEvent
-            const delta = wheelEvent.deltaY > 0 ? -0.01 : 0.01; // Шаг изменения
+            const delta = wheelEvent.deltaY > 0 ? -0.001 : 0.001; // Шаг изменения
             
            // Обновляем позицию с ограничением
             noniusMesh.position.x = Math.max(-0.16, Math.min(0.16, noniusMesh.position.x + delta));
@@ -246,7 +246,7 @@ resetModelPosition(): void {
       const noniusMesh = this.tools['noniusModel']?.mesh;
       if (noniusMesh) {
           // Устанавливаем начальные параметры для SM_Nonius
-          noniusMesh.position = new Vector3(0, 0, 0); // Смещение по оси X
+          noniusMesh.position = new Vector3(-0.03, 0, 0); // Смещение по оси X
           noniusMesh.rotation = new Vector3(0, 0, 0);
           noniusMesh.scaling = new Vector3(1, 1, 1);
           noniusMesh.isVisible = true;
@@ -285,12 +285,13 @@ resetModelPosition(): void {
     });
   }
 
-  private highlightSpecificMeshes(): void {
+  // Добавляем анимацию SM_Nonius после завершения анимации камеры
+  private highlightSpecificMeshes(): void { 
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R",
         "SM_0_SpanStructureBeam_1_Cable_R",
-        "SM_0_SpanStructureBeam_2_Armature_L",
-        "SM_0_SpanStructureBeam_2_Cable_L"
+        //"SM_0_SpanStructureBeam_2_Armature_L",
+        //"SM_0_SpanStructureBeam_2_Cable_L"
     ];
 
     const meshesToHighlight = meshNames
@@ -304,9 +305,13 @@ resetModelPosition(): void {
     const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0); // Начальная позиция Caliper
     const targetCaliperPosition = new Vector3(12.4467, 6.24097, 4.97655); // Целевая позиция Caliper
 
+    let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
+    const initialNoniusPosition = new Vector3(-0.03, 0, 0); // Изначальная позиция SM_Nonius
+    const targetNoniusPosition = new Vector3(-0.006, 0, 0); // Целевая позиция SM_Nonius
+
     meshesToHighlight.forEach(mesh => {
         // Добавляем подсветку
-        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#FF0000"));
+        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
         // Делаем меш кликабельным
         mesh.isPickable = true;
@@ -344,56 +349,112 @@ resetModelPosition(): void {
 
                     cameraAnimation.setKeys(cameraKeys);
 
-                    // Применяем анимацию к камере
-                    camera.animations = [];
-                    camera.animations.push(cameraAnimation);
-                    this.scene.beginAnimation(camera, 0, 60, false);
+                    // Анимация изменения FOV камеры
+                    const initialFov = camera.fov; // Начальное значение FOV
+                    const targetFov = isZoomed ? 0.8 : 0.4; // Зумированное значение FOV
+                    const fovAnimation = new Animation(
+                        "fovAnimation",
+                        "fov",
+                        30, // Частота кадров анимации
+                        Animation.ANIMATIONTYPE_FLOAT,
+                        Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+
+                    const fovKeys = [
+                        { frame: 0, value: initialFov },
+                        { frame: 60, value: targetFov }
+                    ];
+
+                    fovAnimation.setKeys(fovKeys);
+
+                    // Применяем анимации
+                    camera.animations = [cameraAnimation, fovAnimation];
+
+                    // Начинаем анимацию камеры с запуском анимации SM_Nonius после завершения
+                    this.scene.beginAnimation(camera, 0, 60, false, 1, () => {
+                        console.log("Анимация камеры завершена.");
+
+                        // Логика перемещения SM_Nonius с анимацией
+                        const noniusMesh = this.tools['noniusModel']?.mesh;
+                        if (noniusMesh) {
+                            const startPosition = isNoniusMoved ? targetNoniusPosition : initialNoniusPosition;
+                            const endPosition = isNoniusMoved ? initialNoniusPosition : targetNoniusPosition;
+
+                            this.animateNoniusPosition(noniusMesh, startPosition, endPosition);
+
+                            // Переключаем состояние SM_Nonius
+                            isNoniusMoved = !isNoniusMoved;
+                        }
+                    });
                 }
 
                 // Логика перемещения SM_Caliper
                 const endCaliperPosition = isZoomed ? initialCaliperPosition : targetCaliperPosition;
                 this.moveCaliperWithAnimation(endCaliperPosition);
 
-                // Переключаем состояние
+                // Переключаем состояние камеры
                 isZoomed = !isZoomed;
             }
         ));
     });
 }
-  
-  // Функция для перемещения SM_Caliper.gltf с анимацией
-moveCaliperWithAnimation(targetPosition: Vector3): void {
-    if (!this.handModel) {
-        console.warn("Модель SM_Caliper.gltf не найдена.");
-        return;
-    }
 
-    // Создаем анимацию для перемещения
-    const animation = new BABYLON.Animation(
-        "moveCaliperAnimation",
-        "position",
-        60, // Количество кадров в секунду
-        BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-    );
 
-    // Начальная и конечная позиции
-    const keys = [
-        { frame: 0, value: this.handModel.position.clone() }, // Начальная позиция
-        { frame: 60, value: targetPosition }, // Конечная позиция через 1 секунду (60 кадров)
-    ];
+// Функция для анимации перемещения SM_Nonius
+private animateNoniusPosition(mesh: Mesh, from: Vector3, to: Vector3): void {
+  const animation = new Animation(
+      "noniusMove",
+      "position",
+      30, // Частота кадров
+      Animation.ANIMATIONTYPE_VECTOR3,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
 
-    animation.setKeys(keys);
+  const keys = [
+      { frame: 0, value: from },
+      { frame: 30, value: to }
+  ];
 
-    // Применяем анимацию к модели
-    this.handModel.animations = [];
-    this.handModel.animations.push(animation);
+  animation.setKeys(keys);
 
-    // Запускаем анимацию
-    this.scene.beginAnimation(this.handModel, 0, 60, false);
+  mesh.animations = [];
+  mesh.animations.push(animation);
 
-    console.log("Анимация перемещения SM_Caliper запущена к:", targetPosition);
+  this.scene.beginAnimation(mesh, 0, 30, false);
+
+  console.log("Анимация SM_Nonius запущена:", from, "->", to);
 }
+
+// Функция для перемещения SM_Caliper.gltf с анимацией
+private moveCaliperWithAnimation(targetPosition: Vector3): void {
+  if (!this.handModel) {
+      console.warn("Модель SM_Caliper.gltf не найдена.");
+      return;
+  }
+
+  const animation = new BABYLON.Animation(
+      "moveCaliperAnimation",
+      "position",
+      60, // Количество кадров в секунду
+      BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const keys = [
+      { frame: 0, value: this.handModel.position.clone() },
+      { frame: 60, value: targetPosition }
+  ];
+
+  animation.setKeys(keys);
+
+  this.handModel.animations = [];
+  this.handModel.animations.push(animation);
+
+  this.scene.beginAnimation(this.handModel, 0, 60, false);
+
+  console.log("Анимация перемещения SM_Caliper запущена к:", targetPosition);
+}
+
 
 
   
@@ -404,7 +465,7 @@ moveCaliperWithAnimation(targetPosition: Vector3): void {
   
   
   // Метод для настройки мешей типа "broken" с точками и действиями
-  private setupBrokenMeshes(mapMeshes: AbstractMesh[]): void {
+  /*private setupBrokenMeshes(mapMeshes: AbstractMesh[]): void {
     const brokenMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("broken"));
     brokenMeshes.forEach(mesh => {
         mesh.checkCollisions = true;
@@ -419,7 +480,7 @@ moveCaliperWithAnimation(targetPosition: Vector3): void {
             })
         );
     });
-  }
+  }*/
 
   // Метод для настройки мешей типа "whole"
   private setupWholeMeshes(mapMeshes: AbstractMesh[]): void {
@@ -440,37 +501,41 @@ moveCaliperWithAnimation(targetPosition: Vector3): void {
   }
 
   // Добавление функционала для зума на правую кнопку мыши
-  setupZoomEffect(): void {
+  /*setupZoomEffect(): void {
     const defaultFov = this.camera.fov; // Сохраняем стандартное поле зрения
     const zoomedFov1 = defaultFov / 4; // Первый уровень приближения
-    const zoomedFov2 = defaultFov / 8; // Второй уровень приближения
-    const zoomedFov3 = defaultFov / 12; // Третий уровень приближения
 
-    const defaultSensibility = this.camera.angularSensibility; // Сохраняем стандартную чувствительность
-    const zoomedSensibility = defaultSensibility * 10; // Уменьшаем чувствительность (чем больше значение, тем ниже чувствительность)
+    const defaultSensibility = this.camera.angularSensibility; // Стандартная чувствительность
+    const zoomedSensibility = defaultSensibility * 10; // Снижение чувствительности
 
-    let zoomState = 0; // 0: обычный вид, 1: первый зум, 2: второй зум, 3: третий зум
+    const initialCameraPosition = this.camera.position.clone(); // Сохраняем начальное положение камеры
+    const initialTarget = this.camera.getTarget().clone(); // Сохраняем начальную цель камеры
+
+    let zooming = false; // Состояние увеличения
 
     // Обработка событий мыши
     this.scene.onPointerObservable.add((pointerInfo) => {
-      if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 2) {
-        // Переходим к следующему состоянию зума
-        zoomState = (zoomState + 1) % 4; // Переключение между 0, 1, 2 и 3
-
-        if (zoomState === 0) {
-          this.camera.fov = defaultFov; // Вернуть стандартное FOV
-          this.camera.angularSensibility = defaultSensibility; // Восстановить стандартную чувствительность
-        } else if (zoomState === 1) {
-          this.camera.fov = zoomedFov1; // Первый уровень зума
-          this.camera.angularSensibility = zoomedSensibility; // Уменьшить чувствительность
-        } else if (zoomState === 2) {
-          this.camera.fov = zoomedFov2; // Второй уровень зума
-          this.camera.angularSensibility = zoomedSensibility; // Уменьшить чувствительность
-        } else if (zoomState === 3) {
-          this.camera.fov = zoomedFov3; // Третий уровень зума
-          this.camera.angularSensibility = zoomedSensibility; // Уменьшить чувствительность
+        if (pointerInfo.type === PointerEventTypes.POINTERDOWN && pointerInfo.event.button === 2) {
+            // Когда правая кнопка мыши нажата, увеличиваем зум
+            zooming = true;
+            this.camera.fov = zoomedFov1; // Уменьшаем поле зрения (приближаем камеру)
+            this.camera.angularSensibility = zoomedSensibility; // Уменьшаем чувствительность
+            if (this.handModel) {
+                this.camera.setTarget(this.handModel.position); // Фокусируемся на модели
+            }
         }
-      }
+
+        if (pointerInfo.type === PointerEventTypes.POINTERUP && pointerInfo.event.button === 2) {
+            // Когда правая кнопка мыши отпущена, возвращаем камеру в исходное положение
+            zooming = false;
+            this.camera.fov = defaultFov; // Восстанавливаем стандартное поле зрения
+            this.camera.angularSensibility = defaultSensibility; // Восстанавливаем стандартную чувствительность
+            this.camera.position.copyFrom(initialCameraPosition); // Восстанавливаем исходное положение
+            this.camera.setTarget(initialTarget); // Восстанавливаем цель камеры
+        }
     });
-  }
+}*/
+
+
+
 }
