@@ -156,6 +156,96 @@ export class DialogPage {
         return grid
     }
 
+    addInputFields(header: string): void {
+        const grid = new Grid();
+        grid.width = "60%";  // Ограничим ширину сетки
+        grid.height = "75%";  // Ограничим высоту сетки
+        grid.paddingBottom = "5%";  // Уменьшаем padding снизу
+    
+        // Определяем 2 столбца и 4 строки
+        grid.addColumnDefinition(0.5);  // Пропорциональная ширина столбцов
+        grid.addColumnDefinition(0.5);  // Пропорциональная ширина столбцов
+        grid.addRowDefinition(0.1);  // Заголовок
+        grid.addRowDefinition(0.2);  // Поле ввода 1
+        grid.addRowDefinition(0.2);  // Поле ввода 2
+        grid.addRowDefinition(0.2);  // Поле ввода 3
+        grid.addRowDefinition(0.2);  // Дополнительное пространство, если нужно
+    
+        // Заголовок
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = header;
+        headerTextBlock.color = "#212529";  // Цвет темный
+        headerTextBlock.fontSize = "18px";  // Уменьшаем размер шрифта для заголовка
+        headerTextBlock.fontFamily = "Segoe UI";  // Шрифт
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+    
+        grid.addControl(headerTextBlock, 0, 0);  // Заголовок в первую строку
+        grid.addControl(headerTextBlock, 0, 1);  // Заголовок во второй столбец
+    
+        // Поля ввода
+        const fields = [
+            { placeholder: "Арматура (мм)" },
+            { placeholder: "Арматура (мм)" },
+            { placeholder: "Кабель (мм)" }
+        ];
+    
+        fields.forEach((field, index) => {
+            // Кликабельная кнопка
+            const clickableButton = Button.CreateSimpleButton(`button${index}`, field.placeholder);
+            clickableButton.width = "90%";  // Ширина кнопки
+            clickableButton.height = "40px";  // Высота кнопки
+            clickableButton.color = "white";  // Цвет текста
+            clickableButton.background = "gray";  // Фон кнопки (синий)
+            clickableButton.fontSize = "14px";  // Размер шрифта
+            clickableButton.cornerRadius = 1;  // Скругление углов
+            clickableButton.thickness = 1;  // Толщина границы
+            clickableButton.borderColor = "#0056b3";  // Цвет границы
+            clickableButton.hoverCursor = "pointer";  // Курсор указателя при наведении
+    
+            // Эффект при наведении
+            clickableButton.onPointerEnterObservable.add(() => {
+                clickableButton.background = "#0056b3";  // Более темный фон при наведении
+            });
+            clickableButton.onPointerOutObservable.add(() => {
+                clickableButton.background = "gray";  // Восстановить оригинальный фон
+            });
+    
+            // Логика нажатия
+            clickableButton.onPointerUpObservable.add(() => {
+                console.log(`${field.placeholder} clicked`);
+                // Добавьте сюда вашу логику
+            });
+    
+            grid.addControl(clickableButton, index + 1, 0);  // Кнопка в первый столбец
+    
+            // Поле ввода
+            const inputField = new InputText();
+            inputField.width = "90%";  // Поле ввода занимает 90% ширины
+            inputField.height = "30px";  // Установим фиксированную высоту поля ввода
+            inputField.color = "black";  // Цвет текста внутри поля
+            inputField.background = "#f0f0f0";  // Светлый фон
+            inputField.fontSize = "14px";  // Размер шрифта для текста
+            inputField.placeholderText = field.placeholder;  // Текст-заполнитель
+            inputField.focusedBackground = "#f0f0f0";  // Фон не меняется при фокусе
+            inputField.focusedColor = "black";  // Цвет текста при фокусе остается черным
+            inputField.placeholderColor = "gray";  // Цвет текста-заполнителя
+    
+            grid.addControl(inputField, index + 1, 1);  // Поля ввода во второй столбец
+        });
+    
+        // Добавляем сетку на страницу
+        this.pageContainer.addControl(grid);
+    
+        return grid;
+    }
+    
+    
+    
+    
+    
+
+
     // createStartPage(ref: string): void {
     //     // Создаем отдельный контейнер для этой страницы
     //     const innerContainer = new Rectangle();
