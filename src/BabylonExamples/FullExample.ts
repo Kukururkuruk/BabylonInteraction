@@ -326,14 +326,14 @@ private rotateCaliperModel(): void {
   // Добавляем анимацию SM_Nonius после завершения анимации камеры
   private highlightSpecificMeshes(): void {
     const meshNames = [
-        //"SM_0_SpanStructureBeam_1_Armature_R_3",
-        "SM_0_SpanStructureBeam_1_Armature_R_8",
-        //"SM_0_SpanStructureBeam_1_Cable_R",
+        "SM_0_SpanStructureBeam_1_Armature_R_8",  // Основной меш для клика
+        //"SM_0_SpanStructureBeam_1_Armature_R_3",  // Меш, который нужно сделать неактивным при первом клике
+        //"SM_0_SpanStructureBeam_1_Cable_R"        // Другой меш, который нужно сделать неактивным
     ];
 
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
-        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh);
 
     let isZoomed = false; // Флаг для отслеживания состояния камеры
     const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
@@ -346,6 +346,8 @@ private rotateCaliperModel(): void {
     const initialNoniusPosition = new Vector3(-0.03, 0, 0);
     const targetNoniusPosition = new Vector3(-0.004, 0, 0);
 
+    let isFirstClick = true; // Флаг для отслеживания первого клика на "SM_0_SpanStructureBeam_1_Armature_R_8"
+
     meshesToHighlight.forEach(mesh => {
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
@@ -356,6 +358,19 @@ private rotateCaliperModel(): void {
             ActionManager.OnPickTrigger,
             () => {
                 console.log(`${mesh.name} был кликнут!`);
+
+                // Проверка, кликнули ли на основной меш "SM_0_SpanStructureBeam_1_Armature_R_8"
+                if (mesh.name === "SM_0_SpanStructureBeam_1_Armature_R_8") {
+                    if (isFirstClick) {
+                        // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - делаем другие меши неактивными
+                        this.toggleMeshPickability(false);
+                        isFirstClick = false; // Устанавливаем флаг, что клик был совершен
+                    } else {
+                        // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - возвращаем кликабельность
+                        this.toggleMeshPickability(true);
+                        isFirstClick = true; // Возвращаем флаг в исходное состояние
+                    }
+                }
 
                 const camera = this.scene.activeCamera;
                 if (camera && camera instanceof FreeCamera) {
@@ -422,6 +437,22 @@ private rotateCaliperModel(): void {
     });
 }
 
+// Функция для управления кликабельностью мешей
+private toggleMeshPickability(isPickable: boolean): void {
+    const meshesToChange = [
+        "SM_0_SpanStructureBeam_1_Armature_R_3",  // Меши, для которых нужно изменить кликабельность
+        "SM_0_SpanStructureBeam_1_Cable_R"
+    ];
+
+    meshesToChange.forEach(name => {
+        const mesh = this.scene.getMeshByName(name);
+        if (mesh) {
+            mesh.isPickable = isPickable;
+        }
+    });
+}
+
+
 private highlightSpecificMeshesCable_R(): void {
   const meshNames = [
       "SM_0_SpanStructureBeam_1_Cable_R",
@@ -442,6 +473,8 @@ private highlightSpecificMeshesCable_R(): void {
   const initialNoniusPosition = new Vector3(-0.03, 0, 0);
   const targetNoniusPosition = new Vector3(-0.010, 0, 0);
 
+
+  let isFirstClick = true; // Флаг для отслеживания первого клика
   // Получаем меши, которые нужно скрывать/показывать
   const obstructingMeshes = [
       this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_7"),
@@ -467,6 +500,19 @@ private highlightSpecificMeshesCable_R(): void {
           ActionManager.OnPickTrigger,
           () => {
               console.log(`${mesh.name} был кликнут!`);
+
+
+              if (mesh.name === "SM_0_SpanStructureBeam_1_Cable_R") {
+                if (isFirstClick) {
+                    // Первый клик на "SM_0_SpanStructureBeam_1_Cable_R" - делаем другие меши неактивными
+                    this.toggleMeshPickabilityCable_R(false);
+                    isFirstClick = false; // Устанавливаем флаг, что клик был совершен
+                } else {
+                    // Повторный клик на "SM_0_SpanStructureBeam_1_Cable_R" - возвращаем кликабельность
+                    this.toggleMeshPickabilityCable_R(true);
+                    isFirstClick = true; // Возвращаем флаг в исходное состояние
+                }
+            }
 
               const camera = this.scene.activeCamera;
               if (camera && camera instanceof FreeCamera) {
@@ -542,6 +588,21 @@ private highlightSpecificMeshesCable_R(): void {
   });
 }
 
+private toggleMeshPickabilityCable_R(isPickable: boolean): void {
+  const meshesToChange = [
+      "SM_0_SpanStructureBeam_1_Armature_R_8",  
+        "SM_0_SpanStructureBeam_1_Armature_R_3",  
+
+  ];
+
+  meshesToChange.forEach(name => {
+      const mesh = this.scene.getMeshByName(name);
+      if (mesh) {
+          mesh.isPickable = isPickable;
+      }
+  });
+}
+
 
 
 private highlightSpecificMeshesArmature_R_3(): void {
@@ -564,6 +625,8 @@ private highlightSpecificMeshesArmature_R_3(): void {
     const initialNoniusPosition = new Vector3(-0.03, 0, 0);
     const targetNoniusPosition = new Vector3(-0.004, 0, 0);
 
+
+    let isFirstClick = true; // Флаг для отслеживания первого клика
     meshesToHighlight.forEach(mesh => {
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
@@ -574,6 +637,19 @@ private highlightSpecificMeshesArmature_R_3(): void {
             ActionManager.OnPickTrigger,
             () => {
                 console.log(`${mesh.name} был кликнут!`);
+
+
+                if (mesh.name === "SM_0_SpanStructureBeam_1_Armature_R_3") {
+                  if (isFirstClick) {
+                      // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_3" - делаем другие меши неактивными
+                      this.toggleMeshPickabilityArmature_R_3(false);
+                      isFirstClick = false; // Устанавливаем флаг, что клик был совершен
+                  } else {
+                      // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_3" - возвращаем кликабельность
+                      this.toggleMeshPickabilityArmature_R_3(true);
+                      isFirstClick = true; // Возвращаем флаг в исходное состояние
+                  }
+              }
 
                 const camera = this.scene.activeCamera;
                 if (camera && camera instanceof FreeCamera) {
@@ -638,6 +714,21 @@ private highlightSpecificMeshesArmature_R_3(): void {
             }
         ));
     });
+}
+
+private toggleMeshPickabilityArmature_R_3(isPickable: boolean): void {
+  const meshesToChange = [
+      "SM_0_SpanStructureBeam_1_Armature_R_8",  
+        "SM_0_SpanStructureBeam_1_Cable_R",  
+
+  ];
+
+  meshesToChange.forEach(name => {
+      const mesh = this.scene.getMeshByName(name);
+      if (mesh) {
+          mesh.isPickable = isPickable;
+      }
+  });
 }
 
   
