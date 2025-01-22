@@ -42,7 +42,9 @@ export class FullExample {
   dialogPage: DialogPage;
   //tabletManager: TabletManager;
   triggerManager1: TriggerManager2;
-
+  private isCaliperMoved = false; // Переменная для отслеживания состояния
+private initialPosition: Vector3; // Переменная для хранения начальной позиции
+private initialRotation: number; // Переменная для хранения начального вращения
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
@@ -127,7 +129,8 @@ export class FullExample {
   
       this.setupMeshes(map); // Настройка всех мешей
       this.highlightSpecificMeshes(); // Подсвечиваем заранее указанные объекты
-  
+      this.highlightSpecificMeshesCable_R();
+      this.highlightSpecificMeshesArmature_R_3();
       // Настройка мешей типа "broken" и "whole"
       //this.setupBrokenMeshes(map);
       this.setupWholeMeshes(map);
@@ -270,137 +273,373 @@ resetModelPosition(): void {
 
 
 
-  private setupMeshes(mapMeshes: AbstractMesh[]): void {
-    mapMeshes.forEach((mesh) => {
-      // Убираем кликабельность для всех объектов, кроме "broken" и "whole"
-      if (
-        mesh.name.toLowerCase().includes("broken") ||
-        mesh.name.toLowerCase().includes("whole")
-      ) {
-        mesh.isPickable = true;
-      } else {
-        mesh.isPickable = false;
-      }
+private setupMeshes(mapMeshes: AbstractMesh[]): void {
+  mapMeshes.forEach((mesh) => {
+    // Убираем кликабельность для всех объектов, кроме "broken" и "whole"
+    if (
+      mesh.name.toLowerCase().includes("broken") ||
+      mesh.name.toLowerCase().includes("whole")
+    ) {
+      mesh.isPickable = true;
+    } else {
+      mesh.isPickable = false;
+    }
 
-      mesh.actionManager = new ActionManager(this.scene);
-      mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-        console.log(`${mesh.name} был кликнут`);
-      }));
-    });
+    mesh.actionManager = new ActionManager(this.scene);
+    mesh.actionManager.registerAction(new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+      console.log(`${mesh.name} был кликнут`);
+      // Если кликнут "SM_0_SpanStructureBeam_1_Armature_R_3", поворачиваем модель
+      if (mesh.name === "SM_0_SpanStructureBeam_1_Armature_R_3") {
+        this.rotateCaliperModel();
+      }
+    }));
+  });
+}
+
+private rotateCaliperModel(): void {
+  if (this.handModel) {
+    const rotationAnimation = new Animation(
+      "rotateCaliper", 
+      "rotation.z", 
+      30, // скорость анимации
+      Animation.ANIMATIONTYPE_FLOAT, 
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+
+    const keyFrames = [
+      {
+        frame: 0,
+        value: this.handModel.rotation.z
+      },
+      {
+        frame: 30,
+        value: this.handModel.rotation.z + Math.PI / 2 // Поворот на 90 градусов
+      }
+    ];
+
+    rotationAnimation.setKeys(keyFrames);
+    this.handModel.animations.push(rotationAnimation);
+    this.scene.beginAnimation(this.handModel, 0, 30, false);
   }
+}
 
   // Добавляем анимацию SM_Nonius после завершения анимации камеры
-  private highlightSpecificMeshes(): void { 
+  private highlightSpecificMeshes(): void {
     const meshNames = [
-        "SM_0_SpanStructureBeam_1_Armature_R_3",
+        //"SM_0_SpanStructureBeam_1_Armature_R_3",
         "SM_0_SpanStructureBeam_1_Armature_R_8",
-        "SM_0_SpanStructureBeam_1_Cable_R",
+        //"SM_0_SpanStructureBeam_1_Cable_R",
     ];
-  
+
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
-        .filter((mesh): mesh is Mesh => mesh instanceof Mesh);
-  
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
+
     let isZoomed = false; // Флаг для отслеживания состояния камеры
-    const initialCameraPosition = new Vector3(13.7, 6.3, 5.0); // Положение камеры
-    const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164); // Целевая позиция камеры
-  
-    const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0); // Начальная позиция Caliper
-    const targetCaliperPosition = new Vector3(12.444, 6.2437, 4.97655); // Целевая позиция Caliper
-  
+    const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
+    const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164);
+
+    const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0);
+    const targetCaliperPosition = new Vector3(12.444, 6.2437, 4.97655);
+
     let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
-    const initialNoniusPosition = new Vector3(-0.03, 0, 0); // Изначальная позиция SM_Nonius
-    const targetNoniusPosition = new Vector3(-0.004, 0, 0); // Целевая позиция SM_Nonius
-  
+    const initialNoniusPosition = new Vector3(-0.03, 0, 0);
+    const targetNoniusPosition = new Vector3(-0.004, 0, 0);
+
     meshesToHighlight.forEach(mesh => {
-        // Добавляем подсветку
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
-  
-        // Делаем меш кликабельным
+
         mesh.isPickable = true;
-  
-        // Добавляем обработчик клика на каждый меш
+
         mesh.actionManager = new ActionManager(this.scene);
         mesh.actionManager.registerAction(new ExecuteCodeAction(
             ActionManager.OnPickTrigger,
             () => {
                 console.log(`${mesh.name} был кликнут!`);
-  
-                // Логика перемещения камеры
+
                 const camera = this.scene.activeCamera;
                 if (camera && camera instanceof FreeCamera) {
-                    const currentCameraPosition = camera.position.clone(); // Текущая позиция камеры
+                    const currentCameraPosition = camera.position.clone();
                     const endCameraPosition = isZoomed ? initialCameraPosition : targetCameraPosition;
-  
-                    // Если камера уже в целевой позиции, не запускаем анимацию
+
                     if (currentCameraPosition.equals(endCameraPosition)) return;
-  
-                    // Создаем анимацию перемещения камеры
+
                     const cameraAnimation = new Animation(
                         "cameraMove",
                         "position",
-                        30, // Частота кадров анимации
+                        30,
                         Animation.ANIMATIONTYPE_VECTOR3,
                         Animation.ANIMATIONLOOPMODE_CONSTANT
                     );
-  
-                    // Ключевые кадры для анимации камеры
+
                     const cameraKeys = [
                         { frame: 0, value: currentCameraPosition },
                         { frame: 60, value: endCameraPosition }
                     ];
-  
+
                     cameraAnimation.setKeys(cameraKeys);
-  
-                    // Анимация изменения FOV камеры
-                    const initialFov = camera.fov; // Начальное значение FOV
-                    const targetFov = isZoomed ? 0.8 : 0.4; // Зумированное значение FOV
+
+                    const initialFov = camera.fov;
+                    const targetFov = isZoomed ? 0.8 : 0.4;
                     const fovAnimation = new Animation(
                         "fovAnimation",
                         "fov",
-                        30, // Частота кадров анимации
+                        30,
                         Animation.ANIMATIONTYPE_FLOAT,
                         Animation.ANIMATIONLOOPMODE_CONSTANT
                     );
-  
+
                     const fovKeys = [
                         { frame: 0, value: initialFov },
                         { frame: 60, value: targetFov }
                     ];
-  
+
                     fovAnimation.setKeys(fovKeys);
-  
-                    // Применяем анимации
+
                     camera.animations = [cameraAnimation, fovAnimation];
-  
-                    // Начинаем анимацию камеры с запуском анимации SM_Nonius после завершения
+
                     this.scene.beginAnimation(camera, 0, 60, false, 1, () => {
                         console.log("Анимация камеры завершена.");
-  
-                        // Логика перемещения SM_Nonius с анимацией
+
                         const noniusMesh = this.tools['noniusModel']?.mesh;
                         if (noniusMesh) {
                             const startPosition = isNoniusMoved ? targetNoniusPosition : initialNoniusPosition;
                             const endPosition = isNoniusMoved ? initialNoniusPosition : targetNoniusPosition;
-  
+
                             this.animateNoniusPosition(noniusMesh, startPosition, endPosition);
-  
-                            // Переключаем состояние SM_Nonius
+
                             isNoniusMoved = !isNoniusMoved;
                         }
                     });
                 }
-  
-                // Логика перемещения SM_Caliper
+
                 const endCaliperPosition = isZoomed ? initialCaliperPosition : targetCaliperPosition;
                 this.moveCaliperWithAnimation(endCaliperPosition);
-  
-                // Переключаем состояние камеры
+
                 isZoomed = !isZoomed;
             }
         ));
     });
-  }
+}
+
+private highlightSpecificMeshesCable_R(): void {
+  const meshNames = [
+      "SM_0_SpanStructureBeam_1_Cable_R",
+  ];
+
+  const meshesToHighlight = meshNames
+      .map(name => this.scene.getMeshByName(name))
+      .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
+
+  let isZoomed = false; // Флаг для отслеживания состояния камеры
+  const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
+  const targetCameraPosition = new Vector3(12.92, 6.16204, 4.98041);
+
+  const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0);
+  const targetCaliperPosition = new Vector3(12.4, 6.1612, 5.03041);
+
+  let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
+  const initialNoniusPosition = new Vector3(-0.03, 0, 0);
+  const targetNoniusPosition = new Vector3(-0.010, 0, 0);
+
+  // Получаем меши, которые нужно скрывать/показывать
+  const obstructingMeshes = [
+      this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_7"),
+      this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_0"),
+  ];
+
+  // Проверяем, все ли меши найдены
+  obstructingMeshes.forEach(mesh => {
+      if (!mesh) {
+          console.warn("Один или несколько мешей для скрытия не найдены.");
+      }
+  });
+
+  let isObstructingMeshesVisible = true; // Флаг для отслеживания видимости мешей
+
+  meshesToHighlight.forEach(mesh => {
+      this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+
+      mesh.isPickable = true;
+
+      mesh.actionManager = new ActionManager(this.scene);
+      mesh.actionManager.registerAction(new ExecuteCodeAction(
+          ActionManager.OnPickTrigger,
+          () => {
+              console.log(`${mesh.name} был кликнут!`);
+
+              const camera = this.scene.activeCamera;
+              if (camera && camera instanceof FreeCamera) {
+                  const currentCameraPosition = camera.position.clone();
+                  const endCameraPosition = isZoomed ? initialCameraPosition : targetCameraPosition;
+
+                  if (currentCameraPosition.equals(endCameraPosition)) return;
+
+                  const cameraAnimation = new Animation(
+                      "cameraMove",
+                      "position",
+                      30,
+                      Animation.ANIMATIONTYPE_VECTOR3,
+                      Animation.ANIMATIONLOOPMODE_CONSTANT
+                  );
+
+                  const cameraKeys = [
+                      { frame: 0, value: currentCameraPosition },
+                      { frame: 60, value: endCameraPosition }
+                  ];
+
+                  cameraAnimation.setKeys(cameraKeys);
+
+                  const initialFov = camera.fov;
+                  const targetFov = isZoomed ? 0.8 : 0.4;
+                  const fovAnimation = new Animation(
+                      "fovAnimation",
+                      "fov",
+                      30,
+                      Animation.ANIMATIONTYPE_FLOAT,
+                      Animation.ANIMATIONLOOPMODE_CONSTANT
+                  );
+
+                  const fovKeys = [
+                      { frame: 0, value: initialFov },
+                      { frame: 60, value: targetFov }
+                  ];
+
+                  fovAnimation.setKeys(fovKeys);
+
+                  camera.animations = [cameraAnimation, fovAnimation];
+
+                  this.scene.beginAnimation(camera, 0, 60, false, 1, () => {
+                      console.log("Анимация камеры завершена.");
+
+                      const noniusMesh = this.tools['noniusModel']?.mesh;
+                      if (noniusMesh) {
+                          const startPosition = isNoniusMoved ? targetNoniusPosition : initialNoniusPosition;
+                          const endPosition = isNoniusMoved ? initialNoniusPosition : targetNoniusPosition;
+
+                          this.animateNoniusPosition(noniusMesh, startPosition, endPosition);
+
+                          isNoniusMoved = !isNoniusMoved;
+                      }
+                  });
+              }
+
+              const endCaliperPosition = isZoomed ? initialCaliperPosition : targetCaliperPosition;
+              this.moveCaliperWithAnimation(endCaliperPosition);
+
+              // Переключение видимости obstructingMeshes
+              isObstructingMeshesVisible = !isObstructingMeshesVisible;
+              obstructingMeshes.forEach(obstructingMesh => {
+                  if (obstructingMesh) {
+                      obstructingMesh.setEnabled(isObstructingMeshesVisible);
+                      console.log(`Меш ${obstructingMesh.name} теперь ${isObstructingMeshesVisible ? "видим" : "скрыт"}.`);
+                  }
+              });
+
+              isZoomed = !isZoomed;
+          }
+      ));
+  });
+}
+
+
+
+private highlightSpecificMeshesArmature_R_3(): void {
+    const meshNames = [
+        "SM_0_SpanStructureBeam_1_Armature_R_3",
+    ];
+
+    const meshesToHighlight = meshNames
+        .map(name => this.scene.getMeshByName(name))
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
+
+    let isZoomed = false; // Флаг для отслеживания состояния камеры
+    const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
+    const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164);
+
+    const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0);
+    const targetCaliperPosition = new Vector3(12.444, 6.3068, 5.06); // Новая позиция
+
+    let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
+    const initialNoniusPosition = new Vector3(-0.03, 0, 0);
+    const targetNoniusPosition = new Vector3(-0.004, 0, 0);
+
+    meshesToHighlight.forEach(mesh => {
+        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+
+        mesh.isPickable = true;
+
+        mesh.actionManager = new ActionManager(this.scene);
+        mesh.actionManager.registerAction(new ExecuteCodeAction(
+            ActionManager.OnPickTrigger,
+            () => {
+                console.log(`${mesh.name} был кликнут!`);
+
+                const camera = this.scene.activeCamera;
+                if (camera && camera instanceof FreeCamera) {
+                    const currentCameraPosition = camera.position.clone();
+                    const endCameraPosition = isZoomed ? initialCameraPosition : targetCameraPosition;
+
+                    if (currentCameraPosition.equals(endCameraPosition)) return;
+
+                    const cameraAnimation = new Animation(
+                        "cameraMove",
+                        "position",
+                        30,
+                        Animation.ANIMATIONTYPE_VECTOR3,
+                        Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+
+                    const cameraKeys = [
+                        { frame: 0, value: currentCameraPosition },
+                        { frame: 60, value: endCameraPosition }
+                    ];
+
+                    cameraAnimation.setKeys(cameraKeys);
+
+                    const initialFov = camera.fov;
+                    const targetFov = isZoomed ? 0.8 : 0.4;
+                    const fovAnimation = new Animation(
+                        "fovAnimation",
+                        "fov",
+                        30,
+                        Animation.ANIMATIONTYPE_FLOAT,
+                        Animation.ANIMATIONLOOPMODE_CONSTANT
+                    );
+
+                    const fovKeys = [
+                        { frame: 0, value: initialFov },
+                        { frame: 60, value: targetFov }
+                    ];
+
+                    fovAnimation.setKeys(fovKeys);
+
+                    camera.animations = [cameraAnimation, fovAnimation];
+
+                    this.scene.beginAnimation(camera, 0, 60, false, 1, () => {
+                        console.log("Анимация камеры завершена.");
+
+                        const noniusMesh = this.tools['noniusModel']?.mesh;
+                        if (noniusMesh) {
+                            const startPosition = isNoniusMoved ? targetNoniusPosition : initialNoniusPosition;
+                            const endPosition = isNoniusMoved ? initialNoniusPosition : targetNoniusPosition;
+
+                            this.animateNoniusPosition(noniusMesh, startPosition, endPosition);
+
+                            isNoniusMoved = !isNoniusMoved;
+                        }
+                    });
+                }
+
+                const endCaliperPosition = isZoomed ? initialCaliperPosition : targetCaliperPosition;
+                this.moveCaliperWithAnimationArmature_R_3(endCaliperPosition); // Перемещение Caliper
+
+                isZoomed = !isZoomed;
+            }
+        ));
+    });
+}
+
   
   // Функция для анимации перемещения SM_Nonius
   private animateNoniusPosition(mesh: Mesh, from: Vector3, to: Vector3): void {
@@ -456,6 +695,105 @@ resetModelPosition(): void {
   
     console.log("Анимация перемещения SM_Caliper запущена к:", targetPosition);
   }
+
+
+  private moveCaliperWithAnimationArmature_R_3(targetPosition: Vector3): void {
+    if (!this.handModel) {
+        console.warn("Модель SM_Caliper.gltf не найдена.");
+        return;
+    }
+
+    // Если модель не была перемещена раньше, сохраняем её начальные значения
+    if (!this.initialPosition) {
+        this.initialPosition = this.handModel.position.clone();
+        this.initialRotation = this.handModel.rotation.z;
+    }
+
+    // Если модель уже перемещена, возвращаем в исходное состояние
+    if (this.isCaliperMoved) {
+        // Анимация перемещения обратно в исходное положение
+        const moveAnimation = new BABYLON.Animation(
+            "moveCaliperAnimation",
+            "position",
+            60, // Количество кадров в секунду
+            BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+
+        const moveKeys = [
+            { frame: 0, value: this.handModel.position.clone() },
+            { frame: 60, value: this.initialPosition } // Возвращаем в начальную позицию
+        ];
+
+        moveAnimation.setKeys(moveKeys);
+
+        // Анимация вращения обратно в начальное состояние (0 по оси Z)
+        const rotateAnimation = new BABYLON.Animation(
+            "rotateCaliperAnimation",
+            "rotation.z",
+            60, // Количество кадров в секунду
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+
+        const rotateKeys = [
+            { frame: 0, value: this.handModel.rotation.z },
+            { frame: 60, value: this.initialRotation } // Возвращаем на 0 градусов
+        ];
+
+        rotateAnimation.setKeys(rotateKeys);
+
+        // Добавляем анимации сброса
+        this.handModel.animations = [moveAnimation, rotateAnimation];
+
+        // Запуск анимаций сброса
+        this.scene.beginAnimation(this.handModel, 0, 60, false);
+
+        this.isCaliperMoved = false; // Обновляем состояние
+        console.log("Модель вернулась в исходное положение.");
+    } else {
+        // Анимация перемещения в целевую позицию
+        const moveAnimation = new BABYLON.Animation(
+            "moveCaliperAnimation",
+            "position",
+            60, // Количество кадров в секунду
+            BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+
+        const moveKeys = [
+            { frame: 0, value: this.handModel.position.clone() },
+            { frame: 60, value: targetPosition }
+        ];
+
+        moveAnimation.setKeys(moveKeys);
+
+        // Анимация вращения по оси Z (на 90 градусов)
+        const rotateAnimation = new BABYLON.Animation(
+            "rotateCaliperAnimation",
+            "rotation.z",
+            60, // Количество кадров в секунду
+            BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+
+        const rotateKeys = [
+            { frame: 0, value: this.handModel.rotation.z },
+            { frame: 60, value: this.handModel.rotation.z - Math.PI / 2 } // Вращение на 90 градусов (PI/2)
+        ];
+
+        rotateAnimation.setKeys(rotateKeys);
+
+        // Добавляем обе анимации
+        this.handModel.animations = [moveAnimation, rotateAnimation];
+
+        // Запуск анимаций
+        this.scene.beginAnimation(this.handModel, 0, 60, false);
+
+        this.isCaliperMoved = true; // Обновляем состояние
+        console.log("Анимация перемещения и вращения SM_Caliper запущена к:", targetPosition);
+    }
+}
   
 
 
