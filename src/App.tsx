@@ -25,7 +25,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Main />} />
+        <Route path="/" element={<TermPage />} />
         <Route path="/Линейка" element={<Tutor />} />
         <Route path="/ВыборИнструмента" element={<BabylonTest />} />
         <Route path="/тестирование" element={<BabylonQuestion />} />
@@ -43,7 +43,6 @@ const App: React.FC = () => {
         <Route path='/ЛабИнструменты' element={<BabylonLabotary />} />
         <Route path='/ЛабКомпьютер' element={<BabylonLabotaryPC />} />
         <Route path='/ЛабДемо' element={<BabylonDemo />} />
-        <Route path='/БлокТерминология' element={<TermPage />} />
       </Routes>
     </Router>
   );
