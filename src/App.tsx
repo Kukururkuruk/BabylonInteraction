@@ -18,6 +18,7 @@ import BabylonTexture from './components/BabylonTexture';
 import BabylonLabotary from './components/BabylonLabotary/BabylonLabotary';
 import BabylonLabotaryPC from './components/BabylonLabotary/BabylonLabotaryPC';
 import BabylonDemo from './components/BabylonLabotary/BabylonDemo';
+import TermPage from './components/TermPage';
 
 
 const App: React.FC = () => {
@@ -42,6 +43,7 @@ const App: React.FC = () => {
         <Route path='/ЛабИнструменты' element={<BabylonLabotary />} />
         <Route path='/ЛабКомпьютер' element={<BabylonLabotaryPC />} />
         <Route path='/ЛабДемо' element={<BabylonDemo />} />
+        <Route path='/БлокТерминология' element={<TermPage />} />
       </Routes>
     </Router>
   );
