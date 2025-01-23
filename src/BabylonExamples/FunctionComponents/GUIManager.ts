@@ -1,4 +1,4 @@
-import { AbstractMesh, Animation, MeshBuilder, Scene, Sound, Vector3 } from "@babylonjs/core";
+import { AbstractMesh, Animation, Mesh, MeshBuilder, Scene, Sound, Vector3 } from "@babylonjs/core";
 import {
   AdvancedDynamicTexture,
   TextBlock,
@@ -544,14 +544,18 @@ export class GUIManager {
 
 
 
-      if (pages.length > 1) {  const navigationGrid = new Grid();
-        navigationGrid.width = "30%";
+      if (pages.length > 1) {  
+        const navigationGrid = new Grid();
+        navigationGrid.width = "40%";
         navigationGrid.height = "7%";
+        navigationGrid.top = "-10%";
+        navigationGrid.left = "6%"
         navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        navigationGrid.top = "-10%";
+        
 
-        // Определяем 2 колонки для кнопок
+        // Определяем 3 колонки для кнопок
+        navigationGrid.addColumnDefinition(1);
         navigationGrid.addColumnDefinition(1);
         navigationGrid.addColumnDefinition(1);
 
@@ -561,6 +565,13 @@ export class GUIManager {
             this.clickSound.setVolume(0.05);
         }
         };
+
+        const numberPage = new TextBlock();
+        numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
+        numberPage.color = "#212529";
+        numberPage.fontSize = "35%";
+        numberPage.fontFamily = "Segoe UI";
+        numberPage.resizeToFit = true;
 
         // Создаем кнопки "Previous" и "Next"
         const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
@@ -574,6 +585,7 @@ export class GUIManager {
           currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
           updatePageVisibility();
           this.clickSound.play()
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
         });
 
         const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
@@ -587,11 +599,13 @@ export class GUIManager {
           currentPageIndex = (currentPageIndex + 1) % pages.length;
           updatePageVisibility();
           this.clickSound.play()
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
         });
 
         // Добавляем кнопки в соответствующие колонки Grid
         navigationGrid.addControl(prevPageButton, 0, 0);
         navigationGrid.addControl(nextPageButton, 0, 1);
+        navigationGrid.addControl(numberPage, 0, 2);
 
         // Добавляем Grid с кнопками в контейнер диалога
         this.dialogContainer.addControl(navigationGrid);
@@ -788,7 +802,24 @@ export class GUIManager {
     }, 3000);
   }
 
-
+  createBorderBox(): void {
+    const boundaryBoxSize = 130; // Увеличенная ширина
+    const boundaryBoxHeight = 50; // Высота стенки
+    
+    const boundaryBox = MeshBuilder.CreateBox("boundaryBox", { 
+      width: boundaryBoxSize, 
+      height: boundaryBoxHeight, 
+      depth: boundaryBoxSize, 
+      sideOrientation: Mesh.BACKSIDE
+    }, this.scene);
+    
+    // Устанавливаем положение куба, чтобы центр находился на уровне пола
+    boundaryBox.position.y = boundaryBoxHeight / 2;
+    boundaryBox.checkCollisions = true;
+    
+    // Делаем куб невидимым, чтобы он не отвлекал от сцены
+    boundaryBox.isVisible = false;
+  }
 
 
 

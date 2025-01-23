@@ -559,6 +559,7 @@ import { ModelLoader } from "../BaseComponents/ModelLoader";
 import { GUIManager } from "../FunctionComponents/GUIManager";
 import { DialogPage } from "../FunctionComponents/DialogPage";
 import { BabylonUtilities } from "../FunctionComponents/BabylonUtilities";
+import { VideoGui } from "../BaseComponents/VideoGui";
 import eventEmitter from "../../../EventEmitter";
 
 interface ToolData {
@@ -582,7 +583,8 @@ export class DemoScene {
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
   private utilities: BabylonUtilities;
-  private currentDialogBox: Rectangle | null = null;
+  private currentDialogBox: Rectangle | null = null;   // GUI-контейнер внутри Babylon
+  private loadingContainer: HTMLDivElement | null = null; // DOM-элемент <div> c <video>
 
   private tools: { [key: string]: ToolData } = {};
 
@@ -959,6 +961,7 @@ export class DemoScene {
   }
 
   private showToolSelectionDialog(): void {
+    this.removeFileBox()
     const startPage = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
     const endPage = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
       const page4 = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
@@ -998,132 +1001,160 @@ export class DemoScene {
   }
 
   private createFileBox(): void {
-      // Удаляем старый диалог, если есть
-      if (this.currentDialogBox) {
-          this.guiTexture.removeControl(this.currentDialogBox);
-      }
+    // 1) Удаляем старый диалог, если есть
+    if (this.currentDialogBox) {
+        this.guiTexture.removeControl(this.currentDialogBox);
+    }
 
-      // ------------------------
-      // Создаём контейнер
-      // ------------------------
-      const dialogContainer = new Rectangle("dialogContainer");
-      dialogContainer.width = "50%";
-      dialogContainer.height = "100%";
-      dialogContainer.thickness = 0;
-      dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      dialogContainer.top = "0%";
-      dialogContainer.left = "3%";
-      dialogContainer.zIndex = 1; // Ниже мы поднимем другие элементы выше, если нужно
-      this.guiTexture.addControl(dialogContainer);
+    // ------------------------
+    // 2) Создаем Rectangle-контейнер (справа)
+    // ------------------------
+    const dialogContainer = new Rectangle("dialogContainer");
+    dialogContainer.width = "50%";
+    dialogContainer.height = "100%";
+    dialogContainer.thickness = 0;
+    dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+    dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    dialogContainer.top = "0%";
+    dialogContainer.left = "3%";
+    dialogContainer.zIndex = 1;
+    this.guiTexture.addControl(dialogContainer);
 
-      this.currentDialogBox = dialogContainer;
+    this.currentDialogBox = dialogContainer;
 
-      // ------------------------
-      // Фоновое изображение
-      // ------------------------
-      const dialogImage = new Image("dialogImage", "/models/filefolder.png");
-      dialogImage.width = "100%";
-      dialogImage.height = "100%";
-      // Можно явно выставить zIndex
-      dialogImage.zIndex = 1;
-      dialogContainer.addControl(dialogImage);
+    // ------------------------
+    // 3) Фоновое изображение (например, "папка")
+    // ------------------------
+    const dialogImage = new Image("dialogImage", "/models/filefolder.png");
+    dialogImage.width = "100%";
+    dialogImage.height = "100%";
+    dialogImage.zIndex = 1;
+    dialogContainer.addControl(dialogImage);
 
-      // ------------------------
-      // Скролл с текстом
-      // ------------------------
-      const scrollViewer = new ScrollViewer("dialogScroll");
-      scrollViewer.width = "60%";
-      scrollViewer.height = "40%";
-      scrollViewer.barSize = 7;
-      scrollViewer.background = "red";
-      scrollViewer.thickness = 0;
-      scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      scrollViewer.left = "2%";
-      scrollViewer.top = "5%";
-      scrollViewer.zIndex = 2; // Чуть выше фонового изображения
+    // ------------------------
+    // 4) Скролл с текстом (пример)
+    // ------------------------
+    const scrollViewer = new ScrollViewer("dialogScroll");
+    scrollViewer.width = "60%";
+    scrollViewer.height = "40%";
+    scrollViewer.barSize = 7;
+    // scrollViewer.background = "red";
+    scrollViewer.thickness = 0;
+    scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    scrollViewer.left = "2%";
+    scrollViewer.top = "5%";
+    scrollViewer.zIndex = 2;
 
-      const dialogText = new TextBlock("dialogText");
-      dialogText.text = "sdf";
-      dialogText.color = "#212529";
-      dialogText.fontSize = "4.5%";
-      dialogText.fontFamily = "Segoe UI";
-      dialogText.resizeToFit = true;
-      dialogText.textWrapping = TextWrapping.WordWrap;
-      dialogText.width = "100%";
-      dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    const dialogText = new TextBlock("dialogText");
+    dialogText.text = "ЭТО ЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПА";
+    dialogText.color = "#212529";
+    dialogText.fontSize = "5%";
+    dialogText.fontFamily = "Segoe UI";
+    dialogText.resizeToFit = true;
+    dialogText.textWrapping = TextWrapping.WordWrap;
+    dialogText.width = "100%";
+    dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
 
-      scrollViewer.addControl(dialogText);
-      dialogContainer.addControl(scrollViewer);
+    scrollViewer.addControl(dialogText);
+    dialogContainer.addControl(scrollViewer);
 
-      // ------------------------
-      // HTMLVideoElement
-      // ------------------------
-      const videoElement = document.createElement("video");
-      videoElement.src = "/models/film_1var_1_2K.mp4"; // Замените на корректный путь к вашему видео
-      videoElement.autoplay = true;
-      videoElement.loop = true;
-      videoElement.muted = true;
-      videoElement.setAttribute("playsinline", "");
+    // ---------------------------------------------------------------------------------------
+    // 5) Вместо VideoRect + VideoGui,
+    //    вставляем логику, аналогичную LoadingScreen, но под размеры "60% x 40%", bottom=5%, right=3%.
+    // ---------------------------------------------------------------------------------------
 
-      // Попробуем запустить видео программно
-      videoElement.play().catch((err) => {
-          console.log("Не удалось автоматически запустить видео:", err);
-      });
+    // 5.1 Создаём div-контейнер для видео (DOM-элемент), накладываем поверх canvas:
+    const loadingContainer = document.createElement("div");
+    loadingContainer.style.position = "absolute";
+    loadingContainer.style.width = "28%";
+    loadingContainer.style.height = "40%";
+    loadingContainer.style.bottom = "5%";
+    loadingContainer.style.right = "8%";
+    loadingContainer.style.zIndex = "100"; // Поверх canvas
+    loadingContainer.style.backgroundColor = "black"; // На случай, если видео не заполнит
 
-      // Для отладки можно подписаться на события:
-      videoElement.addEventListener("play", () => console.log("play event fired"));
-      videoElement.addEventListener("canplay", () => console.log("canplay event fired"));
-      videoElement.addEventListener("playing", () => console.log("playing event fired"));
-      videoElement.addEventListener("error", () => {
-          console.log("Video error!", videoElement.error);
-      });
+    document.body.appendChild(loadingContainer);
 
-      // ------------------------
-      // Контейнер для видео
-      // ------------------------
-      const videoRect = new Rectangle("videoRect");
-      videoRect.width = "60%";
-      videoRect.height = "40%";
-      videoRect.thickness = 0;
-      videoRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-      videoRect.left = "2%";
-      videoRect.paddingBottom = "5%";
-      // Поднимаем выше скролла
-      videoRect.zIndex = 3;
+    // Сохраняем ссылку
+    this.loadingContainer = loadingContainer;
 
-      // На время отладки можно добавить фон, чтобы видеть область видео:
-      // videoRect.background = "rgba(0, 255, 0, 0.2)";
+    // 5.2 Создаём <video>
+    const videoElement = document.createElement("video");
+    // Добавим динамический параметр "?v=..." как в LoadingScreen, чтобы кеш не мешал
+    videoElement.src = "/models/film_1var_1_2K.mp4" + "?v=" + new Date().getTime();
+    videoElement.autoplay = false; // Управляем вручную
+    videoElement.muted = true;
+    videoElement.loop = true;
+    videoElement.preload = "auto";
 
-      // ------------------------
-      // GUI.Image, используя videoElement
-      // ------------------------
-      const videoGUI = new Image("videoGUI", null);
-      // Принудительно кастуем, чтобы TS не жаловался
-      videoGUI.domImage = videoElement as unknown as HTMLImageElement;
-      // Растягиваем видеокадр по всему контейнеру:
-      videoGUI.stretch = Image.STRETCH_FILL;
-      // Если хотите соотношение сторон, меняйте STRETCH_UNIFORM или другие варианты
-      // videoGUI.stretch = Image.STRETCH_UNIFORM;
+    // Растягиваем на 100% контейнера
+    videoElement.style.width = "100%";
+    videoElement.style.height = "100%";
+    videoElement.style.objectFit = "cover";
+    videoElement.style.backgroundColor = "black";
 
-      // Добавляем в контейнер
-      videoRect.addControl(videoGUI);
-      dialogContainer.addControl(videoRect);
+    loadingContainer.appendChild(videoElement);
 
-      // ------------------------
-      // Принудительное обновление каждый кадр
-      // ------------------------
-      this.scene.onBeforeRenderObservable.add(() => {
-          // Если видео готово и не на паузе, сбрасываем кеш и перерисовываем
-          if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA && !videoElement.paused) {
-              // 1) Сбрасываем внутренний кэш изображения
-              (videoGUI as any)._imageDataCache = null;
+    // 5.3 При окончании видео — убрать
+    videoElement.addEventListener("ended", () => {
+        videoElement.pause();
+        loadingContainer.remove();
+    });
 
-              // 2) Говорим текстуре GUI «перерисовать» на следующий кадр
-              this.guiTexture.markAsDirty();
-          }
-      });
+    // 5.4 Кнопка "Пропустить"
+    const skipButton = document.createElement("button");
+    skipButton.textContent = "Пропустить";
+    skipButton.style.position = "absolute";
+    skipButton.style.bottom = "20px";
+    skipButton.style.right = "20px";
+    skipButton.style.padding = "10px 20px";
+    skipButton.style.fontSize = "16px";
+    skipButton.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+    skipButton.style.border = "none";
+    skipButton.style.cursor = "pointer";
+    skipButton.style.borderRadius = "5px";
+
+    loadingContainer.appendChild(skipButton);
+
+    skipButton.addEventListener("click", () => {
+        videoElement.pause();
+        loadingContainer.remove();
+    });
+
+    // 5.5 Наконец, пытаемся запустить видео
+    videoElement.play().catch((err) => {
+        console.warn("Video can't autoplay (maybe user gesture needed):", err);
+    });
   }
+
+  private removeFileBox(): void {
+    // 1. Удаляем Babylon GUI-контейнер, если существует
+    if (this.currentDialogBox) {
+        this.guiTexture.removeControl(this.currentDialogBox); // Убираем из интерфейса
+        this.currentDialogBox.dispose();                       // Освобождаем ресурсы GUI
+        this.currentDialogBox = null;
+    }
+
+    // 2. Удаляем DOM-контейнер (loadingContainer) с видео
+    if (this.loadingContainer) {
+        // Останавливаем видео на всякий случай
+        const video = this.loadingContainer.querySelector("video");
+        if (video) {
+            (video as HTMLVideoElement).pause();
+        }
+
+        // Удаляем сам <div> из документа
+        if (this.loadingContainer.parentNode) {
+            this.loadingContainer.parentNode.removeChild(this.loadingContainer);
+        }
+        this.loadingContainer = null;
+    }
+}
+
+
+  
+
+
 
 
 

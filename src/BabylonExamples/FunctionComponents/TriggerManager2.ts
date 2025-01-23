@@ -340,7 +340,7 @@ export class TriggerManager2 {
       const positions = [
         { x: 12.32, y: 8.77, z: -3.60 },
         { x: 12.32, y: 8.24, z: -3.60 },
-        { x: 12.12, y: 7.84, z: -3.60 },
+        { x: 12.12, y: 7.88, z: -3.60 },
         { x: 12.12, y: 7.45, z: -3.60 }
       ];
     
@@ -359,6 +359,15 @@ export class TriggerManager2 {
     
         // Устанавливаем позицию
         meshClone.position.set(pos.x, pos.y, pos.z);
+        if(i === 2) {
+          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
+        }
+        if(i === 0) {
+          meshClone.rotation = new Vector3 (0, Math.PI / 2, 0 )
+        }
+        if(i === 1) {
+          meshClone.rotation = new Vector3 (0.3, 0.1, 0.6)
+        }
     
         // Изначально полупрозрачный
         meshClone.visibility = 0.5;
@@ -1308,171 +1317,742 @@ exitLaserMode(): void {
       }
   }
 
+//Старая версия
+// enableDistanceMeasurement(): void {
+//   this.measuringDistance = true;
+//   this.firstPoint = null;
+//   this.secondPoint = null;
+
+//   let sphere: Mesh | null = null; // Сфера, отображающая первую точку
+//   let line: LinesMesh | null = null; // Линия, соединяющая первую точку с курсором
+//   let axesViewer: AxesViewer | null = null; // Визуализатор осей
+
+//   // Создаем текстовый блок для отображения углов
+//   if (!this.angleText) {
+//       this.angleText = new TextBlock();
+//       this.angleText.text = "";
+//       this.angleText.color = "white";
+//       this.angleText.fontSize = 24;
+//       this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+//       this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+//       this.angleText.top = "10px";
+//       this.angleText.left = "10px";
+//       this.angleText.isHitTestVisible = false;
+//   }
+
+//   // Обработчик кликов
+//   this.scene.onPointerDown = (evt, pickResult) => {
+//       if (evt.button === 2) { // Правая кнопка мыши
+//           if (pickResult.hit && pickResult.pickedPoint) {
+//               if (!this.firstPoint) {
+//                   // Установка первой точки
+//                   this.firstPoint = pickResult.pickedPoint.clone();
+
+//                   // Создаем сферу в месте первого клика
+//                   if (sphere) {
+//                       sphere.dispose();
+//                   }
+//                   sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.05 }, this.scene);
+//                   sphere.position = this.firstPoint;
+//                   const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
+//                   sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
+//                   sphereMaterial.emissiveColor = new Color3(1, 0, 0);
+//                   sphere.material = sphereMaterial;
+
+//                   // Создаем линию
+//                   if (line) {
+//                       line.dispose();
+//                   }
+//                   if (!this.glowLayer) {
+//                       this.glowLayer = new GlowLayer("glow", this.scene);
+//                       this.glowLayer.intensity = 1;
+//                   }
+//                   line = MeshBuilder.CreateLines("line", {
+//                       points: [this.firstPoint, this.firstPoint.clone()],
+//                       updatable: true,
+//                   }, this.scene);
+//                   line.color = new Color3(0, 1, 0); // Зеленый цвет
+//                   line.isPickable = false;
+//                   this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+//                       if (mesh === line) {
+//                           result.r = 0;
+//                           result.g = 1;
+//                           result.b = 0;
+//                       }
+//                   };
+//                   this.glowLayer.intensity = 1; // Регулировка яркости свечения
+//                   this.glowLayer.addIncludedOnlyMesh(line);
+
+//                   // Создаем оси координат
+//                   if (!axesViewer) {
+//                       axesViewer = new AxesViewer(this.scene, 0.5); // Длина осей 0.5 единиц
+//                   }
+//                   axesViewer.update(
+//                     this.firstPoint,
+//                     new Vector3(1, 0, 0), // X-ось
+//                     new Vector3(0, 1, 0), // Y-ось
+//                     new Vector3(0, 0, 1)  // Z-ось
+//                 );
+//               } else if (!this.secondPoint) {
+//                   // Установка второй точки и завершение измерения
+//                   this.secondPoint = pickResult.pickedPoint.clone();
+
+//                   // Вычисляем расстояние
+//                   const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+
+//                   // Эмитируем событие с расстоянием
+//                   eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
+
+//                   // Сброс состояния для нового измерения
+//                   this.firstPoint = null;
+//                   this.secondPoint = null;
+
+//                   // Удаление объектов
+//                   if (sphere) {
+//                       sphere.dispose();
+//                       sphere = null;
+//                   }
+//                   if (line) {
+//                       line.dispose();
+//                       line = null;
+//                   }
+//                   if (axesViewer) {
+//                       axesViewer.dispose();
+//                       axesViewer = null;
+//                   }
+//                   this.angleText.isVisible = false;
+//               }
+//           }
+//       } else if (evt.button === 0) {
+//           console.log("Левый клик. Замеры не проводятся.");
+//       }
+//   };
+
+//   // Обновление углов и линии перед каждым кадром
+//   this.scene.registerBeforeRender(() => {
+//       if (this.firstPoint && !this.secondPoint) {
+//           const pointerRay = this.scene.createPickingRay(
+//               this.scene.pointerX,
+//               this.scene.pointerY,
+//               Matrix.Identity(),
+//               this.scene.activeCamera
+//           );
+//           const pickResult = this.scene.pickWithRay(pointerRay);
+
+//           if (pickResult.hit && pickResult.pickedPoint) {
+//               const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+
+//               // Глобальные оси
+//               const globalX = new Vector3(1, 0, 0);
+//               const globalY = new Vector3(0, 1, 0);
+//               const globalZ = new Vector3(0, 0, 1);
+
+//               // Вычисляем углы относительно осей X, Y и Z
+//               const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+//               const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+//               const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+
+//               // Обновляем текст углов
+//               this.angleText.text = `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
+//               this.angleText.isVisible = true;
+
+//               // Эмитируем событие для обновления углов
+//               eventEmitter.emit("updateAngleText", this.angleText.text);
+
+//               // Обновляем линию
+//               if (line) {
+//                   const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
+//                   line = MeshBuilder.CreateLines("line", {
+//                       points: updatedPoints,
+//                       updatable: true,
+//                       instance: line,
+//                   }, this.scene);
+//               }
+
+//               // Обновляем позицию осей координат
+//               if (axesViewer) {
+//                 axesViewer.update(
+//                   this.firstPoint,
+//                   new Vector3(1, 0, 0), // X-ось
+//                   new Vector3(0, 1, 0), // Y-ось
+//                   new Vector3(0, 0, 1)  // Z-ось
+//               );
+//               }
+//           }
+//       }
+//   });
+// }
 
 enableDistanceMeasurement(): void {
   this.measuringDistance = true;
   this.firstPoint = null;
   this.secondPoint = null;
 
-  let sphere: Mesh | null = null; // Сфера, отображающая первую точку
-  let line: LinesMesh | null = null; // Линия, соединяющая первую точку с курсором
-  let axesViewer: AxesViewer | null = null; // Визуализатор осей
+  let modelNode: TransformNode | null = null; // Вместо сферы будет храниться модель
+  let line: LinesMesh | null = null;
+  let axesViewer: AxesViewer | null = null;
 
-  // Создаем текстовый блок для отображения углов
+  // Текстовый блок для углов (как у вас)
   if (!this.angleText) {
-      this.angleText = new TextBlock();
-      this.angleText.text = "";
-      this.angleText.color = "white";
-      this.angleText.fontSize = 24;
-      this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-      this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      this.angleText.top = "10px";
-      this.angleText.left = "10px";
-      this.angleText.isHitTestVisible = false;
+    this.angleText = new TextBlock();
+    this.angleText.text = "";
+    this.angleText.color = "white";
+    this.angleText.fontSize = 24;
+    this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.angleText.top = "10px";
+    this.angleText.left = "10px";
+    this.angleText.isHitTestVisible = false;
   }
 
   // Обработчик кликов
   this.scene.onPointerDown = (evt, pickResult) => {
-      if (evt.button === 2) { // Правая кнопка мыши
-          if (pickResult.hit && pickResult.pickedPoint) {
-              if (!this.firstPoint) {
-                  // Установка первой точки
-                  this.firstPoint = pickResult.pickedPoint.clone();
+    if (evt.button === 2) {
+      // Правая кнопка мыши
+      if (pickResult.hit && pickResult.pickedPoint) {
+        if (!this.firstPoint) {
+          // -----------------------------
+          // 1) Первый клик: ставим модель
+          // -----------------------------
+          this.firstPoint = pickResult.pickedPoint.clone();
 
-                  // Создаем сферу в месте первого клика
-                  if (sphere) {
-                      sphere.dispose();
-                  }
-                  sphere = MeshBuilder.CreateSphere("sphere", { diameter: 0.05 }, this.scene);
-                  sphere.position = this.firstPoint;
-                  const sphereMaterial = new StandardMaterial("sphereMaterial", this.scene);
-                  sphereMaterial.diffuseColor = new Color3(1, 0, 0); // Красный цвет
-                  sphereMaterial.emissiveColor = new Color3(1, 0, 0);
-                  sphere.material = sphereMaterial;
-
-                  // Создаем линию
-                  if (line) {
-                      line.dispose();
-                  }
-                  if (!this.glowLayer) {
-                      this.glowLayer = new GlowLayer("glow", this.scene);
-                      this.glowLayer.intensity = 1;
-                  }
-                  line = MeshBuilder.CreateLines("line", {
-                      points: [this.firstPoint, this.firstPoint.clone()],
-                      updatable: true,
-                  }, this.scene);
-                  line.color = new Color3(0, 1, 0); // Зеленый цвет
-                  line.isPickable = false;
-                  this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
-                      if (mesh === line) {
-                          result.r = 0;
-                          result.g = 1;
-                          result.b = 0;
-                      }
-                  };
-                  this.glowLayer.intensity = 1; // Регулировка яркости свечения
-                  this.glowLayer.addIncludedOnlyMesh(line);
-
-                  // Создаем оси координат
-                  if (!axesViewer) {
-                      axesViewer = new AxesViewer(this.scene, 0.5); // Длина осей 0.5 единиц
-                  }
-                  axesViewer.update(
-                    this.firstPoint,
-                    new Vector3(1, 0, 0), // X-ось
-                    new Vector3(0, 1, 0), // Y-ось
-                    new Vector3(0, 0, 1)  // Z-ось
-                );
-              } else if (!this.secondPoint) {
-                  // Установка второй точки и завершение измерения
-                  this.secondPoint = pickResult.pickedPoint.clone();
-
-                  // Вычисляем расстояние
-                  const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
-
-                  // Эмитируем событие с расстоянием
-                  eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
-
-                  // Сброс состояния для нового измерения
-                  this.firstPoint = null;
-                  this.secondPoint = null;
-
-                  // Удаление объектов
-                  if (sphere) {
-                      sphere.dispose();
-                      sphere = null;
-                  }
-                  if (line) {
-                      line.dispose();
-                      line = null;
-                  }
-                  if (axesViewer) {
-                      axesViewer.dispose();
-                      axesViewer = null;
-                  }
-                  this.angleText.isVisible = false;
-              }
+          // Грузим модель
+          if (modelNode) {
+            modelNode.dispose();
+            modelNode = null;
           }
-      } else if (evt.button === 0) {
-          console.log("Левый клик. Замеры не проводятся.");
+          SceneLoader.ImportMesh(
+            "",
+            "./models/",
+            "Rangefinder_LP.glb", // <-- Замените на свою модель
+            this.scene,
+            (meshes) => {
+              if (meshes.length === 0) {
+                console.error("Модель не содержит мешей.");
+                return;
+              }
+
+              // Родительский узел для всей модели
+              const parentNode = new TransformNode("measureModel", this.scene);
+
+              // Привязываем загруженные меши к родителю
+              meshes.forEach((m) => {
+                m.parent = parentNode;
+                m.isPickable = false;
+              });
+
+              // Ставим родителя прямо в точку клика (без учета нормали)
+              parentNode.position.copyFrom(this.firstPoint);
+
+              // Если нужно задать «исходный» поворот:
+              // parentNode.scaling.x *= -1; // например
+              // const correctionRotation = Quaternion.FromEulerAngles(0, -Math.PI / 2, 0);
+              // parentNode.rotationQuaternion = correctionRotation;
+
+              modelNode = parentNode;
+            },
+            null,
+            (scene, message, exception) => {
+              console.error("Ошибка загрузки модели:", message, exception);
+            }
+          );
+
+          // Создаём линию
+          if (line) {
+            line.dispose();
+          }
+          if (!this.glowLayer) {
+            this.glowLayer = new GlowLayer("glow", this.scene);
+            this.glowLayer.intensity = 1;
+          }
+          line = MeshBuilder.CreateLines(
+            "line",
+            {
+              points: [this.firstPoint, this.firstPoint.clone()],
+              updatable: true,
+            },
+            this.scene
+          );
+          line.color = new Color3(0, 1, 0);
+          line.isPickable = false;
+          this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+            if (mesh === line) {
+              result.r = 0;
+              result.g = 1;
+              result.b = 0;
+            }
+          };
+          this.glowLayer.intensity = 1;
+          this.glowLayer.addIncludedOnlyMesh(line);
+
+          // AxesViewer (необязательно)
+          if (!axesViewer) {
+            axesViewer = new AxesViewer(this.scene, 0.2);
+            // Сделаем оси полупрозрачными, если нужно:
+            const xAxisChildren = axesViewer.xAxis.getChildMeshes();
+            xAxisChildren.forEach((childMesh) => {
+              if ("visibility" in childMesh) {
+                (childMesh as LinesMesh).visibility = 0.5;
+              }
+            });
+            const yAxisChildren = axesViewer.yAxis.getChildMeshes();
+            yAxisChildren.forEach((childMesh) => {
+              if ("visibility" in childMesh) {
+                (childMesh as LinesMesh).visibility = 0.5;
+              }
+            });
+            const zAxisChildren = axesViewer.zAxis.getChildMeshes();
+            zAxisChildren.forEach((childMesh) => {
+              if ("visibility" in childMesh) {
+                (childMesh as LinesMesh).visibility = 0.5;
+              }
+            });
+          }
+          axesViewer.update(
+            this.firstPoint,
+            new Vector3(1, 0, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 0, 1)
+          );
+        } else if (!this.secondPoint) {
+          // -----------------------------
+          // 2) Второй клик: фиксируем расстояние
+          // -----------------------------
+          this.secondPoint = pickResult.pickedPoint.clone();
+
+          // Вычисляем дистанцию
+          const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+          eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
+
+          // Сброс состояния
+          this.firstPoint = null;
+          this.secondPoint = null;
+
+          // Удаляем всю служебную геометрию
+          if (modelNode) {
+            modelNode.dispose();
+            modelNode = null;
+          }
+          if (line) {
+            line.dispose();
+            line = null;
+          }
+          if (axesViewer) {
+            axesViewer.dispose();
+            axesViewer = null;
+          }
+          this.angleText.isVisible = false;
+        }
       }
+    } else if (evt.button === 0) {
+      console.log("Левый клик. Замеры не проводятся.");
+    }
   };
 
-  // Обновление углов и линии перед каждым кадром
+  // ---------------------------------------------
+  // Обновление (линия, углы, поворот модели) до 2-го клика
+  // ---------------------------------------------
   this.scene.registerBeforeRender(() => {
-      if (this.firstPoint && !this.secondPoint) {
-          const pointerRay = this.scene.createPickingRay(
-              this.scene.pointerX,
-              this.scene.pointerY,
-              Matrix.Identity(),
-              this.scene.activeCamera
+    if (this.firstPoint && !this.secondPoint) {
+      const pointerRay = this.scene.createPickingRay(
+        this.scene.pointerX,
+        this.scene.pointerY,
+        Matrix.Identity(),
+        this.scene.activeCamera
+      );
+      const pickResult = this.scene.pickWithRay(pointerRay);
+
+      if (pickResult.hit && pickResult.pickedPoint) {
+        // 1) Углы, как в вашем примере
+        const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+        const globalX = new Vector3(1, 0, 0);
+        const globalY = new Vector3(0, 1, 0);
+        const globalZ = new Vector3(0, 0, 1);
+
+        const angleX =
+          Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+        const angleY =
+          Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+        const angleZ =
+          Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+
+        this.angleText.text = `Угол X: ${angleX.toFixed(
+          2
+        )}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
+        this.angleText.isVisible = true;
+
+        eventEmitter.emit("updateAngleText", this.angleText.text);
+
+        // 2) Обновляем линию
+        if (line) {
+          const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
+          line = MeshBuilder.CreateLines(
+            "line",
+            {
+              points: updatedPoints,
+              updatable: true,
+              instance: line,
+            },
+            this.scene
           );
-          const pickResult = this.scene.pickWithRay(pointerRay);
+        }
 
-          if (pickResult.hit && pickResult.pickedPoint) {
-              const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+        // 3) Обновляем оси
+        if (axesViewer) {
+          axesViewer.update(
+            this.firstPoint,
+            new Vector3(1, 0, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 0, 1)
+          );
+        }
 
-              // Глобальные оси
-              const globalX = new Vector3(1, 0, 0);
-              const globalY = new Vector3(0, 1, 0);
-              const globalZ = new Vector3(0, 0, 1);
+        // 4) Вращаем модель, чтобы она смотрела на курсор
+        if (modelNode) {
+          // Вектор от "первой точки" до курсора
+          const direction = pickResult.pickedPoint.subtract(this.firstPoint);
+          if (direction.length() > 0.0001) {
+            const forward = direction.normalize(); // куда «смотреть»
+            // Зададим "верх" модели = мировая Up (0,1,0)
+            // а "right" найдём через cross
+            const up = new Vector3(0, 1, 0);
+            const right = Vector3.Cross(up, forward).normalize();
+            // Пересчитываем up, чтобы точно были перпендикуляры
+            const realUp = Vector3.Cross(forward, right).normalize();
 
-              // Вычисляем углы относительно осей X, Y и Z
-              const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
-              const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
-              const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
-
-              // Обновляем текст углов
-              this.angleText.text = `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
-              this.angleText.isVisible = true;
-
-              // Эмитируем событие для обновления углов
-              eventEmitter.emit("updateAngleText", this.angleText.text);
-
-              // Обновляем линию
-              if (line) {
-                  const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
-                  line = MeshBuilder.CreateLines("line", {
-                      points: updatedPoints,
-                      updatable: true,
-                      instance: line,
-                  }, this.scene);
-              }
-
-              // Обновляем позицию осей координат
-              if (axesViewer) {
-                axesViewer.update(
-                  this.firstPoint,
-                  new Vector3(1, 0, 0), // X-ось
-                  new Vector3(0, 1, 0), // Y-ось
-                  new Vector3(0, 0, 1)  // Z-ось
-              );
-              }
+            // Если у вашей модели "вперёд" — это локальная Z, а "верх" — это локальная Y:
+            // Значит FromXYZAxesToRef(<X>, <Y>, <Z>).
+            //   X = right
+            //   Y = up
+            //   Z = forward
+            const rotMatrix = Matrix.Identity();
+            Matrix.FromXYZAxesToRef(right, realUp, forward, rotMatrix);
+            const rotationQ = Quaternion.FromRotationMatrix(rotMatrix);
+            const correction = Quaternion.FromEulerAngles(Math.PI, -Math.PI / 2, -Math.PI / 2);
+            const final = rotationQ.multiply(correction);
+            
+            modelNode.rotationQuaternion = Quaternion.Slerp(
+              modelNode.rotationQuaternion || Quaternion.Identity(),
+              final,
+              0.3
+            );
           }
+        }
       }
+    }
   });
 }
+
+//Версия с как в бетоне
+// enableDistanceMeasurement(): void {
+//   this.measuringDistance = true;
+//   this.firstPoint = null;
+//   this.secondPoint = null;
+  
+//   // Будем хранить модель в переменной вместо sphere
+//   let modelNode: TransformNode | null = null; // <-- Изменено
+
+//   let line: LinesMesh | null = null;
+//   let axesViewer: AxesViewer | null = null;
+
+//   // Дополнительно сохраняем нормаль от первого клика:
+//   this.firstNormal = null; // <-- Изменено
+
+//   // Создаём текстовый блок для отображения углов
+//   if (!this.angleText) {
+//     this.angleText = new TextBlock();
+//     this.angleText.text = "";
+//     this.angleText.color = "white";
+//     this.angleText.fontSize = 24;
+//     this.angleText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+//     this.angleText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+//     this.angleText.top = "10px";
+//     this.angleText.left = "10px";
+//     this.angleText.isHitTestVisible = false;
+//   }
+
+//   // Обработчик кликов
+//   this.scene.onPointerDown = (evt, pickResult) => {
+//     if (evt.button === 2) {
+//       // Правая кнопка мыши
+//       if (pickResult.hit && pickResult.pickedPoint) {
+//         if (!this.firstPoint) {
+//           // =======================
+//           // 1) Установка первой точки
+//           // =======================
+//           this.firstPoint = pickResult.pickedPoint.clone();
+//           this.firstNormal = pickResult.getNormal(true)?.normalize() || Vector3.Up(); // <-- Изменено
+
+//           // Вместо сферы — загрузка модели
+//           if (modelNode) {
+//             modelNode.dispose();
+//             modelNode = null;
+//           }
+
+//           SceneLoader.ImportMesh(
+//             "",
+//             "./models/",
+//             "Rangefinder_LP.glb", // <-- Укажите свою модель
+//             this.scene,
+//             (meshes) => {
+//               if (meshes.length === 0) {
+//                 console.error("Модель не содержит мешей.");
+//                 return;
+//               }
+
+//               // Создаём родительский TransformNode
+//               const parentNode = new TransformNode("measureModel", this.scene);
+//               // Привязываем все загруженные меши к родителю
+//               meshes.forEach((m) => {
+//                 m.parent = parentNode;
+//                 m.isPickable = false;
+//               });
+
+//               // Начальная позиция модели = точка клика
+//               parentNode.position.copyFrom(this.firstPoint);
+
+//               // Если модель требует первоначального поворота
+//               // (как в вашем примере, где было `parentNode.scaling.x *= -1` и т.д.):
+//               parentNode.scaling.x *= -1; // К примеру
+//               const correctionRotation = Quaternion.FromEulerAngles(0, -Math.PI / 2, 0);
+//               parentNode.rotationQuaternion = correctionRotation.multiply(
+//                 parentNode.rotationQuaternion || Quaternion.Identity()
+//               );
+
+//               // Сохраняем, чтобы использовать в registerBeforeRender
+//               modelNode = parentNode;
+//             },
+//             null,
+//             (scene, message, exception) => {
+//               console.error("Ошибка загрузки модели:", message, exception);
+//             }
+//           );
+
+//           // =======================
+//           // Создаём линию (как раньше)
+//           // =======================
+//           if (line) {
+//             line.dispose();
+//           }
+//           if (!this.glowLayer) {
+//             this.glowLayer = new GlowLayer("glow", this.scene);
+//             this.glowLayer.intensity = 1;
+//           }
+//           line = MeshBuilder.CreateLines(
+//             "line",
+//             {
+//               points: [this.firstPoint, this.firstPoint.clone()],
+//               updatable: true,
+//             },
+//             this.scene
+//           );
+//           line.color = new Color3(0, 1, 0);
+//           line.isPickable = false;
+//           this.glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
+//             if (mesh === line) {
+//               result.r = 0;
+//               result.g = 1;
+//               result.b = 0;
+//             }
+//           };
+//           this.glowLayer.intensity = 1;
+//           this.glowLayer.addIncludedOnlyMesh(line);
+
+//           // Создаём оси координат
+//           if (!axesViewer) {
+//             axesViewer = new AxesViewer(this.scene, 0.2); // Делаем оси короче
+        
+//             // Например, ось X
+//             // axesViewer.xAxis — это TransformNode
+//             // внутри него будет 1 или более мешей (обычно LinesMesh).
+//             const xAxisChildren = axesViewer.xAxis.getChildMeshes();
+//             xAxisChildren.forEach(childMesh => {
+//               if ("visibility" in childMesh) {  // childMesh должно быть LinesMesh
+//                 (childMesh as LinesMesh).visibility = 0.5; 
+//               }
+//             });
+            
+//             // Аналогично для Y
+//             const yAxisChildren = axesViewer.yAxis.getChildMeshes();
+//             yAxisChildren.forEach(childMesh => {
+//               if ("visibility" in childMesh) {
+//                 (childMesh as LinesMesh).visibility = 0.5;
+//               }
+//             });
+        
+//             // И для Z
+//             const zAxisChildren = axesViewer.zAxis.getChildMeshes();
+//             zAxisChildren.forEach(childMesh => {
+//               if ("visibility" in childMesh) {
+//                 (childMesh as LinesMesh).visibility = 0.5;
+//               }
+//             });
+//         }
+//           axesViewer.update(
+//             this.firstPoint,
+//             new Vector3(1, 0, 0),
+//             new Vector3(0, 1, 0),
+//             new Vector3(0, 0, 1)
+//           );
+//         } else if (!this.secondPoint) {
+//           // =======================
+//           // 2) Установка второй точки, завершение измерения
+//           // =======================
+//           this.secondPoint = pickResult.pickedPoint.clone();
+
+//           // Вычисляем расстояние
+//           const distance = Vector3.Distance(this.firstPoint, this.secondPoint);
+//           eventEmitter.emit("updateTextPlane", `Расстояние:\n${distance.toFixed(2)} м`);
+
+//           // Сброс состояния
+//           this.firstPoint = null;
+//           this.secondPoint = null;
+
+//           // Удаление объектов
+//           if (modelNode) {
+//             modelNode.dispose(); // <-- уничтожаем модель вместо сферы
+//             modelNode = null;
+//           }
+//           if (line) {
+//             line.dispose();
+//             line = null;
+//           }
+//           if (axesViewer) {
+//             axesViewer.dispose();
+//             axesViewer = null;
+//           }
+//           this.angleText.isVisible = false;
+//         }
+//       }
+//     } else if (evt.button === 0) {
+//       console.log("Левый клик. Замеры не проводятся.");
+//     }
+//   };
+
+//   // =======================
+//   // Обновление углов, линии и поворот модели (если создана) перед кадром
+//   // =======================
+//   this.scene.registerBeforeRender(() => {
+//     // Если выбрана первая точка, но вторая ещё не выбрана
+//     if (this.firstPoint && !this.secondPoint) {
+//       const pointerRay = this.scene.createPickingRay(
+//         this.scene.pointerX,
+//         this.scene.pointerY,
+//         Matrix.Identity(),
+//         this.scene.activeCamera
+//       );
+//       const pickResult = this.scene.pickWithRay(pointerRay);
+
+//       if (pickResult.hit && pickResult.pickedPoint) {
+//         // -----------------------
+//         // 1. Вычисляем вектор от первой точки до курсора
+//         // -----------------------
+//         const currentVector = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+
+//         // -----------------------
+//         // 2. Углы относительно глобальных осей (как и было)
+//         // -----------------------
+//         const globalX = new Vector3(1, 0, 0);
+//         const globalY = new Vector3(0, 1, 0);
+//         const globalZ = new Vector3(0, 0, 1);
+
+//         const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+//         const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+//         const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+
+//         this.angleText.text = `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
+//         this.angleText.isVisible = true;
+
+//         eventEmitter.emit("updateAngleText", this.angleText.text);
+
+//         // -----------------------
+//         // 3. Обновляем линию
+//         // -----------------------
+//         if (line) {
+//           const updatedPoints = [this.firstPoint, pickResult.pickedPoint];
+//           line = MeshBuilder.CreateLines(
+//             "line",
+//             {
+//               points: updatedPoints,
+//               updatable: true,
+//               instance: line,
+//             },
+//             this.scene
+//           );
+//         }
+
+//         // -----------------------
+//         // 4. Обновляем оси координат
+//         // -----------------------
+//         if (axesViewer) {
+//           axesViewer.update(
+//             this.firstPoint,
+//             new Vector3(1, 0, 0),
+//             new Vector3(0, 1, 0),
+//             new Vector3(0, 0, 1)
+//           );
+//         }
+
+//         // -----------------------
+//         // 5. Вращаем модель, чтобы она
+//         //    - Всегда "смотрела" нормалью к поверхности (this.firstNormal)
+//         //    - Повернулась в сторону курсора (по сути вокруг нормали)
+//         // -----------------------
+//         if (modelNode && this.firstNormal) {
+//           // Нормаль, полученная при первом клике
+//           const normal = this.firstNormal;
+
+//           // Вектор, указывающий от "первой точки" к курсору
+//           // При желании можно взять проекцию на плоскость, перпендикулярную normal,
+//           // чтобы вращение шло строго вокруг normal.
+//           const toCursor = pickResult.pickedPoint.subtract(this.firstPoint).normalize();
+
+//           // Простейший подход:
+//           //  - "Верх" (up) модели = нормаль поверхности
+//           //  - Ориентация "вперёд" = проекция направления наCursor на плоскость
+//           //    перпендикулярную normal.
+
+//           // Проецируем toCursor на плоскость, перпендикулярную normal
+//           // (убираем компоненту, направленную вдоль normal)
+//           const dot = Vector3.Dot(toCursor, normal);
+//           // Компонента вдоль normal:
+//           const alongNormal = normal.scale(dot);
+//           // Остаток — это проекция на плоскость:
+//           const forward = toCursor.subtract(alongNormal).normalize();
+
+//           // Если проекция получилась очень маленькой, чтобы избежать ошибок:
+//           if (forward.length() < 0.0001) {
+//             return;
+//           }
+
+//           // Находим оси: forward, normal, right
+//           //  - forward = X
+//           //  - normal  = Y
+//           //  - right   = Z
+//           // Или любая удобная вам ориентация.
+//           const right = Vector3.Cross(normal, forward).normalize();
+//           // Собираем матрицу поворота из трёх перпендикулярных векторов
+//           //   columns: right, normal, forward (или в другом порядке, в зависимости от того,
+//           //   как именно должна «стоять» ваша модель)
+//           const rotMatrix = Matrix.Identity();
+//           Matrix.FromXYZAxesToRef(right, normal, forward, rotMatrix);
+
+//           // Преобразуем матрицу в кватернион
+//           const rotationQ = Quaternion.FromRotationMatrix(rotMatrix);
+//           const correction = Quaternion.FromEulerAngles(0, -Math.PI / 2, -Math.PI / 2);
+//           const final = rotationQ.multiply(correction);
+          
+//           modelNode.rotationQuaternion = Quaternion.Slerp(
+//             modelNode.rotationQuaternion || Quaternion.Identity(),
+//             final,
+//             0.3
+//           );
+//         }
+//       }
+//     }
+//   });
+// }
+
 disableDistanceMeasurement(): void {
         this.measuringDistance = false;
         this.firstPoint = null;
