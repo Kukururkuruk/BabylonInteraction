@@ -17,7 +17,7 @@ import BabylonTest2 from './components/BabylonTest2';
 import BabylonTexture from './components/BabylonTexture';
 import BabylonLabotary from './components/BabylonLabotary/BabylonLabotary';
 import BabylonLabotaryPC from './components/BabylonLabotary/BabylonLabotaryPC';
-
+import BabylonRuler from './components/BabylonRuler'; // Импортируйте FullExample
 
 const App: React.FC = () => {
   return (
@@ -25,6 +25,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<Main />} />
         <Route path="/Линейка" element={<Tutor />} />
+        <Route path="/ЛинейкаЗадание" element={<BabylonRuler />} />
         <Route path="/ВыборИнструмента" element={<BabylonTest />} />
         <Route path="/тестирование" element={<BabylonQuestion />} />
         <Route path="/Штангенциркуль" element={<BabylonFull />} />
