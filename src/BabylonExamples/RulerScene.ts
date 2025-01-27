@@ -42,6 +42,12 @@ export class RulerScene {
   dialogPage: DialogPage;
   //tabletManager: TabletManager;
   triggerManager1: TriggerManager2;
+  lastLogTime = 0; // Время последнего логирования
+  logInterval = 100; // Интервал логирования в миллисекундах
+
+
+
+  
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
@@ -103,7 +109,7 @@ export class RulerScene {
 
 
   CreateController(): void { 
-    this.camera = new FreeCamera("camera", new Vector3(13.7, 6.3, 5.0), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(13.7, 6.3, 4.8), this.scene);
     
     // Отключаем управление
     this.camera.detachControl();
@@ -136,7 +142,7 @@ export class RulerScene {
     console.log("Загрузка модели штангенциркуля начата...");
     try {
         // Загрузка модели SM_Caliper.gltf
-        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP_MOD_1.gltf", this.scene);
+        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
 
         console.log("Модели после загрузки:", meshes);
 
@@ -184,7 +190,7 @@ export class RulerScene {
             this.enableChildScaling(childMeshes);
 
             // Устанавливаем параметры для основной модели
-            this.handModel.position = new Vector3(13, 6.41004, 4.85);
+            this.handModel.position = new Vector3(13, 6.41004, 4.95);
             this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
             this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0); // 90° по X и -90° по Y
             this.handModel.isVisible = true;
@@ -207,21 +213,64 @@ export class RulerScene {
     }
 }
 
-// Функция для управления масштабированием дочерних элементов по колесику мыши
-enableChildScaling(childMeshes: Mesh[]): void {
-  // Добавим обработчик события колесика мыши для независимого масштабирования
-  this.scene.onPointerObservable.add((event) => {
-      if (event.type === PointerEventTypes.POINTERWHEEL) {
-          const wheelEvent = event.event as WheelEvent; // Преобразуем в WheelEvent
-          const delta = wheelEvent.deltaY > 0 ? -0.001 : 0.001; // Шаг изменения
 
-          // Проходим по каждому дочернему элементу
-          childMeshes.forEach(childMesh => {
-              // Обновляем позицию с ограничением для каждого дочернего элемента
-              childMesh.position.x = Math.max(-0.16, Math.min(0.16, childMesh.position.x + delta));
-              console.log(`Новое значение ${childMesh.name} по оси X:`, childMesh.position.x);
-          });
+enableChildScaling(childMeshes: BABYLON.Mesh[]): void { 
+  this.scene.onPointerObservable.add((event) => {
+    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL) {
+      const wheelEvent = event.event as WheelEvent;
+      const delta = wheelEvent.deltaY > 0 ? 0.001 : -0.001; // Шаг изменения
+
+      // Начинаем с первого объекта
+      for (let i = 0; i < childMeshes.length; i++) {
+        const childMesh = childMeshes[i];
+
+        // Если это первый объект, просто двигаем его
+        if (i === 0) {
+          childMesh.position.x += delta;
+        } else {
+          // Для остальных объектов проверяем, достиг ли SM_10cm нужной позиции
+          const firstMesh = childMeshes[0]; // Всегда ориентируемся на SM_10cm
+          let threshold = 0;
+
+          // Задаем пороги для каждого меша
+          if (i === 1) {
+            threshold = 0.0485; // SM_20cm начинает движение, когда SM_10cm достигает 0.0485
+          } else if (i === 2) {
+            threshold = 0.144; // SM_30cm начинает движение, когда SM_10cm достигает 0.144
+          } else if (i === 3) {
+            threshold = 0.240; // SM_40cm начинает движение, когда SM_10cm достигает 0.350
+          } else if (i === 4) {
+            threshold = 0.336; // SM_50cm начинает движение, когда SM_10cm достигает 0.450
+          } else if (i === 5) {
+            threshold = 0.432; // SM_60cm начинает движение, когда SM_10cm достигает 0.550
+          } else if (i === 6) {
+            threshold = 0.530; // SM_70cm начинает движение, когда SM_10cm достигает 0.650
+          } else if (i === 7) {
+            threshold = 0.638; // SM_80cm начинает движение, когда SM_10cm достигает 0.750
+          } else if (i === 8) {
+            threshold = 0.738; // SM_90cm начинает движение, когда SM_10cm достигает 0.850
+          } else if (i === 9) {
+            threshold = 0.838; // SM_100cm начинает движение, когда SM_10cm достигает 0.950
+          } else if (i === 10) {
+            threshold = 0.938; // SM_110cm начинает движение, когда SM_10cm достигает 1.050
+          }
+
+          if (firstMesh.position.x >= threshold) {
+            childMesh.position.x += delta;
+          }
+        }
+
+        // Ограничиваем движение, чтобы оно не выходило за границы
+        if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
+
+        // Логируем изменения только через заданный интервал
+        const currentTime = Date.now();
+        if (currentTime - this.lastLogTime > this.logInterval) {
+          console.log(`Новое значение ${childMesh.name} по оси X:`, childMesh.position.x);
+          this.lastLogTime = currentTime; // Обновляем время последнего логирования
+        }
       }
+    }
   });
 }
 
