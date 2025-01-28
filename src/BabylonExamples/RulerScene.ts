@@ -112,7 +112,7 @@ export class RulerScene {
 
 
   private CreateController(): void { 
-    this.camera = new FreeCamera("camera", new Vector3(13.7, 6.3, 4.8), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(14.3, 6.3, 5.0), this.scene);
     
     // Отключаем управление
     this.camera.detachControl();
@@ -126,27 +126,103 @@ export class RulerScene {
     this.camera.speed = 0.55;
     this.camera.angularSensibility = 4000;
     this.camera.inertia = 0.8;
+
+    // Увеличиваем поле зрения (FOV) в 2 раза
+    this.camera.fov /= 2;
 }
+
 private async CreateEnvironment(): Promise<void> {
-    try {
+  try {
+      // Загрузка карты
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
       map.forEach((mesh) => {
-        mesh.checkCollisions = true;
+          mesh.checkCollisions = true;
       });
-  
+
       this.setupWholeMeshes(map);
-  
-    } catch (error) {
+
+      // Поиск ограничивающих мешей
+      const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
+      if (boundaryMeshes.length === 0) {
+          console.error("Ошибка: ограничивающие меши не найдены.");
+          return;
+      }
+      console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
+
+      // Вычисление объединённых границ
+      const minBoundary = new BABYLON.Vector3(
+          Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.x)),
+          Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.y)),
+          Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.z))
+      );
+
+      const maxBoundary = new BABYLON.Vector3(
+          Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.x)),
+          Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.y)),
+          Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.z))
+      );
+
+      console.log("Границы движения:", { minBoundary, maxBoundary });
+
+      // Добавляем плавное движение
+      let targetPosition: BABYLON.Vector3 | null = null; // Целевая позиция
+      const smoothingFactor = 0.1; // Плавность, уменьшай для более плавного эффекта
+
+      let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero(); // Текущая позиция
+
+      this.scene.onPointerObservable.add((event) => {
+          if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && this.handModel) {
+              const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+              if (pickInfo.hit && pickInfo.pickedPoint) {
+                  let newPosition = pickInfo.pickedPoint.clone();
+
+                  // Ограничиваем движение в пределах границ
+                  newPosition.x = Math.max(minBoundary.x, Math.min(maxBoundary.x, newPosition.x));
+                  newPosition.y = Math.max(minBoundary.y, Math.min(maxBoundary.y, newPosition.y));
+                  newPosition.z = Math.max(minBoundary.z, Math.min(maxBoundary.z, newPosition.z));
+
+                  // Получаем нормаль на поверхности для корректного выравнивания модели
+                  const surfaceNormal = pickInfo.getNormal();
+
+                  // Выравниваем модель относительно нормали поверхности
+                  if (this.handModel) {
+                      // Позиционируем модель на поверхности
+                      this.handModel.position = newPosition;
+                      // Дополнительно, если нужно, можно использовать нормаль для корректного вращения:
+                      //this.handModel.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(
+                          //BABYLON.Matrix.RotationQuaternionFromAxisAngle(surfaceNormal, Math.PI / 2)
+                       //);
+                  }
+                  targetPosition = newPosition;
+              }
+          }
+      });
+
+      // Обновляем позицию объекта каждую кадровую перерисовку
+      this.scene.onBeforeRenderObservable.add(() => {
+          if (this.handModel && targetPosition) {
+              // Интерполируем плавно от текущей позиции к целевой
+              currentPosition = BABYLON.Vector3.Lerp(currentPosition, targetPosition, smoothingFactor);
+              this.handModel.position = currentPosition; // Применяем обновлённую позицию
+          }
+      });
+
+  } catch (error) {
       console.error("Ошибка при загрузке окружения:", error);
-    }
   }
+}
+
+
+
 
   private async CreateHandModel(): Promise<void> {
     console.log("Загрузка модели штангенциркуля начата...");
     try {
         // Загрузка модели SM_Caliper.gltf
         const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
-
+        if (this.handModel) {
+          this.handModel.checkCollisions = true;
+      }
         console.log("Модели после загрузки:", meshes);
 
         if (meshes.length > 0) {
@@ -195,26 +271,70 @@ private async CreateEnvironment(): Promise<void> {
             // Устанавливаем параметры для основной модели
             this.handModel.position = new Vector3(13, 6.41004, 4.95);
             this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
-            this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0); // 90° по X и -90° по Y
+            this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
             this.handModel.isVisible = true;
 
             console.log("Модель штангенциркуля загружена и параметры установлены.");
+
+            
+
+            // Привязка модели к курсору мыши
+            this.scene.onPointerObservable.add((event) => {
+                if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && this.handModel) {
+                    const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+                    if (pickInfo.hit && this.handModel) {
+                        this.handModel.position = pickInfo.pickedPoint!;
+                    }
+                }
+            });
+
+            // Включаем обработку нажатий клавиш для вращения модели
+            this.rotateModelOnKeyPress();
+
         } else {
             console.error("Ошибка: модель штангенциркуля не найдена в файле.");
         }
-
-        // Пример события для обработки нажатия клавиши Esc и сброса позиции
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                // Устанавливаем модель в принудительную позицию
-                this.resetModelPosition();
-            }
-        });
 
     } catch (error) {
         console.error("Ошибка при загрузке модели штангенциркуля:", error);
     }
 }
+
+private rotateModelOnKeyPress(): void {
+  // Подписываемся на события клавиатуры
+  this.scene.onKeyboardObservable.add((kbInfo) => {
+      if (this.handModel) { // Проверка на наличие handModel
+          const rotationSpeed = 0.05; // Скорость вращения
+
+          // Проверяем тип события и обрабатываем нажатие клавиши
+          if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
+              switch (kbInfo.event.key.toLowerCase()) {
+                  case 'q': // Вращение против часовой стрелки вокруг оси Y (Q)
+                  case 'й': // Вращение против часовой стрелки вокруг оси Y (Й)
+                      this.handModel.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
+                      console.log('Rotate around Y-axis counter-clockwise');
+                      break;
+
+                  case 'e': // Вращение по часовой стрелке вокруг оси Y (E)
+                  case 'у': // Вращение по часовой стрелке вокруг оси Y (У)
+                      this.handModel.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
+                      console.log('Rotate around Y-axis clockwise');
+                      break;
+
+                  default:
+                      console.log(`Key pressed: ${kbInfo.event.key}`);
+                      break;
+              }
+          }
+      } else {
+          console.warn('Hand model is not initialized!');
+      }
+  });
+}
+
+
+
+
 
 
 private enableChildScaling(childMeshes: BABYLON.Mesh[]): void { 
