@@ -29,21 +29,24 @@ import { DialogPage } from "./FunctionComponents/DialogPage";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 
 export class RulerScene {
-  scene: Scene;
-  engine: Engine;
-  camera!: FreeCamera;
-  triggerManager: TriggersManager;
-  guiTexture: AdvancedDynamicTexture;
-  highlightLayer: HighlightLayer;
-  modelLoader: ModelLoader;
-  handModel: Mesh | null = null;  // Используем Mesh вместо AbstractMesh
-  tools: { [key: string]: any } = {};
-  guiManager: GUIManager;
-  dialogPage: DialogPage;
+  private scene: Scene;
+  private engine: Engine;
+  private camera!: FreeCamera;
+  private triggerManager: TriggersManager;
+  private guiTexture: AdvancedDynamicTexture;
+  private highlightLayer: HighlightLayer;
+  private modelLoader: ModelLoader;
+  private handModel: Mesh | null = null;  // Используем Mesh вместо AbstractMesh
+  private tools: { [key: string]: any } = {};
+  private guiManager: GUIManager;
+  private dialogPage: DialogPage;
   //tabletManager: TabletManager;
-  triggerManager1: TriggerManager2;
-  lastLogTime = 0; // Время последнего логирования
-  logInterval = 100; // Интервал логирования в миллисекундах
+  private triggerManager1: TriggerManager2;
+  private lastLogTime = 0; // Время последнего логирования
+  private logInterval = 100; // Интервал логирования в миллисекундах
+  private isMeasuring: boolean = false;
+  private firstClickPosition: BABYLON.Vector3 | null = null;
+  private secondClickPosition: BABYLON.Vector3 | null = null;
 
 
 
@@ -85,7 +88,7 @@ export class RulerScene {
     });
   }
 
-  CreateScene(): Scene {
+  private CreateScene(): Scene {
     const scene = new Scene(this.engine);
     new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
 
@@ -108,7 +111,7 @@ export class RulerScene {
   }
 
 
-  CreateController(): void { 
+  private CreateController(): void { 
     this.camera = new FreeCamera("camera", new Vector3(13.7, 6.3, 4.8), this.scene);
     
     // Отключаем управление
@@ -124,7 +127,7 @@ export class RulerScene {
     this.camera.angularSensibility = 4000;
     this.camera.inertia = 0.8;
 }
-  async CreateEnvironment(): Promise<void> {
+private async CreateEnvironment(): Promise<void> {
     try {
       const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
       map.forEach((mesh) => {
@@ -138,7 +141,7 @@ export class RulerScene {
     }
   }
 
-  async CreateHandModel(): Promise<void> {
+  private async CreateHandModel(): Promise<void> {
     console.log("Загрузка модели штангенциркуля начата...");
     try {
         // Загрузка модели SM_Caliper.gltf
@@ -214,7 +217,7 @@ export class RulerScene {
 }
 
 
-enableChildScaling(childMeshes: BABYLON.Mesh[]): void { 
+private enableChildScaling(childMeshes: BABYLON.Mesh[]): void { 
   this.scene.onPointerObservable.add((event) => {
     if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL) {
       const wheelEvent = event.event as WheelEvent;
@@ -275,7 +278,7 @@ enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
 }
 
 // Функция для сброса модели штангенциркуля в исходное положение и включения видимости
-resetModelPosition(): void {
+private resetModelPosition(): void {
   // Заданные координаты
   const forcedPosition = new BABYLON.Vector3(13.2, 6.41004, 4.85);
   
@@ -376,7 +379,7 @@ private setupWholeMeshes(mapMeshes: AbstractMesh[]): void {
 }
 
 
-  Page(): void {const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
+ private  Page(): void {const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
     this.guiManager.CreateDialogBox([page1])
   
             this.triggerManager1.createStartButton('Начать', () => {
