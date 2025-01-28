@@ -610,7 +610,7 @@ export class GUIManager {
 
 
       // Создаем кнопку для скрытия диалогового окна
-      this.hideButton = Button.CreateSimpleButton("hideButton", "Скрыть планшет");
+      this.hideButton = Button.CreateSimpleButton("hideButton", "Скрыть\nпланшет");
       this.hideButton.width = "150px";
       this.hideButton.height = "50px";
       this.hideButton.color = "white";
@@ -639,10 +639,21 @@ export class GUIManager {
           if (target) {
             this.updateNonDialogAnimation(this.dialogVisible, target);
           }
-          
-      });
 
+          // Обновление текста кнопки
+          this.updateButtonText();
+      });
     }
+
+    // Функция для обновления текста кнопки
+    private updateButtonText() {
+      if (this.dialogVisible) {
+          this.hideButton.textBlock.text = "Скрыть\nпланшет";
+      } else {
+          this.hideButton.textBlock.text = "Показать планшет";
+      }
+    }
+
     DeleteDialogBox(): void {
       if (this.currentDialogBox) {
         this.advancedTexture.removeControl(this.currentDialogBox);
