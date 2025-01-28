@@ -83,7 +83,7 @@ export class ModelLoader {
         const result = await SceneLoader.ImportMeshAsync(
             "",
             "./models/",
-            "Laboratory_01.gltf",
+            "Laboratory_MOD_1.gltf",
             this.scene
         );
 
@@ -380,6 +380,54 @@ export class ModelLoader {
       throw error;
     }
   }
+
+
+  // Добавьте новые методы для штангенциркуля, линейки и рулетки
+public async loadCaliperModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_Caliper.gltf",
+      this.scene
+    );
+    this.loadedMeshes["caliper"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_Caliper.gltf:", error);
+    throw error;
+  }
+}
+
+public async loadRulerModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_Ruler_LP.gltf",
+      this.scene
+    );
+    this.loadedMeshes["ruler"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_Ruler_LP.gltf:", error);
+    throw error;
+  }
+}
+
+public async loadTapeMeasureModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_TapeMeasure_LP_MOD_1.gltf",
+      this.scene
+    );
+    this.loadedMeshes["tape"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_TapeMeasure_LP_MOD_1.gltf:", error);
+    throw error;
+  }
+}
+
   
 
   addGUIToTool(mesh, texts): void {

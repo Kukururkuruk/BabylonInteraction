@@ -127,6 +127,8 @@ export class NewDistanceScene {
                 mesh.visibility = 0;
             });
 
+            this.guiManager.createBorderBox()
+
             this.targetMeshes2 = map.filter((mesh) => mesh.name.toLowerCase().includes("rack"));
             this.beam2 = this.targetMeshes2[1];
 

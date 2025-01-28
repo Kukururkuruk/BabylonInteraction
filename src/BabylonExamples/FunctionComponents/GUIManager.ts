@@ -114,15 +114,15 @@ export class GUIManager {
     return new Promise((resolve) => {
 
       this.WASDContainer = new Rectangle();
-      this.WASDContainer.width = "20%";
-      this.WASDContainer.height = "20%";
+      this.WASDContainer.width = "50%";
+      this.WASDContainer.height = "50%";
       this.WASDContainer.thickness = 0;
       this.WASDContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       this.WASDContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      this.WASDContainer.top = "40%";
-      this.WASDContainer.paddingRight = "2%";
+      this.WASDContainer.top = "55%";
+      this.WASDContainer.left = "-23%";
       // this.WASDContainer.background = 'red'
-      this.advancedTexture.addControl(this.WASDContainer);
+      this.dialogContainer.addControl(this.WASDContainer);
 
       // Создаем TextBlock для отображения счетчика кликов
       this.textBlock = new TextBlock();
@@ -165,10 +165,6 @@ export class GUIManager {
     });
   }
 
-  
-
-
-  
   updateText(index: number): void {
     if (index === this.currentTextIndex) {
       this.currentTextIndex++;
@@ -637,9 +633,9 @@ export class GUIManager {
       this.hideButton.onPointerUpObservable.add(() => {
         this.dialogVisible = !this.dialogVisible;
           this.updateDialogAnimation(this.dialogVisible, this.dialogContainer);
-          if (this.WASDContainer) {
-            this.updateNonDialogAnimation(this.dialogVisible, this.WASDContainer);
-          }
+          // if (this.WASDContainer) {
+          //   this.updateNonDialogAnimation(this.dialogVisible, this.WASDContainer);
+          // }
           if (target) {
             this.updateNonDialogAnimation(this.dialogVisible, target);
           }
@@ -675,10 +671,6 @@ export class GUIManager {
       this.nondialogAnimation.setKeys(keys);
       this.scene.beginDirectAnimation(targetObject, [this.nondialogAnimation], 0, 30, false);
   }
-
-
-
-
 
     updateDialogAnimation(visible: boolean, targetObject: Rectangle) {
       const keys = [];
