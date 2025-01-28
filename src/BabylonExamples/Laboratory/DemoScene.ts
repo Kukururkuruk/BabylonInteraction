@@ -521,7 +521,7 @@ export class DemoScene {
     scrollViewer.zIndex = 2;
 
     const dialogText = new TextBlock("dialogText");
-    dialogText.text = "ЭТО ЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПА";
+    dialogText.text = "ЭТОТ ТЕКСТ";
     dialogText.color = "#212529";
     dialogText.fontSize = "5%";
     dialogText.fontFamily = "Segoe UI";
