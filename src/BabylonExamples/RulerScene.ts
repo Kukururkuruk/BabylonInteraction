@@ -285,7 +285,7 @@ private resetModelPosition(): void {
   if (this.handModel) {
       // Принудительно устанавливаем позицию основной модели
       this.handModel.position = forcedPosition.clone();
-      console.log("Модель установлена в принудительную позицию:", this.handModel.position);
+      console.log("Модель установлена в принудительную  позицию:", this.handModel.position);
 
       // Восстанавливаем видимость модели
       this.handModel.isVisible = true;
