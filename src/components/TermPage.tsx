@@ -10,6 +10,7 @@ const TermPage: React.FC = () => {
         <div className="column">
           <button><Link to="/терминология">Терминология</Link></button>
           <button><Link to="/тестирование">Тест терминологии</Link></button>
+          <button><Link to="/ТестНеРандом">Тест все вопросы</Link></button>
         </div>
       </div>
     </div>

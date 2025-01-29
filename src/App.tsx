@@ -19,6 +19,7 @@ import BabylonLabotary from './components/BabylonLabotary/BabylonLabotary';
 import BabylonLabotaryPC from './components/BabylonLabotary/BabylonLabotaryPC';
 import BabylonDemo from './components/BabylonLabotary/BabylonDemo';
 import TermPage from './components/TermPage';
+import BabylonQuestionNONRANDOM from './components/BabylonQuestionNONRANDOM';
 
 
 const App: React.FC = () => {
@@ -43,6 +44,7 @@ const App: React.FC = () => {
         <Route path='/ЛабИнструменты' element={<BabylonLabotary />} />
         <Route path='/ЛабКомпьютер' element={<BabylonLabotaryPC />} />
         <Route path='/ЛабДемо' element={<BabylonDemo />} />
+        <Route path='/ТестНеРандом' element={<BabylonQuestionNONRANDOM />} />
       </Routes>
     </Router>
   );
