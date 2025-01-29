@@ -12,8 +12,8 @@ export class ModelLoader {
   private nonCollisionMeshNames: string[] = [
     "SM_ConcreteFence_LP.015",
     "SM_ConcreteFence_LP.030",
-    "SM_0_FencePost_Road.087",
-    "SM_0_FencePost_Road.088",
+    "SM_0_FencePost_Road.016",
+    "SM_0_FencePost_Road.020",
   ];
 
   private brokenMeshSubstring: string = "broken";
@@ -49,9 +49,9 @@ export class ModelLoader {
       // Шов тип
       "SM_0_connectingShaft_2",
       // Дорожное полотно
-      "SM_0_Road_Down.001",
+      "SM_0_Road_Down",
       // Насыпь
-      "SM_0_Landscape_2.002",
+      "SM_0_Landscape_R",
       // Асфальт на мосту
       "SM_0_BridgeAsfalt",
       // Кирпич
@@ -97,7 +97,7 @@ export class ModelLoader {
     "SM_0_FencePost_Road.002",          // Барьерное ограждение (тип 1)
     "SM_0_FencePostBridge_base_.004",   // Барьерное ограждение (тип 2)
     "SM_0_connectingShaft_1",           // Шов
-    "SM_0_Road_Down.001",               // Дорожное полотно
+    "SM_0_Road_Down",               // Дорожное полотно
     "SM_0_BridgeAsfalt",                // Асфальт на мосту
     "SM_0_Stand_R",                     // Подферменник
     "SM_0_Road_1_R",                    // Дорога сверху
@@ -129,7 +129,7 @@ export class ModelLoader {
         "",
         "./models/",
         // ИМЯ ФАЙЛА, соответствующее QuestionScene:
-        "Map_1_MOD.gltf",
+        "Map_1_MOD_V_7.gltf",
         this.scene
       );
       this.loadedMeshes["questionMap"] = result.meshes; 
@@ -197,7 +197,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Map_1_MOD_V_4.gltf",
+        "Map_1_MOD_V_7.gltf",
         this.scene
       );
       this.loadedMeshes["map"] = result.meshes;

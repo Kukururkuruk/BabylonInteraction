@@ -819,6 +819,7 @@ export class GUIManager {
     // Устанавливаем положение куба, чтобы центр находился на уровне пола
     boundaryBox.position.y = boundaryBoxHeight / 2;
     boundaryBox.checkCollisions = true;
+    boundaryBox.isPickable = false
     
     // Делаем куб невидимым, чтобы он не отвлекал от сцены
     boundaryBox.isVisible = false;
