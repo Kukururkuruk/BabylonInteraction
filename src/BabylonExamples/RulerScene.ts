@@ -180,8 +180,8 @@ private async CreateEnvironment(): Promise<void> {
 
         // Массив дочерних элементов
         const childMeshesNames = [
-            "SM_10cm", "SM_20cm", "SM_30cm", "SM_40cm", "SM_50cm",
-            "SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
+            "SM_10cm", "SM_20cm", "SM_30cm", "SM_40cm", 
+            //"SM_50cm","SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
         ];
 
         // Массив для хранения дочерних объектов Mesh
@@ -215,6 +215,8 @@ if (this.handModel.position.x >= 0.5) {
 }
 // После загрузки штангенциркуля и дочерних элементов
 this.setupClickListenerForScene(childMeshes);
+
+this.setupKeyListener(childMeshes); // Добавляем вызов
         // Устанавливаем параметры для основной модели
         this.handModel.position = new Vector3(13, 6.41004, 4.95);
         this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
@@ -376,48 +378,123 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
 }
 
 
-private startScalingAnimation(childMeshes: BABYLON.Mesh[]): void {
-  const firstMesh = childMeshes[0];
+private async startScalingAnimation(childMeshes: BABYLON.Mesh[]): Promise<void> {
+  if (!childMeshes.length) return;
 
-  // Печатаем позицию первой модели для отладки
-  console.log("Позиция первой модели перед проверкой:", firstMesh.position.x);
+  const distanceStep = 0.096; // Шаг движения
 
-  // Изменим проверку позиции на диапазон (например, между -0.1 и 0.1)
-  // или же на другие значения в зависимости от ваших требований
-  if (firstMesh.position.x >= -0.1 && firstMesh.position.x <= 0.1) {
-    console.log("Модель в нужной позиции, запускаем анимацию.");
+  if (childMeshes[0].position.x >= -0.1 && childMeshes[0].position.x <= 0.1) {
+      console.log("Первая модель в нужной позиции, запускаем анимацию.");
 
-    // Если модель установлена в нужной позиции, запускаем анимацию
-    for (let i = 0; i < childMeshes.length; i++) {
-      const childMesh = childMeshes[i];
+      for (let i = 0; i < childMeshes.length; i++) {
+          await this.animateMesh(childMeshes, i, distanceStep);
+      }
+  } else {
+      console.log("Первая модель не в нужной позиции, анимация не запущена.");
+  }
+}
 
-      // Создаем анимацию для каждого меша
+// Функция для обратного сворачивания
+// Функция сворачивания в 0
+private async collapseMeshes(childMeshes: BABYLON.Mesh[]): Promise<void> {
+  if (!childMeshes.length) return;
+
+  console.log("Сворачиваем рулетку обратно...");
+
+  for (let i = childMeshes.length - 1; i >= 0; i--) {
+      await this.animateMeshToZero(childMeshes[i]);
+  }
+}
+
+// Функция анимации меша (вперед или назад)
+private animateMesh(childMeshes: BABYLON.Mesh[], index: number, distance: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+      if (index === 0) {
+          this.moveMesh(childMeshes[index], distance, resolve);
+      } else {
+          this.moveMesh(childMeshes[index], distance, () => {
+              for (let j = 0; j < index; j++) {
+                  childMeshes[j].position.x += distance;
+              }
+              resolve();
+          });
+      }
+  });
+}
+
+// Анимация движения меша
+private moveMesh(mesh: BABYLON.Mesh, distance: number, onComplete: () => void): void {
+  const animation = new BABYLON.Animation(
+      `positionAnimation_${mesh.name}`,
+      "position.x",
+      30, // FPS
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const targetPosition = mesh.position.x + distance; // Двигаем меш вперед или назад
+
+  const keys = [
+      { frame: 0, value: mesh.position.x },
+      { frame: 30, value: targetPosition }
+  ];
+  animation.setKeys(keys);
+
+  mesh.animations.push(animation);
+
+  this.scene.beginAnimation(mesh, 0, 30, false, 1, () => {
+      console.log(`Анимация завершена для ${mesh.name}, новая позиция: ${mesh.position.x}`);
+      onComplete();
+  });
+}
+
+
+
+// Анимация возврата меша в 0
+private animateMeshToZero(mesh: BABYLON.Mesh): Promise<void> {
+  return new Promise<void>((resolve) => {
       const animation = new BABYLON.Animation(
-        `scaleAnimation_${i}`,
-        "position.x", // Анимируем позицию по оси X
-        30, // Количество кадров в анимации
-        BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+          `collapseAnimation_${mesh.name}`,
+          "position.x",
+          30, // FPS
+          BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
       );
 
-      // Устанавливаем ключевые кадры
       const keys = [
-        { frame: 0, value: childMesh.position.x }, // Начальное положение
-        { frame: 30, value: childMesh.position.x + 0.05 } // Конечное положение
+          { frame: 0, value: mesh.position.x },
+          { frame: 30, value: 0 } // Возвращаем в 0
       ];
       animation.setKeys(keys);
 
-      // Запускаем анимацию
-      childMesh.animations.push(animation);
-      this.scene.beginAnimation(childMesh, 0, 30, false);
+      mesh.animations.push(animation);
 
-      console.log(`Запуск анимации для ${childMesh.name}`);
-      
-    }
-  } else {
-    console.log("Модель не в нужной позиции, анимация не будет запущена.");
-  }
+      this.scene.beginAnimation(mesh, 0, 30, false, 1, () => {
+          mesh.position.x = -0.48; // Фиксируем позицию после анимации
+          console.log(`Анимация завершена для ${mesh.name}, теперь позиция: ${mesh.position.x}`);
+          resolve();
+      });
+  });
 }
+
+// Добавляем обработчик клавиши Escape
+// Добавляем обработчик клавиши Escape
+private setupKeyListener(childMeshes: BABYLON.Mesh[]): void {
+  window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+          if (childMeshes.every(mesh => mesh.position.x === -0.48)) {
+              console.log("Все меши уже на месте (-0.48), анимация не требуется.");
+              return;
+          }
+          this.collapseMeshes(childMeshes);
+      }
+  });
+}
+
+
+
+
+
 
 
 private setupClickListenerForScene(childMeshes: BABYLON.Mesh[]): void {
