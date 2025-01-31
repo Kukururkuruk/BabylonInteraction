@@ -48,7 +48,7 @@ export class RulerScene {
   private isModelPositioned: boolean = false;  // Флаг для отслеживания состояния модели
   private lastLogTime: number = 0;  // Время последнего логирования
   private logInterval: number = 1000;  // Интервал между логами (в миллисекундах)
-
+  private isCollapsed: boolean = false; // Флаг для отслеживания состояния
   
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -235,35 +235,7 @@ this.setupKeyListener(childMeshes); // Добавляем вызов
             }
         });
 
-        // Включаем обработку нажатий клавиш для вращения модели
-        this.scene.onKeyboardObservable.add((kbInfo) => {
-            if (this.handModel) {
-                const rotationSpeed = 0.05; // Скорость вращения
-
-                // Проверяем тип события и обрабатываем нажатие клавиши
-                if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
-                    switch (kbInfo.event.key.toLowerCase()) {
-                        case 'q': // Вращение против часовой стрелки вокруг оси Y (Q)
-                        case 'й': // Вращение против часовой стрелки вокруг оси Y (Й)
-                            this.handModel.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
-                            console.log('Rotate around Y-axis counter-clockwise');
-                            break;
-
-                        case 'e': // Вращение по часовой стрелке вокруг оси Y (E)
-                        case 'у': // Вращение по часовой стрелке вокруг оси Y (У)
-                            this.handModel.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
-                            console.log('Rotate around Y-axis clockwise');
-                            break;
-
-                        default:
-                            console.log(`Key pressed: ${kbInfo.event.key}`);
-                            break;
-                    }
-                }
-            } else {
-                console.warn('Hand model is not initialized!');
-            }
-        });
+        
     } else {
         console.error("Ошибка: модель штангенциркуля не найдена в файле.");
     }
@@ -380,6 +352,10 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
 
 private async startScalingAnimation(childMeshes: BABYLON.Mesh[]): Promise<void> {
   if (!childMeshes.length) return;
+  if (this.isCollapsed) {
+    this.isCollapsed = false; // После нажатия ESC меняем флаг
+    console.log("Рулетка готова к выдвижению.");
+}
 
   const distanceStep = 0.096; // Шаг движения
 
@@ -398,22 +374,28 @@ private async startScalingAnimation(childMeshes: BABYLON.Mesh[]): Promise<void> 
 // Функция сворачивания в 0
 private async collapseMeshes(childMeshes: BABYLON.Mesh[]): Promise<void> {
   if (!childMeshes.length) return;
+  if (this.isCollapsed) return; // Если уже свернуто, не запускаем анимацию
 
   console.log("Сворачиваем рулетку обратно...");
 
   for (let i = childMeshes.length - 1; i >= 0; i--) {
       await this.animateMeshToZero(childMeshes[i]);
   }
+  this.isCollapsed = true; // После сворачивания устанавливаем флаг в true
 }
 
+// Функция анимации меша (вперед или назад)
 // Функция анимации меша (вперед или назад)
 private animateMesh(childMeshes: BABYLON.Mesh[], index: number, distance: number): Promise<void> {
   return new Promise<void>((resolve) => {
       if (index === 0) {
+          // Для первого меша просто начинаем движение
           this.moveMesh(childMeshes[index], distance, resolve);
       } else {
+          // Для остальных мешей, сначала движется текущий, затем тянет за собой предыдущие
           this.moveMesh(childMeshes[index], distance, () => {
               for (let j = 0; j < index; j++) {
+                  // Применяем одинаковое движение ко всем предыдущим мешам
                   childMeshes[j].position.x += distance;
               }
               resolve();
@@ -427,7 +409,7 @@ private moveMesh(mesh: BABYLON.Mesh, distance: number, onComplete: () => void): 
   const animation = new BABYLON.Animation(
       `positionAnimation_${mesh.name}`,
       "position.x",
-      30, // FPS
+      120, // FPS
       BABYLON.Animation.ANIMATIONTYPE_FLOAT,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
@@ -436,13 +418,13 @@ private moveMesh(mesh: BABYLON.Mesh, distance: number, onComplete: () => void): 
 
   const keys = [
       { frame: 0, value: mesh.position.x },
-      { frame: 30, value: targetPosition }
+      { frame: 120, value: targetPosition } // Увеличиваем количество кадров для более плавного движения
   ];
   animation.setKeys(keys);
 
   mesh.animations.push(animation);
 
-  this.scene.beginAnimation(mesh, 0, 30, false, 1, () => {
+  this.scene.beginAnimation(mesh, 0, 120, false, 1, () => { // Используем больше кадров для плавности
       console.log(`Анимация завершена для ${mesh.name}, новая позиция: ${mesh.position.x}`);
       onComplete();
   });
@@ -456,21 +438,21 @@ private animateMeshToZero(mesh: BABYLON.Mesh): Promise<void> {
       const animation = new BABYLON.Animation(
           `collapseAnimation_${mesh.name}`,
           "position.x",
-          30, // FPS
+          60, // FPS
           BABYLON.Animation.ANIMATIONTYPE_FLOAT,
           BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
       );
 
       const keys = [
           { frame: 0, value: mesh.position.x },
-          { frame: 30, value: 0 } // Возвращаем в 0
+          { frame: 60, value: 0 } // Возвращаем в 0
       ];
       animation.setKeys(keys);
 
       mesh.animations.push(animation);
 
       this.scene.beginAnimation(mesh, 0, 30, false, 1, () => {
-          mesh.position.x = -0.48; // Фиксируем позицию после анимации
+          mesh.position.x = -0.04780360972881317; // Фиксируем позицию после анимации
           console.log(`Анимация завершена для ${mesh.name}, теперь позиция: ${mesh.position.x}`);
           resolve();
       });
@@ -479,14 +461,49 @@ private animateMeshToZero(mesh: BABYLON.Mesh): Promise<void> {
 
 // Добавляем обработчик клавиши Escape
 // Добавляем обработчик клавиши Escape
+// Обработчик нажатия Escape
 private setupKeyListener(childMeshes: BABYLON.Mesh[]): void {
   window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-          if (childMeshes.every(mesh => mesh.position.x === -0.48)) {
-              console.log("Все меши уже на месте (-0.48), анимация не требуется.");
-              return;
+      console.log("Key pressed:", event.key);  // Логируем нажатие клавиши
+
+      if (this.handModel) {
+          const rotationSpeed = 0.05; // Скорость вращения
+
+          // Обрабатываем нажатие клавиш для вращения
+          switch (event.key.toLowerCase()) {
+              case 'q': // Вращение против часовой стрелки вокруг оси Y (Q)
+              case 'й': // Вращение против часовой стрелки вокруг оси Y (Й)
+                  this.handModel.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
+                  console.log('Rotate around Y-axis counter-clockwise');
+                  break;
+
+              case 'e': // Вращение по часовой стрелке вокруг оси Y (E)
+              case 'у': // Вращение по часовой стрелке вокруг оси Y (У)
+                  this.handModel.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
+                  console.log('Rotate around Y-axis clockwise');
+                  break;
+
+              case 'escape':
+                  console.log("Key pressed: Escape");
+                  if (this.isCollapsed) {
+                      console.log("Все меши уже на месте, анимация не требуется.");
+                      return; // Если уже свернуто, ничего не делаем
+                  }
+                  if (childMeshes.every(mesh => mesh.position.x === -0.04780360972881317)) {
+                      console.log("Все меши уже на месте, анимация не требуется.");
+                      return;
+                  }
+
+                  console.log("Рулетка сворачивается...");
+                  this.collapseMeshes(childMeshes);
+                  break;
+
+              default:
+                  console.log(`Key pressed: ${event.key}`);
+                  break;
           }
-          this.collapseMeshes(childMeshes);
+      } else {
+          console.warn('Hand model is not initialized!');
       }
   });
 }
