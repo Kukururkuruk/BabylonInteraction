@@ -49,6 +49,7 @@ export class RulerScene {
   private lastLogTime: number = 0;  // Время последнего логирования
   private logInterval: number = 1000;  // Интервал между логами (в миллисекундах)
   private isCollapsed: boolean = false; // Флаг для отслеживания состояния
+  private originalPosition!: BABYLON.Vector3; // Добавляем '!' для исключения ошибки
   
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -77,6 +78,7 @@ export class RulerScene {
     });
     this.CreateController();
     this.Page();
+    this.originalPosition = new BABYLON.Vector3(0, 0, 0); // Задаем начальное значение
     // Инициализация TabletManager
     //this.tabletManager = new TabletManager();
     //this.tabletManager.createAlwaysVisibleTablet();
@@ -165,7 +167,7 @@ private async CreateEnvironment(): Promise<void> {
 
     // Загрузка модели штангенциркуля
     console.log("Загрузка модели штангенциркуля начата...");
-    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
+    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP_MOD_1.gltf", this.scene);
     if (this.handModel) {
         this.handModel.checkCollisions = true;
     }
@@ -180,7 +182,7 @@ private async CreateEnvironment(): Promise<void> {
 
         // Массив дочерних элементов
         const childMeshesNames = [
-            "SM_10cm", "SM_20cm", "SM_30cm", "SM_40cm", 
+            "SM_10cm", 
             //"SM_50cm","SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
         ];
 
@@ -207,16 +209,13 @@ private async CreateEnvironment(): Promise<void> {
             }
         });
 
-        // Включаем масштабирование для дочерних элементов
+        // Включаем масштабирование для дочерних элементов 
         this.enableChildScaling(childMeshes);
-// Включаем масштабирование для дочерних элементов, но только после установки первой модели в нужную позицию
-if (this.handModel.position.x >= 0.5) {
-  this.startScalingAnimation(childMeshes);
-}
-// После загрузки штангенциркуля и дочерних элементов
-this.setupClickListenerForScene(childMeshes);
-
-this.setupKeyListener(childMeshes); // Добавляем вызов
+        
+        const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
+  if (sm_10cm) {
+    this.enableMeshMovement(sm_10cm);
+  }
         // Устанавливаем параметры для основной модели
         this.handModel.position = new Vector3(13, 6.41004, 4.95);
         this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
@@ -350,191 +349,91 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
 }
 
 
-private async startScalingAnimation(childMeshes: BABYLON.Mesh[]): Promise<void> {
-  if (!childMeshes.length) return;
-  if (this.isCollapsed) {
-    this.isCollapsed = false; // После нажатия ESC меняем флаг
-    console.log("Рулетка готова к выдвижению.");
-}
+private enableMeshMovement(sm_10cm: BABYLON.Mesh): void {
+  this.originalPosition = sm_10cm.position.clone(); // Запоминаем исходную позицию
 
-  const distanceStep = 0.096; // Шаг движения
+  this.scene.onPointerObservable.add((event) => {
+    if (event.type === BABYLON.PointerEventTypes.POINTERPICK) {
+      console.log("Клик по сцене, двигаем SM_10cm на 0.05");
 
-  if (childMeshes[0].position.x >= -0.1 && childMeshes[0].position.x <= 0.1) {
-      console.log("Первая модель в нужной позиции, запускаем анимацию.");
+      // Анимация движения на фиксированное расстояние (0.05)
+      BABYLON.Animation.CreateAndStartAnimation(
+        "moveAnimation",
+        sm_10cm,
+        "position.x",
+        60,
+        30,
+        sm_10cm.position.x,
+        this.originalPosition.x + 0.05,
+        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+    }
+  });
 
-      for (let i = 0; i < childMeshes.length; i++) {
-          await this.animateMesh(childMeshes, i, distanceStep);
-      }
-  } else {
-      console.log("Первая модель не в нужной позиции, анимация не запущена.");
-  }
-}
+  // Обработчик для ESC (возвращаем обратно)
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      console.log("ESC нажата, возвращаем SM_10cm в исходную позицию");
 
-// Функция для обратного сворачивания
-// Функция сворачивания в 0
-private async collapseMeshes(childMeshes: BABYLON.Mesh[]): Promise<void> {
-  if (!childMeshes.length) return;
-  if (this.isCollapsed) return; // Если уже свернуто, не запускаем анимацию
-
-  console.log("Сворачиваем рулетку обратно...");
-
-  for (let i = childMeshes.length - 1; i >= 0; i--) {
-      await this.animateMeshToZero(childMeshes[i]);
-  }
-  this.isCollapsed = true; // После сворачивания устанавливаем флаг в true
-}
-
-// Функция анимации меша (вперед или назад)
-// Функция анимации меша (вперед или назад)
-private animateMesh(childMeshes: BABYLON.Mesh[], index: number, distance: number): Promise<void> {
-  return new Promise<void>((resolve) => {
-      if (index === 0) {
-          // Для первого меша просто начинаем движение
-          this.moveMesh(childMeshes[index], distance, resolve);
-      } else {
-          // Для остальных мешей, сначала движется текущий, затем тянет за собой предыдущие
-          this.moveMesh(childMeshes[index], distance, () => {
-              for (let j = 0; j < index; j++) {
-                  // Применяем одинаковое движение ко всем предыдущим мешам
-                  childMeshes[j].position.x += distance;
-              }
-              resolve();
-          });
-      }
+      BABYLON.Animation.CreateAndStartAnimation(
+        "returnAnimation",
+        sm_10cm,
+        "position.x",
+        60,
+        30,
+        sm_10cm.position.x,
+        this.originalPosition.x,
+        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+      );
+    }
   });
 }
 
-// Анимация движения меша
-private moveMesh(mesh: BABYLON.Mesh, distance: number, onComplete: () => void): void {
+
+
+
+
+
+
+/*// Добавляем обработчик клика на точку
+private onPointClick(targetPosition: BABYLON.Vector3): void {
+  const mesh = this.scene.getMeshByName("sm_10cm") as BABYLON.Mesh; // Приводим AbstractMesh к Mesh
+  if (!mesh || !(mesh instanceof BABYLON.Mesh)) {
+      console.error("Меш sm_10cm не найден или не является Mesh!");
+      return;
+  }
+
+  console.log(`Клик по точке, перемещаем sm_10cm в позицию ${targetPosition}`);
+
+  this.animateMeshToPosition(mesh, targetPosition);
+}
+
+// Функция анимации перемещения меша в указанную позицию
+private animateMeshToPosition(mesh: BABYLON.Mesh, targetPosition: BABYLON.Vector3): void {
   const animation = new BABYLON.Animation(
-      `positionAnimation_${mesh.name}`,
-      "position.x",
-      120, // FPS
-      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      `moveToPosition_${mesh.name}`,
+      "position",
+      120,
+      BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
       BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
   );
 
-  const targetPosition = mesh.position.x + distance; // Двигаем меш вперед или назад
-
   const keys = [
-      { frame: 0, value: mesh.position.x },
-      { frame: 120, value: targetPosition } // Увеличиваем количество кадров для более плавного движения
+      { frame: 0, value: mesh.position.clone() },
+      { frame: 120, value: targetPosition }
   ];
   animation.setKeys(keys);
 
   mesh.animations.push(animation);
 
-  this.scene.beginAnimation(mesh, 0, 120, false, 1, () => { // Используем больше кадров для плавности
-      console.log(`Анимация завершена для ${mesh.name}, новая позиция: ${mesh.position.x}`);
-      onComplete();
+  this.scene.beginAnimation(mesh, 0, 120, false, 1, () => {
+      console.log(`sm_10cm достиг позиции ${targetPosition}`);
   });
-}
-
-
-
-// Анимация возврата меша в 0
-private animateMeshToZero(mesh: BABYLON.Mesh): Promise<void> {
-  return new Promise<void>((resolve) => {
-      const animation = new BABYLON.Animation(
-          `collapseAnimation_${mesh.name}`,
-          "position.x",
-          60, // FPS
-          BABYLON.Animation.ANIMATIONTYPE_FLOAT,
-          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
-
-      const keys = [
-          { frame: 0, value: mesh.position.x },
-          { frame: 60, value: 0 } // Возвращаем в 0
-      ];
-      animation.setKeys(keys);
-
-      mesh.animations.push(animation);
-
-      this.scene.beginAnimation(mesh, 0, 30, false, 1, () => {
-          mesh.position.x = -0.04780360972881317; // Фиксируем позицию после анимации
-          console.log(`Анимация завершена для ${mesh.name}, теперь позиция: ${mesh.position.x}`);
-          resolve();
-      });
-  });
-}
-
-// Добавляем обработчик клавиши Escape
-// Добавляем обработчик клавиши Escape
-// Обработчик нажатия Escape
-private setupKeyListener(childMeshes: BABYLON.Mesh[]): void {
-  window.addEventListener("keydown", (event) => {
-      console.log("Key pressed:", event.key);  // Логируем нажатие клавиши
-
-      if (this.handModel) {
-          const rotationSpeed = 0.05; // Скорость вращения
-
-          // Обрабатываем нажатие клавиш для вращения
-          switch (event.key.toLowerCase()) {
-              case 'q': // Вращение против часовой стрелки вокруг оси Y (Q)
-              case 'й': // Вращение против часовой стрелки вокруг оси Y (Й)
-                  this.handModel.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
-                  console.log('Rotate around Y-axis counter-clockwise');
-                  break;
-
-              case 'e': // Вращение по часовой стрелке вокруг оси Y (E)
-              case 'у': // Вращение по часовой стрелке вокруг оси Y (У)
-                  this.handModel.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
-                  console.log('Rotate around Y-axis clockwise');
-                  break;
-
-              case 'escape':
-                  console.log("Key pressed: Escape");
-                  if (this.isCollapsed) {
-                      console.log("Все меши уже на месте, анимация не требуется.");
-                      return; // Если уже свернуто, ничего не делаем
-                  }
-                  if (childMeshes.every(mesh => mesh.position.x === -0.04780360972881317)) {
-                      console.log("Все меши уже на месте, анимация не требуется.");
-                      return;
-                  }
-
-                  console.log("Рулетка сворачивается...");
-                  this.collapseMeshes(childMeshes);
-                  break;
-
-              default:
-                  console.log(`Key pressed: ${event.key}`);
-                  break;
-          }
-      } else {
-          console.warn('Hand model is not initialized!');
-      }
-  });
-}
+}*/
 
 
 
 
-
-
-
-private setupClickListenerForScene(childMeshes: BABYLON.Mesh[]): void {
-  this.scene.onPointerObservable.add((event) => {
-      if (event.type === BABYLON.PointerEventTypes.POINTERPICK) {
-          const pickInfo = event.pickInfo;
-
-          // Проверяем, что pickInfo не равно null и что выбранный объект является мешом
-          if (pickInfo && pickInfo.pickedMesh) {
-              const pickedMesh = pickInfo.pickedMesh;
-              console.log(`Выбрано: ${pickedMesh.name}, Позиция:`, pickedMesh.position);
-
-              // Если кликаем на объект, начинаем анимацию
-              console.log("Произошел клик по объекту на сцене, начинаем анимацию для дочерних элементов.");
-              
-              // Запускаем анимацию для всех дочерних объектов
-              this.startScalingAnimation(childMeshes);
-          } else {
-              console.log("Клик не по объекту на сцене.");
-          }
-      }
-  });
-}
 
 
 
