@@ -50,7 +50,9 @@ export class RulerScene {
   private logInterval: number = 1000;  // Интервал между логами (в миллисекундах)
   private isCollapsed: boolean = false; // Флаг для отслеживания состояния
   private originalPosition!: BABYLON.Vector3; // Добавляем '!' для исключения ошибки
-  
+  private originalCameraPosition: BABYLON.Vector3 | null = null;  // Для хранения исходной позиции камеры
+
+
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
@@ -114,7 +116,9 @@ export class RulerScene {
 
   private CreateController(): void { 
     this.camera = new FreeCamera("camera", new Vector3(14.3, 6.3, 5.0), this.scene);
-    
+     // Сохраняем исходную позицию камеры
+  this.originalCameraPosition = this.camera.position.clone();
+
     // Отключаем управление
     this.camera.detachControl();
     // Поворачиваем камеру влево на 90 градусов (поворот вокруг оси Y)
@@ -130,6 +134,8 @@ export class RulerScene {
 
     // Увеличиваем поле зрения (FOV) в 2 раза
     this.camera.fov /= 2;
+    // Добавляем обработчик нажатия клавиши Esc
+    this.addEscapeKeyListener();
 }
 
 private async CreateEnvironment(): Promise<void> {
@@ -167,7 +173,7 @@ private async CreateEnvironment(): Promise<void> {
 
     // Загрузка модели штангенциркуля
     console.log("Загрузка модели штангенциркуля начата...");
-    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP_MOD_1.gltf", this.scene);
+    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
     if (this.handModel) {
         this.handModel.checkCollisions = true;
     }
@@ -182,7 +188,7 @@ private async CreateEnvironment(): Promise<void> {
 
         // Массив дочерних элементов
         const childMeshesNames = [
-            "SM_10cm", 
+            "SM_10cm", "SM_20cm","SM_30cm","SM_40cm","SM_50cm",
             //"SM_50cm","SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
         ];
 
@@ -214,8 +220,9 @@ private async CreateEnvironment(): Promise<void> {
         
         const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
   if (sm_10cm) {
-    this.enableMeshMovement(sm_10cm);
-  }
+    sm_10cm.position.x += 0;  // Сдвигаем меш на 0.1 по оси X
+    console.log("Новая позиция SM_10cm: ", sm_10cm.position);
+}
         // Устанавливаем параметры для основной модели
         this.handModel.position = new Vector3(13, 6.41004, 4.95);
         this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
@@ -288,106 +295,153 @@ private async CreateEnvironment(): Promise<void> {
   }
 }
 
-private enableChildScaling(childMeshes: BABYLON.Mesh[]): void { 
-  this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL) {
-      const wheelEvent = event.event as WheelEvent;
-      const delta = wheelEvent.deltaY > 0 ? 0.001 : -0.001; // Шаг изменения
+private enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
+  let isMoving = false;
+  let moveInterval: number | null = null;
+  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
 
-      // Начинаем с первого объекта
-      for (let i = 0; i < childMeshes.length; i++) {
-        const childMesh = childMeshes[i];
+  const moveMeshes = (delta: number) => {
+    const firstMesh = childMeshes[0];
 
-        // Если это первый объект, просто двигаем его
-        if (i === 0) {
+    if (firstMesh.position.x >= 0.22) {
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
+      }
+
+      this.zoomCamera();
+      return;
+    }
+
+    for (let i = 0; i < childMeshes.length; i++) {
+      const childMesh = childMeshes[i];
+
+      if (i === 0) {
+        childMesh.position.x += delta;
+      } else {
+        let threshold = 0;
+        // Устанавливаем threshold для каждого меша
+        if (i === 1) threshold = 0.0485;
+        else if (i === 2) threshold = 0.144;
+        else if (i === 3) threshold = 0.240;
+        else if (i === 4) threshold = 0.336;
+        else if (i === 5) threshold = 0.432;
+        else if (i === 6) threshold = 0.530;
+        else if (i === 7) threshold = 0.638;
+        else if (i === 8) threshold = 0.738;
+        else if (i === 9) threshold = 0.838;
+        else if (i === 10) threshold = 0.938;
+
+        if (firstMesh.position.x >= threshold) {
           childMesh.position.x += delta;
-        } else {
-          // Для остальных объектов проверяем, достиг ли SM_10cm нужной позиции
-          const firstMesh = childMeshes[0]; // Всегда ориентируемся на SM_10cm
-          let threshold = 0;
-
-          // Задаем пороги для каждого меша
-          if (i === 1) {
-            threshold = 0.0485; // SM_20cm начинает движение, когда SM_10cm достигает 0.0485
-          } else if (i === 2) {
-            threshold = 0.144; // SM_30cm начинает движение, когда SM_10cm достигает 0.144
-          } else if (i === 3) {
-            threshold = 0.240; // SM_40cm начинает движение, когда SM_10cm достигает 0.350
-          } else if (i === 4) {
-            threshold = 0.336; // SM_50cm начинает движение, когда SM_10cm достигает 0.450
-          } else if (i === 5) {
-            threshold = 0.432; // SM_60cm начинает движение, когда SM_10cm достигает 0.550
-          } else if (i === 6) {
-            threshold = 0.530; // SM_70cm начинает движение, когда SM_10cm достигает 0.650
-          } else if (i === 7) {
-            threshold = 0.638; // SM_80cm начинает движение, когда SM_10cm достигает 0.750
-          } else if (i === 8) {
-            threshold = 0.738; // SM_90cm начинает движение, когда SM_10cm достигает 0.850
-          } else if (i === 9) {
-            threshold = 0.838; // SM_100cm начинает движение, когда SM_10cm достигает 0.950
-          } else if (i === 10) {
-            threshold = 0.938; // SM_110cm начинает движение, когда SM_10cm достигает 1.050
-          }
-
-          if (firstMesh.position.x >= threshold) {
-            childMesh.position.x += delta;
-          }
         }
+      }
 
-        // Ограничиваем движение, чтобы оно не выходило за границы
-        if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
+      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
+    }
+  };
 
-        // Логируем изменения только через заданный интервал
-        const currentTime = Date.now();
-        if (currentTime - this.lastLogTime > this.logInterval) {
-          console.log(`Новое значение ${childMesh.name} по оси X:`, childMesh.position.x);
-          this.lastLogTime = currentTime; // Обновляем время последнего логирования
-        }
+  this.scene.onPointerObservable.add((event) => {
+    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+      if (!isMoving) {
+        isMoving = true;
+        moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
+      }
+    }
+
+    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
       }
     }
   });
-}
 
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      // Восстанавливаем оригинальные позиции мешей
+      for (let i = 0; i < childMeshes.length; i++) {
+        childMeshes[i].position = originalPositions[i].clone();
+      }
 
-private enableMeshMovement(sm_10cm: BABYLON.Mesh): void {
-  this.originalPosition = sm_10cm.position.clone(); // Запоминаем исходную позицию
+      // Останавливаем движение
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
+      }
 
-  this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERPICK) {
-      console.log("Клик по сцене, двигаем SM_10cm на 0.05");
-
-      // Анимация движения на фиксированное расстояние (0.05)
-      BABYLON.Animation.CreateAndStartAnimation(
-        "moveAnimation",
-        sm_10cm,
-        "position.x",
-        60,
-        30,
-        sm_10cm.position.x,
-        this.originalPosition.x + 0.05,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
-    }
-  });
-
-  // Обработчик для ESC (возвращаем обратно)
-  window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      console.log("ESC нажата, возвращаем SM_10cm в исходную позицию");
-
-      BABYLON.Animation.CreateAndStartAnimation(
-        "returnAnimation",
-        sm_10cm,
-        "position.x",
-        60,
-        30,
-        sm_10cm.position.x,
-        this.originalPosition.x,
-        BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-      );
+      console.log("Все меши возвращены в исходное состояние.");
     }
   });
 }
+
+// Функция для приближения камеры
+private zoomCamera(): void {
+  const camera = this.scene.activeCamera as BABYLON.FreeCamera;
+  if (camera) {
+    const originalPosition = camera.position.clone();  // Сохраняем оригинальную позицию камеры
+    const zoomPosition = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, -0.2)); // Смещаем камеру по оси Z
+    const zoomDuration = 500; // Продолжительность анимации
+
+    BABYLON.Animation.CreateAndStartAnimation(
+      "zoomCamera", 
+      camera, 
+      "position", 
+      30, 
+      zoomDuration / 30, 
+      originalPosition, 
+      zoomPosition, 
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    console.log("Камера приближена.");
+  }
+}
+
+private resetCameraPosition(): void {
+  if (this.originalCameraPosition) {
+    const camera = this.camera;
+    const resetDuration = 500; // Продолжительность анимации возврата камеры
+
+    console.log("Попытка вернуть камеру в исходное положение...");
+
+    // Анимация возврата камеры в исходную позицию
+    BABYLON.Animation.CreateAndStartAnimation(
+      "resetCameraPosition", 
+      camera, 
+      "position", 
+      30, 
+      resetDuration / 30, 
+      camera.position, 
+      this.originalCameraPosition, 
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+    console.log("Анимация возвращения камеры запущена.");
+  } else {
+    console.log("Исходная позиция камеры не сохранена.");
+  }
+}
+
+// Добавляем обработку нажатия клавиши Esc
+private addEscapeKeyListener(): void {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      // Восстанавливаем камеру в исходную позицию
+      this.resetCameraPosition();
+    }
+  });
+}
+
+
+
+
+
+
+
+
+
 
 
 
