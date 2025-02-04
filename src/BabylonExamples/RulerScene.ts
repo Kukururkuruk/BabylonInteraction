@@ -138,7 +138,7 @@ export class RulerScene {
     this.addEscapeKeyListener();
 }
 
-private async CreateEnvironment(): Promise<void> {
+private async CreateEnvironment(): Promise<void> { 
   try {
     // Загрузка карты
     const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
@@ -219,10 +219,11 @@ private async CreateEnvironment(): Promise<void> {
         this.enableChildScaling(childMeshes);
         
         const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
-  if (sm_10cm) {
-    sm_10cm.position.x += 0;  // Сдвигаем меш на 0.1 по оси X
-    console.log("Новая позиция SM_10cm: ", sm_10cm.position);
-}
+        if (sm_10cm) {
+            sm_10cm.position.x += 0;  // Сдвигаем меш на 0.1 по оси X
+            console.log("Новая позиция SM_10cm: ", sm_10cm.position);
+        }
+
         // Устанавливаем параметры для основной модели
         this.handModel.position = new Vector3(13, 6.41004, 4.95);
         this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
@@ -240,12 +241,38 @@ private async CreateEnvironment(): Promise<void> {
                 }
             }
         });
-
         
     } else {
         console.error("Ошибка: модель штангенциркуля не найдена в файле.");
     }
 
+    /*// Создание кликабельных примитивов (мешей) серого цвета
+    const createClickableMesh = (position: BABYLON.Vector3): BABYLON.Mesh => {
+      // Измените размеры коробки для создания прямоугольной формы
+      const mesh = BABYLON.MeshBuilder.CreateBox("clickableMesh", { width: 0.2, height: 0.09, depth: 0.02 }, this.scene);
+      mesh.position = position;
+    
+      // Создание стандартного материала
+      const material = new BABYLON.StandardMaterial("grayMaterial", this.scene);
+      material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);  // Серый цвет
+      mesh.material = material;
+    
+      // Обработчик клика на меш
+      mesh.actionManager = new BABYLON.ActionManager(this.scene);
+      mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (event) => {
+        console.log("Меш был кликнут!", mesh.position);
+        // Здесь можно добавить дополнительную логику, например, отправить данные на сервер или что-то другое
+      }));
+    
+      return mesh;
+    };
+
+    // Создание двух кликабельных мешей в заданных координатах
+    const mesh1 = createClickableMesh(new BABYLON.Vector3(12.6, 6.45, 5));
+    const mesh2 = createClickableMesh(new BABYLON.Vector3(12.44, 6.16411, 5.33));
+
+    console.log("Кликабельные меши созданы.");
+*/
     // Плавное движение модели
     let targetPosition: BABYLON.Vector3 | null = null;
     const smoothingFactor = 0.1;
@@ -289,11 +316,71 @@ private async CreateEnvironment(): Promise<void> {
             this.handModel.position = currentPosition;
         }
     });
+      // Создание полупрозрачной неактивной модели
+    await this.createTransparentModel(new BABYLON.Vector3(12.6, 6.45, 5));
+    await this.createTransparentModel(new BABYLON.Vector3(12.44, 6.16411, 5.33));
+
 
   } catch (error) {
     console.error("Ошибка при загрузке окружения:", error);
   }
 }
+
+private async createTransparentModel(position: BABYLON.Vector3): Promise<void> {
+  try {
+    // Загружаем модель
+    const { meshes } = await BABYLON.SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
+
+    if (meshes.length > 0) {
+      const modelCopy = meshes[0].clone("transparentModelCopy", null);
+
+      if (modelCopy) {
+        modelCopy.position = position;
+
+        // Применяем прозрачность ко всем подмешам
+        modelCopy.getChildMeshes().forEach((childMesh) => {
+          if (childMesh instanceof BABYLON.Mesh) {
+            let originalMaterial = childMesh.material;
+
+            if (!originalMaterial) {
+              // Если материала нет, создаем новый стандартный материал
+              originalMaterial = new BABYLON.StandardMaterial(`autoMaterial_${childMesh.name}`, this.scene);
+              childMesh.material = originalMaterial;
+            }
+
+            const transparentMaterial = originalMaterial.clone(`transparent_${originalMaterial.name}`);
+            if (transparentMaterial) {
+              transparentMaterial.alpha = 0.5; // 50% прозрачности
+
+              if (transparentMaterial instanceof BABYLON.PBRMaterial) {
+                transparentMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+              }
+
+              childMesh.material = transparentMaterial;
+            } else {
+              console.warn(`Не удалось клонировать материал для меша ${childMesh.name}`);
+            }
+          }
+        });
+
+        modelCopy.isPickable = false;
+        modelCopy.setEnabled(true);
+
+        console.log("Создана полупрозрачная модель в своих цветах", position);
+      } else {
+        console.error("Ошибка: не удалось клонировать модель.");
+      }
+    } else {
+      console.error("Ошибка: модель SM_TapeMeasure_LP не загружена.");
+    }
+    
+  } catch (error) {
+    console.error("Ошибка при создании полупрозрачной модели:", error);
+  }
+}
+
+
+
 
 private enableChildScaling(childMeshes: BABYLON.Mesh[]): void {
   let isMoving = false;

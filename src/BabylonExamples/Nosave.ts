@@ -1,3 +1,245 @@
+private async CreateEnvironment(): Promise<void> { 
+  try {
+    // Загрузка карты
+    const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+    map.forEach((mesh) => {
+        mesh.checkCollisions = true;
+    });
+
+    this.setupWholeMeshes(map);
+
+    // Поиск ограничивающих мешей
+    const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
+    if (boundaryMeshes.length === 0) {
+        console.error("Ошибка: ограничивающие меши не найдены.");
+        return;
+    }
+    console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
+
+    // Вычисление объединённых границ
+    const minBoundary = new BABYLON.Vector3(
+        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.x)),
+        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.y)),
+        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.z))
+    );
+
+    const maxBoundary = new BABYLON.Vector3(
+        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.x)),
+        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.y)),
+        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.z))
+    );
+
+    console.log("Границы движения:", { minBoundary, maxBoundary });
+
+    // Загрузка модели штангенциркуля
+    console.log("Загрузка модели штангенциркуля начата...");
+    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
+    if (this.handModel) {
+        this.handModel.checkCollisions = true;
+    }
+    console.log("Модели после загрузки:", meshes);
+
+    if (meshes.length > 0) {
+        this.handModel = meshes[0] as Mesh;
+
+        // Сохраняем исходные параметры
+        this.tools['originalHandModelPosition'] = this.handModel.position.clone();
+        this.tools['originalHandModelRotation'] = this.handModel.rotation.clone();
+
+        // Массив дочерних элементов
+        const childMeshesNames = [
+            "SM_10cm", "SM_20cm","SM_30cm","SM_40cm","SM_50cm",
+            //"SM_50cm","SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
+        ];
+
+        // Массив для хранения дочерних объектов Mesh
+        const childMeshes: Mesh[] = [];
+
+        // Перебираем дочерние элементы
+        childMeshesNames.forEach(childName => {
+            const childMesh = meshes.find(mesh => mesh.name === childName) as Mesh;
+
+            if (!childMesh) {
+                console.warn(`Ошибка: дочерний элемент ${childName} не найден.`);
+            } else {
+                console.log(`Дочерний элемент ${childName} найден:`, childMesh);
+
+                // Сохраняем параметры дочерних элементов
+                this.tools[`${childName}Model`] = {
+                    mesh: childMesh,
+                    originalPosition: childMesh.position.clone(),
+                    originalRotation: childMesh.rotation.clone(),
+                };
+
+                childMeshes.push(childMesh);
+            }
+        });
+
+        // Включаем масштабирование для дочерних элементов 
+        this.enableChildScaling(childMeshes);
+        
+        const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
+        if (sm_10cm) {
+            sm_10cm.position.x += 0;  // Сдвигаем меш на 0.1 по оси X
+            console.log("Новая позиция SM_10cm: ", sm_10cm.position);
+        }
+
+        // Устанавливаем параметры для основной модели
+        this.handModel.position = new Vector3(13, 6.41004, 4.95);
+        this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
+        this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
+        this.handModel.isVisible = true;
+
+        console.log("Модель штангенциркуля загружена и параметры установлены.");
+
+        // Привязка модели к курсору мыши
+        this.scene.onPointerObservable.add((event) => {
+            if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && this.handModel) {
+                const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+                if (pickInfo.hit && this.handModel) {
+                    this.handModel.position = pickInfo.pickedPoint!;
+                }
+            }
+        });
+        
+    } else {
+        console.error("Ошибка: модель штангенциркуля не найдена в файле.");
+    }
+
+    // Создание кликабельных примитивов (мешей) серого цвета
+    const createClickableMesh = (position: BABYLON.Vector3): BABYLON.Mesh => {
+      // Измените размеры коробки для создания прямоугольной формы
+      const mesh = BABYLON.MeshBuilder.CreateBox("clickableMesh", { width: 0.2, height: 0.09, depth: 0.02 }, this.scene);
+      mesh.position = position;
+    
+      // Создание стандартного материала
+      const material = new BABYLON.StandardMaterial("grayMaterial", this.scene);
+      material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);  // Серый цвет
+      mesh.material = material;
+    
+      // Обработчик клика на меш
+      mesh.actionManager = new BABYLON.ActionManager(this.scene);
+      mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (event) => {
+        console.log("Меш был кликнут!", mesh.position);
+        // Здесь можно добавить дополнительную логику, например, отправить данные на сервер или что-то другое
+      }));
+    
+      return mesh;
+    };
+
+    // Создание двух кликабельных мешей в заданных координатах
+    const mesh1 = createClickableMesh(new BABYLON.Vector3(12.6, 6.45, 5));
+    const mesh2 = createClickableMesh(new BABYLON.Vector3(12.44, 6.16411, 5.33));
+
+    console.log("Кликабельные меши созданы.");
+
+    // Плавное движение модели
+    let targetPosition: BABYLON.Vector3 | null = null;
+    const smoothingFactor = 0.1;
+    let isFixed = false;
+    let lastPosition: BABYLON.Vector3 | null = null;
+    let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero();
+
+    this.scene.onPointerObservable.add((event) => {
+        if (!this.handModel) return;
+
+        if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && !isFixed) {
+            const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+            if (pickInfo.hit && pickInfo.pickedPoint) {
+                let newPosition = pickInfo.pickedPoint.clone();
+
+                // Ограничиваем движение в пределах границ
+                newPosition.x = Math.max(minBoundary.x, Math.min(maxBoundary.x, newPosition.x));
+                newPosition.y = Math.max(minBoundary.y, Math.min(maxBoundary.y, newPosition.y));
+                newPosition.z = Math.max(minBoundary.z, Math.min(maxBoundary.z, newPosition.z));
+
+                targetPosition = newPosition;
+            }
+        }
+
+        if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+            isFixed = true;
+            lastPosition = this.handModel.position.clone();
+        }
+    });
+
+    this.scene.onKeyboardObservable.add((event) => {
+        if (event.type === BABYLON.KeyboardEventTypes.KEYDOWN && event.event.key === "Escape") {
+            isFixed = false; // Разрешаем перемещение при нажатии Escape
+        }
+    });
+
+    // Обновляем позицию объекта
+    this.scene.onBeforeRenderObservable.add(() => {
+        if (this.handModel && targetPosition) {
+            currentPosition = BABYLON.Vector3.Lerp(currentPosition, targetPosition, smoothingFactor);
+            this.handModel.position = currentPosition;
+        }
+    });
+
+  } catch (error) {
+    console.error("Ошибка при загрузке окружения:", error);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import {  
   Scene,
   Engine,
