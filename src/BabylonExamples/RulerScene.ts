@@ -53,6 +53,13 @@ export class RulerScene {
   private originalCameraPosition: BABYLON.Vector3 | null = null;  // Для хранения исходной позиции камеры
   private isVerticalMeasurement = false; // Флаг для отслеживания вертикального измерения
   private currentMeasurementMode: 'horizontal' | 'vertical' = 'horizontal'; // Флаг для текущего режима измерения
+  private isMoving: boolean = false;
+  private moveInterval: number | null = null;
+  private previousY: number = 0; // Добавляем свойство previousY для отслеживания положения
+  private isChildScalingEnabled = true;  // Флаг для активации/деактивации метода
+  private previousX: number = 0; // Добавляем свойство для отслеживания позиции X
+
+
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
@@ -393,25 +400,173 @@ private async createTransparentModel(position: BABYLON.Vector3): Promise<void> {
 
 
 
-// Горизонтальное измерение
 private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
-  if (this.isVerticalMeasurement) return; // Если вертикальное измерение активно, не выполняем
+  if (this.isVerticalMeasurement || !this.isChildScalingEnabled) return; // Если вертикальное измерение или метод деактивирован, не выполняем
 
-  let isMoving = false;
-  let moveInterval: number | null = null;
   const originalPositions = childMeshes.map(mesh => mesh.position.clone());
 
   const moveMeshes = (delta: number) => {
     const firstMesh = childMeshes[0];
+    console.log(`🔵 Проверяем позицию первого меша: x = ${firstMesh.position.x}`);
 
+    // Если мы достигли порога (0.42), прекращаем движение и переключаем камеру
     if (firstMesh.position.x >= 0.42) {
-      isMoving = false;
+      this.isMoving = false;
+      if (this.moveInterval !== null) {
+        window.clearInterval(this.moveInterval);
+        this.moveInterval = null;
+      }
+
+      // Переключаем камеру на горизонтальное положение
+      if (!this.isVerticalMeasurement) {
+        console.log("Переключаем камеру на горизонтальное положение.");
+        this.zoomCamera();
+      }
+
+      return;
+    }
+
+    // Перемещаем все меши с учетом пороговых значений
+    for (let i = 0; i < childMeshes.length; i++) {
+      const childMesh = childMeshes[i];
+
+      if (i === 0) {
+        childMesh.position.x += delta;
+        console.log(`Перемещаем первый меш на: ${delta}`);
+      } else {
+        let threshold = 0;
+        if (i === 1) threshold = 0.0485;
+        else if (i === 2) threshold = 0.144;
+        else if (i === 3) threshold = 0.240;
+        else if (i === 4) threshold = 0.336;
+        else if (i === 5) threshold = 0.432;
+        else if (i === 6) threshold = 0.530;
+        else if (i === 7) threshold = 0.638;
+        else if (i === 8) threshold = 0.738;
+        else if (i === 9) threshold = 0.838;
+        else if (i === 10) threshold = 0.938;
+
+        if (firstMesh.position.x >= threshold) {
+          childMesh.position.x += delta;
+          console.log(`Перемещаем меш ${i} на: ${delta}`);
+        }
+      }
+
+      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
+    }
+  };
+
+  this.scene.onPointerObservable.add((event: BABYLON.PointerInfo) => { 
+    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+      const pointerEvent = event.event as PointerEvent;  // Используем event вместо pointerEvent
+
+      // Проверяем горизонтальное движение, используя previousX
+      const isHorizontal = Math.abs(pointerEvent.clientX - this.previousX) > 10; // Если движение по оси X значительное
+
+      console.log(`🔵 Событие мыши: ${event.type}, isHorizontal = ${isHorizontal}`);
+
+      if (isHorizontal && !this.isMoving) {
+        this.isMoving = true;
+        console.log("🔵 Запускаем setInterval для moveMeshes!");
+        this.moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
+      }
+
+      // Сохраняем текущую позицию X
+      this.previousX = pointerEvent.clientX;
+    }
+  
+    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
+      this.isMoving = false;
+      if (this.moveInterval !== null) {
+        window.clearInterval(this.moveInterval);
+        this.moveInterval = null;
+      }
+      console.log("⏸ Остановка движения (POINTERUP)");
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    console.log(`Клавиша нажата: ${e.key}`);
+    
+    if (e.key === 'Escape') {
+      console.log("Нажата Escape: сбрасываем позиции мешей");
+      childMeshes.forEach((mesh, i) => {
+        console.log(`Возвращаем ${mesh.name} в ${originalPositions[i]}`);
+        mesh.position.copyFrom(originalPositions[i]);
+      });
+  
+      this.isMoving = false;
+      if (this.moveInterval !== null) {
+        window.clearInterval(this.moveInterval);
+        this.moveInterval = null;
+      }
+    }
+
+    if (e.key === 'q') {
+      console.log("Нажата клавиша 'q'");
+      this.isChildScalingEnabled = !this.isChildScalingEnabled; // Переключаем флаг
+
+      console.log(`Метод enableChildScaling теперь ${this.isChildScalingEnabled ? 'активен' : 'деактивирован'}`);
+
+      if (!rulerModel) {
+        console.error("Ошибка: rulerModel не найден!");
+        return;
+      }
+
+      console.log(`Текущее положение модели: rotation = ${rulerModel.rotation.toString()}`);
+
+      // Переключаем положение модели
+      if (this.isVerticalMeasurement) {
+        rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2); // Возвращаем горизонтальное положение
+        this.isVerticalMeasurement = false;
+        console.log("Модель повернута в горизонтальное положение.");
+      } else {
+        rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2); // Возвращаем вертикальное положение
+        this.isVerticalMeasurement = true;
+        console.log("Модель повернута в вертикальное положение.");
+      }
+
+      // Лог после изменения
+      console.log(`После изменения: isVerticalMeasurement = ${this.isVerticalMeasurement}`);
+      console.log(`Положение модели: rotation = ${rulerModel.rotation.toString()}`);
+
+      // Выполняем соответствующую функцию в зависимости от положения модели
+      if (this.isVerticalMeasurement) {
+        this.enableVerticalScaling(childMeshes, rulerModel);  // Вертикальное измерение
+      } else {
+        this.enableChildScaling(childMeshes, rulerModel);  // Горизонтальное измерение
+      }
+    }
+  });
+}
+
+
+private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
+  if (!this.isVerticalMeasurement) return; // Если вертикальное измерение не активно, не выполняем
+
+  let isMoving = false;
+  let moveInterval: number | null = null;
+  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
+  let stopMoving = false;  // Флаг для остановки движения
+  let isInterfaceLocked = false;  // Флаг для блокировки интерфейса
+
+  const moveMeshes = (delta: number) => {
+    if (stopMoving) return;  // Если движение остановлено, не продолжаем
+
+    const firstMesh = childMeshes[0];
+
+    // Проверяем, если первый меш достиг предела X >= 0.10, останавливаем движение
+    if (firstMesh.position.x >= 0.20) {
+      console.log("⏹ Движение остановлено: достигнут предел X >= 0.10");
+      stopMoving = true;  // Устанавливаем флаг, чтобы движение больше не продолжалось
       if (moveInterval !== null) {
         window.clearInterval(moveInterval);
         moveInterval = null;
       }
 
-      this.zoomCamera();
+      // Блокируем интерфейс
+      isInterfaceLocked = true;
+      this.zoomCameraVertical();
       return;
     }
 
@@ -419,7 +574,7 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
       const childMesh = childMeshes[i];
 
       if (i === 0) {
-        childMesh.position.x += delta;
+        childMesh.position.x += delta;  // Двигаем только по оси X
       } else {
         let threshold = 0;
         // Устанавливаем threshold для каждого меша
@@ -434,25 +589,35 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
         else if (i === 9) threshold = 0.838;
         else if (i === 10) threshold = 0.938;
 
-        if (firstMesh.position.x >= threshold) {
-          childMesh.position.x += delta;
+        if (firstMesh.position.x >= threshold) {  // Проверяем ось X
+          childMesh.position.x += delta;  // Двигаем только по оси X
         }
       }
 
-      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
+      console.log(`📍 Новая позиция ${childMesh.name}: X=${childMesh.position.x}`); // Лог позиции меша
+
+      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;  // Ограничиваем движение по оси X
     }
   };
 
   this.scene.onPointerObservable.add((event) => {
+    if (isInterfaceLocked) return;  // Игнорируем клики, если интерфейс заблокирован
+
+    console.log(`🟢 Событие мыши: ${event.type}`); // Лог события мыши
+
     if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-      if (!isMoving) {
+      // Проверка, чтобы не запускать setInterval, если уже идет движение
+      if (!isMoving && !stopMoving && moveInterval === null) {
+        console.log("🔵 Запускаем setInterval для moveMeshes!");
         isMoving = true;
         moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
       }
     }
 
     if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
+      console.log("⏸ Остановка движения (POINTERUP)");
       isMoving = false;
+      stopMoving = true;  // Принудительно останавливаем движение при отпускании кнопки мыши
       if (moveInterval !== null) {
         window.clearInterval(moveInterval);
         moveInterval = null;
@@ -461,93 +626,65 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
   });
 
   window.addEventListener('keydown', (e) => {
-    console.log(`Клавиша нажата: ${e.key}`); // Логируем нажатие клавиши
-    
-    if (e.key === 'Escape') {
-      // Восстанавливаем оригинальные позиции мешей
-      for (let i = 0; i < childMeshes.length; i++) {
-        childMeshes[i].position = originalPositions[i].clone();
-      }
+    console.log(`Клавиша нажата: ${e.key}`); // Проверяем, что нажатие клавиши вообще регистрируется
 
-      // Останавливаем движение
+    if (e.key === 'Escape') {
+      console.log("Нажата Escape: сбрасываем позиции мешей");
+      childMeshes.forEach((mesh, i) => {
+        console.log(`Возвращаем ${mesh.name} в ${originalPositions[i]}`);
+        mesh.position.copyFrom(originalPositions[i]);
+      });
+
       isMoving = false;
+      stopMoving = false;  // Сбрасываем флаг при нажатии Escape
+      isInterfaceLocked = false;  // Разблокируем интерфейс
       if (moveInterval !== null) {
         window.clearInterval(moveInterval);
         moveInterval = null;
       }
-
-      console.log("Все меши возвращены в исходное состояние.");
-    }
-
-    if (e.key === 'q') {
-      console.log("Нажата клавиша 'q'"); // Логируем, что клавиша 'q' была нажата
-      console.log(`Состояние флага isVerticalMeasurement: ${this.isVerticalMeasurement}`); // Логируем состояние флага
-    
-      // Повернуть модель рулетки, если она найдена
-      if (rulerModel) {
-        console.log("Модель рулетки найдена."); // Логируем, что модель найдена
-        if (this.isVerticalMeasurement) {
-          console.log("Переключаем на горизонтальный режим.");
-          rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2);  // Поворот на 90 градусов
-          this.isVerticalMeasurement = false;
-          rulerModel.computeWorldMatrix(true); // Обновляем матрицу модели
-          console.log("Модель развернута на 90 градусов.");
-        } else {
-          console.log("Переключаем на вертикальный режим.");
-          rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2);  // Вернуть в исходное положение
-          this.isVerticalMeasurement = true;
-          rulerModel.computeWorldMatrix(true); // Обновляем матрицу модели
-          console.log("Модель возвращена в вертикальный режим.");
-        }
-      } else {
-        console.error("Модель рулетки не найдена.");
-      }
     }
   });
 }
+
+
 
 // Функция для приближения камеры (аналог для горизонтального замера)
 private zoomCamera(): void {
   const camera = this.scene.activeCamera as BABYLON.FreeCamera;
   if (!camera) return;
 
-  const originalPosition = camera.position.clone();  
-  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, 0.2)); // Смещение вперёд
-  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, 0, -0.4)); // Смещение назад
+  const originalPosition = camera.position.clone();
+  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, 0.2));
+  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, 0, -0.4));
 
-  const zoomDuration = 1000; // Длительность каждой анимации в мс
-  const pauseDuration = 1000; // Длительность паузы в мс (1 секунда)
+  const zoomDuration = 1000;
+  const pauseDuration = 1000;
 
-  // Первая анимация (приближение)
   BABYLON.Animation.CreateAndStartAnimation(
-    "zoomCamera1", 
-    camera, 
-    "position", 
-    30, 
-    zoomDuration / 30, 
-    originalPosition, 
-    zoomPosition1, 
+    "zoomCamera1",
+    camera,
+    "position",
+    30,
+    zoomDuration / 30,
+    originalPosition,
+    zoomPosition1,
     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
     undefined,
     () => {
-      // Пауза перед второй анимацией
       setTimeout(() => {
-        // Вторая анимация (смещение назад)
         BABYLON.Animation.CreateAndStartAnimation(
-          "zoomCamera2", 
-          camera, 
-          "position", 
-          30, 
-          zoomDuration / 30, 
-          zoomPosition1, 
-          zoomPosition2, 
+          "zoomCamera2",
+          camera,
+          "position",
+          30,
+          zoomDuration / 30,
+          zoomPosition1,
+          zoomPosition2,
           BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
         );
       }, pauseDuration);
     }
   );
-
-  console.log("Камера приближается, затем делает паузу, потом смещается назад.");
 }
 
 
@@ -587,158 +724,44 @@ private addEscapeKeyListener(): void {
 }
 
 
-// Вертикальное измерение
-private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
-  if (!this.isVerticalMeasurement) return; // Если вертикальное измерение не активно, не выполняем
-
-  let isMoving = false;
-  let moveInterval: number | null = null;
-  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
-
-  const moveMeshes = (delta: number) => {
-    const firstMesh = childMeshes[0];
-
-    if (firstMesh.position.x >= 0.10) {
-      isMoving = false;
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
-      }
-
-      this.zoomCameraVertical();
-      return;
-    }
-
-    for (let i = 0; i < childMeshes.length; i++) {
-      const childMesh = childMeshes[i];
-
-      if (i === 0) {
-        childMesh.position.x += delta;  // Двигаем только по оси X
-      } else {
-        let threshold = 0;
-        // Устанавливаем threshold для каждого меша
-        if (i === 1) threshold = 0.0485;
-        else if (i === 2) threshold = 0.144;
-        else if (i === 3) threshold = 0.240;
-        else if (i === 4) threshold = 0.336;
-        else if (i === 5) threshold = 0.432;
-        else if (i === 6) threshold = 0.530;
-        else if (i === 7) threshold = 0.638;
-        else if (i === 8) threshold = 0.738;
-        else if (i === 9) threshold = 0.838;
-        else if (i === 10) threshold = 0.938;
-
-        if (firstMesh.position.x >= threshold) {  // Проверяем ось X
-          childMesh.position.x += delta;  // Двигаем только по оси X
-        }
-      }
-
-      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;  // Ограничиваем движение по оси X
-    }
-  };
-
-  this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-      if (!isMoving) {
-        isMoving = true;
-        moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
-      }
-    }
-
-    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
-      isMoving = false;
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
-      }
-    }
-  });
-
-  window.addEventListener('keydown', (e) => {
-    console.log(`Клавиша нажата: ${e.key}`); // Логируем нажатие клавиши
-  
-    if (e.key === 'Escape') {
-      // Восстанавливаем оригинальные позиции мешей
-      for (let i = 0; i < childMeshes.length; i++) {
-        childMeshes[i].position = originalPositions[i].clone();
-      }
-  
-      // Останавливаем движение
-      isMoving = false;
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
-      }
-  
-      console.log("Все меши возвращены в исходное состояние.");
-    }
-  
-    if (e.key === 'q') {
-      console.log("Нажата клавиша 'q'"); // Логируем, что клавиша 'q' была нажата
-      console.log(`Текущее состояние флага isVerticalMeasurement: ${this.isVerticalMeasurement}`); // Логируем состояние флага
-    
-      // Повернуть модель рулетки, если она найдена
-      if (rulerModel) {
-        console.log("Модель рулетки найдена."); // Логируем, что модель найдена
-        if (this.isVerticalMeasurement) {
-          rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2); // Поворот на 90 градусов по оси Y
-          this.isVerticalMeasurement = false;  // Переключаем флаг на горизонтальный режим
-          console.log("Модель рулетки развернута для горизонтального замера.");
-        } else {
-          rulerModel.rotation = new BABYLON.Vector3(0, 0, 0); // Возвращаем исходное положение
-          this.isVerticalMeasurement = true;  // Переключаем флаг на вертикальный режим
-          console.log("Модель рулетки развернута для вертикального замера.");
-        }
-      } else {
-        console.error("Модель рулетки не найдена.");
-      }
-    }
-  });
-  
-}
 
 // Функция для приближения камеры (аналог для вертикального замера)
 private zoomCameraVertical(): void {
   const camera = this.scene.activeCamera as BABYLON.FreeCamera;
   if (!camera) return;
 
-  const originalPosition = camera.position.clone();  
-  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, 0.4)); // Смещение вперёд
-  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, 0, -0.4)); // Смещение назад
+  const originalPosition = camera.position.clone();
+  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.2, 0.03));
+  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, -0.25, 0));
 
-  const zoomDuration = 1000; // Длительность каждой анимации в мс
-  const pauseDuration = 1000; // Длительность паузы в мс (1 секунда)
+  const zoomDuration = 1000;
+  const pauseDuration = 1000;
 
-  // Первая анимация (приближение)
   BABYLON.Animation.CreateAndStartAnimation(
-    "zoomCamera1", 
-    camera, 
-    "position", 
-    30, 
-    zoomDuration / 30, 
-    originalPosition, 
-    zoomPosition1, 
+    "zoomCamera1",
+    camera,
+    "position",
+    30,
+    zoomDuration / 30,
+    originalPosition,
+    zoomPosition1,
     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
     undefined,
     () => {
-      // Пауза перед второй анимацией
       setTimeout(() => {
-        // Вторая анимация (смещение назад)
         BABYLON.Animation.CreateAndStartAnimation(
-          "zoomCamera2", 
-          camera, 
-          "position", 
-          30, 
-          zoomDuration / 30, 
-          zoomPosition1, 
-          zoomPosition2, 
+          "zoomCamera2",
+          camera,
+          "position",
+          30,
+          zoomDuration / 30,
+          zoomPosition1,
+          zoomPosition2,
           BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
         );
       }, pauseDuration);
     }
   );
-
-  console.log("Камера приближается, затем делает паузу, потом смещается назад.");
 }
 
 
