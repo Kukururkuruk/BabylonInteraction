@@ -1,3 +1,206 @@
+// Вертикальное измерение
+private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
+  //if (!this.isVerticalMeasurement) return; // Если вертикальное измерение не активно, не выполняем
+
+  let isMoving = false;
+  let moveInterval: number | null = null;
+  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
+
+  const moveMeshes = (delta: number) => {
+    const firstMesh = childMeshes[0];
+
+    if (firstMesh.position.x >= 0.10) {
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
+      }
+
+      this.zoomCameraVertical();
+      return;
+    }
+
+    for (let i = 0; i < childMeshes.length; i++) {
+      const childMesh = childMeshes[i];
+
+      if (i === 0) {
+        childMesh.position.x += delta;  // Двигаем только по оси X
+      } else {
+        let threshold = 0;
+        // Устанавливаем threshold для каждого меша
+        if (i === 1) threshold = 0.0485;
+        else if (i === 2) threshold = 0.144;
+        else if (i === 3) threshold = 0.240;
+        else if (i === 4) threshold = 0.336;
+        else if (i === 5) threshold = 0.432;
+        else if (i === 6) threshold = 0.530;
+        else if (i === 7) threshold = 0.638;
+        else if (i === 8) threshold = 0.738;
+        else if (i === 9) threshold = 0.838;
+        else if (i === 10) threshold = 0.938;
+
+        if (firstMesh.position.x >= threshold) {  // Проверяем ось X
+          childMesh.position.x += delta;  // Двигаем только по оси X
+        }
+      }
+
+      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;  // Ограничиваем движение по оси X
+    }
+  };
+
+  this.scene.onPointerObservable.add((event) => {
+    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+      if (!isMoving) {
+        isMoving = true;
+        moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
+      }
+    }
+
+    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
+      }
+    }
+  });
+
+  window.addEventListener('keydown', (e) => {
+    console.log(`Клавиша нажата: ${e.key}`); // Логируем нажатие клавиши
+
+    if (e.key === 'Escape') {
+      // Восстанавливаем оригинальные позиции мешей
+      for (let i = 0; i < childMeshes.length; i++) {
+        childMeshes[i].position = originalPositions[i].clone();
+      }
+
+      // Останавливаем движение
+      isMoving = false;
+      if (moveInterval !== null) {
+        window.clearInterval(moveInterval);
+        moveInterval = null;
+      }
+
+      console.log("Все меши возвращены в исходное состояние.");
+    }
+
+    if (e.key === 'q') {
+      if (this.currentMeasurementMode === 'horizontal') {
+        this.currentMeasurementMode = 'vertical';
+        if (rulerModel) {
+          rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2);  // Поворот на 90 градусов
+        } else {
+          console.error("Модель рулетки не найдена.");
+        }
+      }
+    }
+  });
+}
+
+// Функция для приближения камеры (аналог для вертикального замера)
+private zoomCameraVertical(): void {
+  const camera = this.scene.activeCamera as BABYLON.FreeCamera;
+  if (!camera) return;
+
+  const originalPosition = camera.position.clone();  
+  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, 0.4)); // Смещение вперёд
+  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, 0, -0.4)); // Смещение назад
+
+  const zoomDuration = 1000; // Длительность каждой анимации в мс
+  const pauseDuration = 1000; // Длительность паузы в мс (1 секунда)
+
+  // Первая анимация (приближение)
+  BABYLON.Animation.CreateAndStartAnimation(
+    "zoomCamera1", 
+    camera, 
+    "position", 
+    30, 
+    zoomDuration / 30, 
+    originalPosition, 
+    zoomPosition1, 
+    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
+    undefined,
+    () => {
+      // Пауза перед второй анимацией
+      setTimeout(() => {
+        // Вторая анимация (смещение назад)
+        BABYLON.Animation.CreateAndStartAnimation(
+          "zoomCamera2", 
+          camera, 
+          "position", 
+          30, 
+          zoomDuration / 30, 
+          zoomPosition1, 
+          zoomPosition2, 
+          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+        );
+      }, pauseDuration);
+    }
+  );
+
+  console.log("Камера приближается, затем делает паузу, потом смещается назад.");
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 private async CreateEnvironment(): Promise<void> { 
   try {
     // Загрузка карты
