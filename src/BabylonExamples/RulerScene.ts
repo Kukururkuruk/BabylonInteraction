@@ -406,11 +406,11 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
   const originalPositions = childMeshes.map(mesh => mesh.position.clone());
 
   const moveMeshes = (delta: number) => {
-    const firstMesh = childMeshes[0];
-    console.log(`🔵 Проверяем позицию первого меша: x = ${firstMesh.position.x}`);
+    const firstMesh1 = childMeshes[0];
+    //console.log(`🔵 Проверяем позицию первого меша: x = ${firstMesh.position.x}`);
 
     // Если мы достигли порога (0.42), прекращаем движение и переключаем камеру
-    if (firstMesh.position.x >= 0.42) {
+    if (firstMesh1.position.x >= 0.42) {
       this.isMoving = false;
       if (this.moveInterval !== null) {
         window.clearInterval(this.moveInterval);
@@ -432,7 +432,7 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
 
       if (i === 0) {
         childMesh.position.x += delta;
-        console.log(`Перемещаем первый меш на: ${delta}`);
+        //console.log(`Перемещаем первый меш на: ${delta}`);
       } else {
         let threshold = 0;
         if (i === 1) threshold = 0.0485;
@@ -446,9 +446,9 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
         else if (i === 9) threshold = 0.838;
         else if (i === 10) threshold = 0.938;
 
-        if (firstMesh.position.x >= threshold) {
+        if (firstMesh1.position.x >= threshold) {
           childMesh.position.x += delta;
-          console.log(`Перемещаем меш ${i} на: ${delta}`);
+          //console.log(`Перемещаем меш ${i} на: ${delta}`);
         }
       }
 
@@ -463,11 +463,11 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
       // Проверяем горизонтальное движение, используя previousX
       const isHorizontal = Math.abs(pointerEvent.clientX - this.previousX) > 10; // Если движение по оси X значительное
 
-      console.log(`🔵 Событие мыши: ${event.type}, isHorizontal = ${isHorizontal}`);
+      //console.log(`🔵 Событие мыши: ${event.type}, isHorizontal = ${isHorizontal}`);
 
       if (isHorizontal && !this.isMoving) {
         this.isMoving = true;
-        console.log("🔵 Запускаем setInterval для moveMeshes!");
+        //console.log("🔵 Запускаем setInterval для moveMeshes!");
         this.moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
       }
 
@@ -475,14 +475,14 @@ private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh
       this.previousX = pointerEvent.clientX;
     }
   
-    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
+    /*if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
       this.isMoving = false;
       if (this.moveInterval !== null) {
         window.clearInterval(this.moveInterval);
         this.moveInterval = null;
       }
-      console.log("⏸ Остановка движения (POINTERUP)");
-    }
+      //console.log("⏸ Остановка движения (POINTERUP)");
+    }*/
   });
 
   window.addEventListener('keydown', (e) => {
@@ -556,17 +556,21 @@ private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.M
     const firstMesh = childMeshes[0];
 
     // Проверяем, если первый меш достиг предела X >= 0.10, останавливаем движение
+    // Если мы достигли порога (0.42), прекращаем движение и переключаем камеру
     if (firstMesh.position.x >= 0.20) {
-      console.log("⏹ Движение остановлено: достигнут предел X >= 0.10");
-      stopMoving = true;  // Устанавливаем флаг, чтобы движение больше не продолжалось
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
+      this.isMoving = false;
+      if (this.moveInterval !== null) {
+        window.clearInterval(this.moveInterval);
+        this.moveInterval = null;
+        this.zoomCameraVertical();
       }
 
-      // Блокируем интерфейс
-      isInterfaceLocked = true;
-      this.zoomCameraVertical();
+      // Переключаем камеру на горизонтальное положение
+     /* if (!this.isVerticalMeasurement) {
+        console.log("Переключаем камеру на горизонтальное положение.");
+        this.zoomCameraVertical();
+      }*/
+
       return;
     }
 
@@ -594,7 +598,7 @@ private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.M
         }
       }
 
-      console.log(`📍 Новая позиция ${childMesh.name}: X=${childMesh.position.x}`); // Лог позиции меша
+      //console.log(`📍 Новая позиция ${childMesh.name}: X=${childMesh.position.x}`); // Лог позиции меша
 
       if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;  // Ограничиваем движение по оси X
     }
@@ -603,45 +607,25 @@ private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.M
   this.scene.onPointerObservable.add((event) => {
     if (isInterfaceLocked) return;  // Игнорируем клики, если интерфейс заблокирован
 
-    console.log(`🟢 Событие мыши: ${event.type}`); // Лог события мыши
+    //console.log(`🟢 Событие мыши: ${event.type}`); // Лог события мыши
 
     if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
       // Проверка, чтобы не запускать setInterval, если уже идет движение
-      if (!isMoving && !stopMoving && moveInterval === null) {
-        console.log("🔵 Запускаем setInterval для moveMeshes!");
+      if (!isMoving) {
         isMoving = true;
-        moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
-      }
-    }
-
-    if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
-      console.log("⏸ Остановка движения (POINTERUP)");
-      isMoving = false;
-      stopMoving = true;  // Принудительно останавливаем движение при отпускании кнопки мыши
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
+        this.scene.onBeforeRenderObservable.add(() => moveMeshes(0.003));
       }
     }
   });
 
   window.addEventListener('keydown', (e) => {
-    console.log(`Клавиша нажата: ${e.key}`); // Проверяем, что нажатие клавиши вообще регистрируется
-
     if (e.key === 'Escape') {
-      console.log("Нажата Escape: сбрасываем позиции мешей");
-      childMeshes.forEach((mesh, i) => {
-        console.log(`Возвращаем ${mesh.name} в ${originalPositions[i]}`);
-        mesh.position.copyFrom(originalPositions[i]);
-      });
-
+      childMeshes.forEach((mesh, i) => mesh.position.copyFrom(originalPositions[i]));
       isMoving = false;
-      stopMoving = false;  // Сбрасываем флаг при нажатии Escape
-      isInterfaceLocked = false;  // Разблокируем интерфейс
-      if (moveInterval !== null) {
-        window.clearInterval(moveInterval);
-        moveInterval = null;
-      }
+      stopMoving = false;
+      isInterfaceLocked = false;
+      // Убираем обработчик с обновлений, если движение уже было активным
+      this.scene.onBeforeRenderObservable.clear();
     }
   });
 }
