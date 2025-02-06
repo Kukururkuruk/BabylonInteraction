@@ -36,6 +36,7 @@ import { DialogPage } from "../FunctionComponents/DialogPage";
 import { BabylonUtilities } from "../FunctionComponents/BabylonUtilities";
 import { VideoGui } from "../BaseComponents/VideoGui";
 import eventEmitter from "../../../EventEmitter";
+import { LabFunManager } from "./LabFunctions/LabFunManager";
 
 interface ToolData {
   meshes: AbstractMesh[];
@@ -58,6 +59,7 @@ export class DemoScene {
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
   private utilities: BabylonUtilities;
+  private labFunManager: LabFunManager
   private currentDialogBox: Rectangle | null = null;   // GUI-контейнер внутри Babylon
   private loadingContainer: HTMLDivElement | null = null; // DOM-элемент <div> c <video>
 
@@ -89,6 +91,7 @@ export class DemoScene {
     this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
     this.dialogPage = new DialogPage();
     this.utilities = new BabylonUtilities(this.scene, this.engine, this.guiTexture);
+    this.labFunManager = new LabFunManager(this.guiTexture);
 
     this.initializeScene();
 
@@ -153,150 +156,236 @@ export class DemoScene {
     });
   }
 
+  private makeRootFromMeshes(meshes: AbstractMesh[]): AbstractMesh | null {
+    if (meshes.length === 0) return null;
+    const root = meshes[0];
+    for (let i = 1; i < meshes.length; i++) {
+      meshes[i].setParent(root);
+    }
+    return root;
+  }
+
   /**
    * Переносим сюда ВСЮ логику загрузки моделей: и "lab", и "dist".
    */
-  async CreateEnvironment(): Promise<void> {
+  public async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
   
-      // 1) Загружаем основную сцену (Lab)
-      await this.modelLoader.loadMLabModel();
+      // Пример добавления направленного света (опционально)
+      const light = new DirectionalLight("dirLight", new Vector3(-1, -1, -1), this.scene);
+      light.position = new Vector3(-20, 20, 20);
+      light.intensity = 2;
+  
+      // 1) Загружаем ВСЕ нужные модели параллельно (включая Rangefinder_LP)
+      await Promise.all([
+        this.modelLoader.loadMLabModel(),       // lab окружение
+        this.modelLoader.loadRangeCentrModel(), // dist (rangeC)
+        this.modelLoader.loadUltraModel(),      // ultra
+        this.modelLoader.loadCaliperModel(),    // caliper
+        this.modelLoader.loadRulerModel(),      // ruler
+        this.modelLoader.loadTapeMeasureModel(),// tape
+        this.modelLoader.loadRangeModel()       // Rangefinder_LP (новое)
+      ]);
+  
+      // --- 2) Обрабатываем сцену (lab) ---
       const lab = this.modelLoader.getMeshes("lab") || [];
-
-      // Пример работы со светящимися материалами
       const glowLayer = new GlowLayer("glow", this.scene);
       glowLayer.intensity = 1;
-
+  
       lab.forEach((mesh) => {
         mesh.checkCollisions = false;
+        // Пример: подсветка конкретного меша (стол)
         if (mesh.name === "SM_0_Tools_Desk" && mesh instanceof Mesh) {
           const material = mesh.material;
           if (material && material instanceof PBRMaterial) {
             material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
             material.emissiveColor = new Color3(1, 1, 1);
             material.emissiveIntensity = 2;
+  
             if (material.emissiveTexture) {
               glowLayer.addIncludedOnlyMesh(mesh);
             }
           }
         }
       });
-
-      // -------------------------------------------
-      // ПРАВКИ ДЛЯ ПЕРВОГО ВОПРОСА:
-      // Делим логику так, чтобы:
-      // - При клике на SM_0_Wall_R отключался SM_0_Tools_Desk
-      // - При клике на SM_0_Tools_Desk отключался SM_0_Wall_R
-      // - Убираем курсор-«палец» (hoverCursor = "default")
-      // -------------------------------------------
-      
-      // Ищем нужные меши в lab
+  
+      // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
       const meshWall = lab.find((m) => m.name === "SM_0_Wall_R");
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
-
-      // Настраиваем кликабельность для стены (если найдена)
+  
       if (meshWall) {
         meshWall.isPickable = true;
         meshWall.actionManager = new ActionManager(this.scene);
-        meshWall.actionManager.hoverCursor = "default"; // убрать «палец» при наведении
-
+        meshWall.actionManager.hoverCursor = "default"; // убираем курсор-палец
+  
         meshWall.actionManager.registerAction(
           new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
             // Если уже запущен бетон-триггер - ничего не делаем
             if (this.isBetonTriggered) return;
-
-            // Активируем "бетон"
+  
             this.isBetonTriggered = true;
-            this.BetonTrigger(); // запуск вашей логики
-
-            // Отключаем "стол" (чтобы нельзя было кликать)
+            this.BetonTrigger();
+  
+            // Отключаем стол
             if (meshDesk) {
-              meshDesk.isPickable = false;   
-              meshDesk.actionManager = null; // убираем actionManager
+              meshDesk.isPickable = false;
+              meshDesk.actionManager = null;
             }
           })
         );
       }
-
-      // Настраиваем кликабельность для стола (если найден)
+  
       if (meshDesk) {
         meshDesk.isPickable = true;
         meshDesk.actionManager = new ActionManager(this.scene);
-        meshDesk.actionManager.hoverCursor = "default"; // убрать «палец» при наведении
-
+        meshDesk.actionManager.hoverCursor = "default"; // убираем курсор-палец
+  
         meshDesk.actionManager.registerAction(
           new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            // Если уже нажимали на стол - ничего не делаем
             if (this.isToolDeskClicked) return;
-
+  
             this.isToolDeskClicked = true;
-            this.initToolHandling(); // запуск вашей логики
-
-            // Отключаем "стену"
+            this.initToolHandling();
+  
+            // Отключаем стену
             if (meshWall) {
               meshWall.isPickable = false;
-              meshWall.actionManager = null;  
+              meshWall.actionManager = null;
             }
           })
         );
       }
-      // -------------------------------------------
-
+  
       console.log("Основные модели (LAB) успешно загружены.");
   
-      // 2) Загружаем инструмент dist (rangeC)
-      await this.modelLoader.loadRangeCentrModel();
-      const dist = this.modelLoader.getMeshes("rangeC") || [];
-      dist.forEach((mesh, index) => {
-        if (index !== 0) {
-          mesh.scaling = new Vector3(1, 1, 1);
-          mesh.position = new Vector3(3.56, 0.95, 1.99);
-          mesh.rotation = new Vector3(0, Math.PI, Math.PI / 2);
-          if (!mesh.rotationQuaternion) {
-            mesh.rotationQuaternion = Quaternion.FromEulerAngles(
-              mesh.rotation.x,
-              mesh.rotation.y,
-              mesh.rotation.z
-            );
+      // --- 4) Создаём "dist" (rangeC) ---
+      {
+        const distMeshes = this.modelLoader.getMeshes("rangeC") || [];
+        distMeshes.forEach((mesh, index) => {
+          if (index !== 0) {
+            // Ставим примерную позицию, масштаб, поворот
+            mesh.scaling = new Vector3(1, 1, 1);
+            mesh.position = new Vector3(3.56, 0.95, 1.99);
+            mesh.rotation = new Vector3(0, Math.PI, Math.PI / 2);
+            if (!mesh.rotationQuaternion) {
+              mesh.rotationQuaternion = Quaternion.FromEulerAngles(
+                mesh.rotation.x,
+                mesh.rotation.y,
+                mesh.rotation.z
+              );
+            }
+          }
+        });
+  
+        const distPositions = distMeshes.map((m) => m.getAbsolutePosition().clone());
+        const distQuats = distMeshes.map((m) => m.rotationQuaternion?.clone());
+        this.tools["dist"] = {
+          meshes: distMeshes,
+          originalAbsolutePositions: distPositions,
+          originalWorldRotationQuaternions: distQuats,
+          isFront: false,
+          onFrontCallback: () => {
+            const text = "Дальномер — измерительный инструмент, предназначенный для определения расстояния до объекта с помощью различных методов измерения, включая лазерные, ультразвуковые или оптические технологии. Широко используется в строительстве, геодезии, военном деле и других сферах.";
+            const videoName = "Rangefinder_Preview_1K.mp4";
+            this.guiManager.DeleteDialogBox();
+            this.labFunManager.createFileBox(text, videoName);
+          },
+          frontPosition: new Vector3(-0.3, 0, 0.9),
+          frontRotation: new Vector3(Math.PI, Math.PI / 2, 0),
+        };
+        console.log("Модели 'dist' успешно загружены (CreateEnvironment).");
+      }
+  
+      // --- 5) Добавляем остальные инструменты (ultra, caliper, ruler, tape) ---
+      //     Они просто лежат на карте полупрозрачными и НЕактивны.
+  
+      // --------- ULTRA ---------
+      {
+        const ultraMeshes = this.modelLoader.getMeshes("ultra") || [];
+        if (ultraMeshes.length > 0) {
+          const ultraRoot = this.makeRootFromMeshes(ultraMeshes);
+          if (ultraRoot) {
+            ultraRoot.position = new Vector3(-3.71, 0.93, 1.43);
+            ultraRoot.rotation = new Vector3(0, Math.PI / 2, Math.PI / 2);
+            ultraRoot.scaling = new Vector3(1, -1, 1);
+            ultraRoot.getChildMeshes().forEach((m) => {
+              m.isPickable = false;
+              m.visibility = 0.4; 
+            });
           }
         }
-      });
-      const distAbsolutePositions = dist.map((m) => m.getAbsolutePosition().clone());
-      const distWorldRotQuats = dist.map((m) => m.rotationQuaternion!.clone());
-  
-      this.tools["dist"] = {
-        meshes: dist,
-        originalAbsolutePositions: distAbsolutePositions,
-        originalWorldRotationQuaternions: distWorldRotQuats,
-        isFront: false,
-        onFrontCallback: () => {
-          this.guiManager.DeleteDialogBox()
-          this.createFileBox()
-        },
-        frontPosition: new Vector3(-0.3, 0, 0.9),
-        frontRotation: new Vector3(Math.PI, Math.PI / 2, 0),
-      };
-      console.log("Модели 'dist' успешно загружены (CreateEnvironment).");
-  
-      // 3) Загружаем Rangefinder_LP.glb (раньше это было в BetonTrigger)
-      try {
-        const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Rangefinder_LP.glb", this.scene);
-        this.rangefinderMeshes = meshes;
-        this.rangefinderMeshes.forEach((mesh) => {
-          mesh.position = new Vector3(0,-1,0);
-        });
-        console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
-      } catch (err) {
-        console.error("Ошибка при загрузке Rangefinder_LP.glb:", err);
       }
+  
+      // --------- CALIPER ---------
+      {
+        const caliperMeshes = this.modelLoader.getMeshes("caliper") || [];
+        if (caliperMeshes.length > 0) {
+          const caliperRoot = this.makeRootFromMeshes(caliperMeshes);
+          if (caliperRoot) {
+            caliperRoot.position = new Vector3(-3.45, 0.90, 1.64);
+            caliperRoot.rotation = new Vector3(Math.PI / 2, 0, 0);
+            caliperRoot.scaling = new Vector3(1, -1, 1);
+            caliperRoot.getChildMeshes().forEach((m) => {
+              m.isPickable = false;
+              m.visibility = 0.4; 
+            });
+          }
+        }
+      }
+  
+      // --------- RULER ---------
+      {
+        const rulerMeshes = this.modelLoader.getMeshes("ruler") || [];
+        if (rulerMeshes.length > 0) {
+          const rulerRoot = this.makeRootFromMeshes(rulerMeshes);
+          if (rulerRoot) {
+            rulerRoot.position = new Vector3(-3.71, 0.89, 2.4);
+            rulerRoot.rotation = Vector3.Zero();
+            rulerRoot.scaling = new Vector3(1, -1, 1);
+            rulerRoot.getChildMeshes().forEach((m) => {
+              m.isPickable = false;
+              m.visibility = 0.4; 
+            });
+          }
+        }
+      }
+  
+      // --------- TAPE ---------
+      {
+        const tapeMeshes = this.modelLoader.getMeshes("tape") || [];
+        if (tapeMeshes.length > 0) {
+          const tapeRoot = this.makeRootFromMeshes(tapeMeshes);
+          if (tapeRoot) {
+            tapeRoot.position = new Vector3(-3.36, 0.90, 2.29);
+            tapeRoot.rotation = new Vector3(Math.PI / 2, 0, 0);
+            tapeRoot.scaling = new Vector3(1, -1, 1);
+            tapeRoot.getChildMeshes().forEach((m, index) => {
+              m.isPickable = false;
+              m.visibility = 0.5; 
+              if (index !== 0 && index !== 11) {
+                m.visibility = 0; 
+              }
+            });
+          }
+        }
+        console.log(tapeMeshes);
+        
+      }
+  
+      // --- 6) Rangefinder_LP уже загружен (т.к. через Promise.all) ---
+      //     Достаём меши и расставляем, как нужно
+      this.rangefinderMeshes = this.modelLoader.getMeshes("range") || [];
+      this.rangefinderMeshes.forEach((mesh) => {
+        mesh.position = new Vector3(0, -1, 0);
+      });
+      console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
+  
+      console.log("Все модели успешно загружены.");
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
-    } finally {
-      this.engine.hideLoadingUI();
     }
   }
-  
 
   /**
    * Метод, который вызывается по клику на SM_0_Tools_Desk.
@@ -436,7 +525,7 @@ export class DemoScene {
   }
 
   private showToolSelectionDialog(): void {
-    this.removeFileBox()
+    this.labFunManager.removeFileBox()
     const startPage = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
     const endPage = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
       const page4 = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
@@ -474,164 +563,6 @@ export class DemoScene {
     });
     this.guiManager.CreateDialogBox([startPage, endPage]);
   }
-
-  private createFileBox(): void {
-    // 1) Удаляем старый диалог, если есть
-    if (this.currentDialogBox) {
-        this.guiTexture.removeControl(this.currentDialogBox);
-    }
-
-    // ------------------------
-    // 2) Создаем Rectangle-контейнер (справа)
-    // ------------------------
-    const dialogContainer = new Rectangle("dialogContainer");
-    dialogContainer.width = "50%";
-    dialogContainer.height = "100%";
-    dialogContainer.thickness = 0;
-    dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-    dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    dialogContainer.top = "0%";
-    dialogContainer.left = "3%";
-    dialogContainer.zIndex = 1;
-    this.guiTexture.addControl(dialogContainer);
-
-    this.currentDialogBox = dialogContainer;
-
-    // ------------------------
-    // 3) Фоновое изображение (например, "папка")
-    // ------------------------
-    const dialogImage = new Image("dialogImage", "/models/filefolder.png");
-    dialogImage.width = "100%";
-    dialogImage.height = "100%";
-    dialogImage.zIndex = 1;
-    dialogContainer.addControl(dialogImage);
-
-    // ------------------------
-    // 4) Скролл с текстом (пример)
-    // ------------------------
-    const scrollViewer = new ScrollViewer("dialogScroll");
-    scrollViewer.width = "60%";
-    scrollViewer.height = "40%";
-    scrollViewer.barSize = 7;
-    // scrollViewer.background = "red";
-    scrollViewer.thickness = 0;
-    scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    scrollViewer.left = "2%";
-    scrollViewer.top = "5%";
-    scrollViewer.zIndex = 2;
-
-    const dialogText = new TextBlock("dialogText");
-    dialogText.text = "ЭТО ЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПАЖОПАЖОПАЖОПАЖОПА\nЖОПАЖОПАЖОПА";
-    dialogText.color = "#212529";
-    dialogText.fontSize = "5%";
-    dialogText.fontFamily = "Segoe UI";
-    dialogText.resizeToFit = true;
-    dialogText.textWrapping = TextWrapping.WordWrap;
-    dialogText.width = "100%";
-    dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-
-    scrollViewer.addControl(dialogText);
-    dialogContainer.addControl(scrollViewer);
-
-    // ---------------------------------------------------------------------------------------
-    // 5) Вместо VideoRect + VideoGui,
-    //    вставляем логику, аналогичную LoadingScreen, но под размеры "60% x 40%", bottom=5%, right=3%.
-    // ---------------------------------------------------------------------------------------
-
-    // 5.1 Создаём div-контейнер для видео (DOM-элемент), накладываем поверх canvas:
-    const loadingContainer = document.createElement("div");
-    loadingContainer.style.position = "absolute";
-    loadingContainer.style.width = "28%";
-    loadingContainer.style.height = "40%";
-    loadingContainer.style.bottom = "5%";
-    loadingContainer.style.right = "8%";
-    loadingContainer.style.zIndex = "100"; // Поверх canvas
-    loadingContainer.style.backgroundColor = "black"; // На случай, если видео не заполнит
-
-    document.body.appendChild(loadingContainer);
-
-    // Сохраняем ссылку
-    this.loadingContainer = loadingContainer;
-
-    // 5.2 Создаём <video>
-    const videoElement = document.createElement("video");
-    // Добавим динамический параметр "?v=..." как в LoadingScreen, чтобы кеш не мешал
-    videoElement.src = "/models/film_1var_1_2K.mp4" + "?v=" + new Date().getTime();
-    videoElement.autoplay = false; // Управляем вручную
-    videoElement.muted = true;
-    videoElement.loop = true;
-    videoElement.preload = "auto";
-
-    // Растягиваем на 100% контейнера
-    videoElement.style.width = "100%";
-    videoElement.style.height = "100%";
-    videoElement.style.objectFit = "cover";
-    videoElement.style.backgroundColor = "black";
-
-    loadingContainer.appendChild(videoElement);
-
-    // 5.3 При окончании видео — убрать
-    videoElement.addEventListener("ended", () => {
-        videoElement.pause();
-        loadingContainer.remove();
-    });
-
-    // 5.4 Кнопка "Пропустить"
-    const skipButton = document.createElement("button");
-    skipButton.textContent = "Пропустить";
-    skipButton.style.position = "absolute";
-    skipButton.style.bottom = "20px";
-    skipButton.style.right = "20px";
-    skipButton.style.padding = "10px 20px";
-    skipButton.style.fontSize = "16px";
-    skipButton.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
-    skipButton.style.border = "none";
-    skipButton.style.cursor = "pointer";
-    skipButton.style.borderRadius = "5px";
-
-    loadingContainer.appendChild(skipButton);
-
-    skipButton.addEventListener("click", () => {
-        videoElement.pause();
-        loadingContainer.remove();
-    });
-
-    // 5.5 Наконец, пытаемся запустить видео
-    videoElement.play().catch((err) => {
-        console.warn("Video can't autoplay (maybe user gesture needed):", err);
-    });
-  }
-
-  private removeFileBox(): void {
-    // 1. Удаляем Babylon GUI-контейнер, если существует
-    if (this.currentDialogBox) {
-        this.guiTexture.removeControl(this.currentDialogBox); // Убираем из интерфейса
-        this.currentDialogBox.dispose();                       // Освобождаем ресурсы GUI
-        this.currentDialogBox = null;
-    }
-
-    // 2. Удаляем DOM-контейнер (loadingContainer) с видео
-    if (this.loadingContainer) {
-        // Останавливаем видео на всякий случай
-        const video = this.loadingContainer.querySelector("video");
-        if (video) {
-            (video as HTMLVideoElement).pause();
-        }
-
-        // Удаляем сам <div> из документа
-        if (this.loadingContainer.parentNode) {
-            this.loadingContainer.parentNode.removeChild(this.loadingContainer);
-        }
-        this.loadingContainer = null;
-    }
-}
-
-
-  
-
-
-
-
 
   public BetonTrigger(): void {
     // Показываем диалог перед началом
@@ -774,21 +705,17 @@ export class DemoScene {
     this.guiManager.CreateDialogBox([page2, page3, page4]);
   }
 
-  async initializeScene(): Promise<void> {
+  public async initializeScene(): Promise<void> {
     try {
       await this.CreateEnvironment();
-      // По умолчанию (можете менять логику):
-      // this.showToolSelectionDialog();
-      // Или сразу показывать другой текст, если нужно
+      await this.scene.whenReadyAsync();
+      this.engine.hideLoadingUI();
       const page4 = this.dialogPage.addText("Сцена загружена. Можете кликать на стену или стол.");
       this.guiManager.CreateDialogBox([page4]);
 
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
-    } finally {
-      this.scene.onReadyObservable.add(() => {
-        this.engine.hideLoadingUI();
-    })
+      this.engine.hideLoadingUI();
     }
   }
 

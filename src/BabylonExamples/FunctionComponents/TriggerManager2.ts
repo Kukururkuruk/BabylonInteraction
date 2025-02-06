@@ -208,114 +208,6 @@ export class TriggerManager2 {
       camera.attachControl(this.canvas, true);
     }
 
-    // createRadioButtons(onHide: () => void): void {
-    //   const radioButtons: RadioButton[] = [];
-  
-    //   // Создаем контейнер для радио-кнопок
-    //   const container = new Rectangle();
-    //   container.width = "15%"; // Увеличили ширину для горизонтального размещения
-    //   container.height = "50%"; // Уменьшили высоту
-    //   container.top = "3%"
-    //   container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-    //   container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-    //   container.thickness = 0;
-    //   container.background = "transparent";
-  
-    //   // Создаем Grid внутри контейнера
-    //   const grid = new Grid();
-    //   grid.width = "100%";
-    //   grid.height = "100%";
-  
-    //   // Определяем колонки для кнопок
-    //   grid.addColumnDefinition(1); // Колонка для кнопки 1
-    //   grid.addColumnDefinition(1); // Колонка для кнопок 2 и 3
-    //   grid.addColumnDefinition(1); // Колонка для кнопки 4
-  
-    //   // Определяем строки
-    //   grid.addRowDefinition(1); // Строка 0
-    //   grid.addRowDefinition(1); // Строка 1 (для кнопки 3)
-  
-    //   for (let i = 0; i < 4; i++) {
-    //       // Контейнер для радио-кнопки и лейбла
-    //       const buttonContainer = new Rectangle();
-    //       buttonContainer.width = "100%";
-    //       buttonContainer.height = "100%";
-    //       buttonContainer.thickness = 0;
-    //       buttonContainer.background = "transparent";
-  
-    //       // Радио-кнопка
-    //       const radioButton = new RadioButton();
-    //       radioButton.width = "30%";
-    //       radioButton.height = "13%"; // Занимает 30% высоты контейнера
-    //       radioButton.color = "white";
-    //       radioButton.background = "grey";
-    //       radioButton.group = "group1";
-  
-    //       // Позиционируем радио-кнопку внутри контейнера
-    //       radioButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-    //       radioButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-  
-    //       // Добавляем радио-кнопку и лейбл в контейнер
-    //       buttonContainer.addControl(radioButton);
-
-  
-    //       // Определяем позицию в Grid
-    //       let row = 0;
-    //       let column = 0;
-  
-    //       if (i === 0) {
-    //           column = 0; // Кнопка 1 в колонке 0, строке 0
-    //           row = 0;
-    //           buttonContainer.top = "85%"
-    //           buttonContainer.left = "35%"
-
-    //       } else if (i === 1) {
-    //           column = 1; // Кнопка 2 в колонке 1, строке 0
-    //           row = 0;
-    //           buttonContainer.top = "40%"
-
-    //       } else if (i === 2) {
-    //           column = 1; // Кнопка 3 в колонке 1, строке 1
-    //           row = 1;
-    //           buttonContainer.top = "15%"
-
-    //       } else if (i === 3) {
-    //           column = 2; // Кнопка 4 в колонке 2, строке 0
-    //           row = 0;
-    //           buttonContainer.top = "85%"
-
-    //       }
-  
-    //       // Добавляем контейнер кнопки в Grid
-    //       grid.addControl(buttonContainer, row, column);
-  
-    //       // Добавляем радио-кнопку в массив
-    //       radioButtons.push(radioButton);
-  
-    //       // Обработчик события при выборе радио-кнопки
-    //       radioButton.onIsCheckedChangedObservable.add((state) => {
-    //           if (state) {
-    //               console.log(`Выбрана радио-кнопка: ${i + 1}`);
-    //               if (i === 2) { // Третья кнопка
-    //                   this.guiTexture.removeControl(container);
-    //                   onHide();
-    //                   this.activateLaserMode();
-    //               } else if (i !== 2) {
-    //                 this.showMessage("Неправильный выбор. Попробуйте снова.");
-    //               }
-    //           }
-    //       });
-    //   }
-  
-    //   // Добавляем Grid в контейнер
-    //   container.addControl(grid);
-  
-    //   // Добавляем контейнер на экран
-    //   this.guiTexture.addControl(container);
-    // }
-
-    
-
     async createRadioButtons(onHide: () => void): Promise<void> {
       // Загрузка модели дальномера
       await this.modelLoader.loadRangeModel();
@@ -414,114 +306,6 @@ export class TriggerManager2 {
       }
     }
     
-
-
-  //   activateLaserMode(): void {
-  //     const camera = this.scene.activeCamera as FreeCamera;
-  
-  //     const cubeSize = 0.15; 
-  //     this.centralCube = MeshBuilder.CreateBox("centralCube", { size: cubeSize }, this.scene);
-  //     this.centralCube.parent = camera;
-  //     this.centralCube.position = new Vector3(0, 0, 3);
-  
-  //     const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
-  //     cubeMaterial.diffuseColor = new Color3(0, 1, 0);
-  //     this.centralCube.material = cubeMaterial;
-  //     this.centralCube.isVisible = false;
-  //     this.centralCube.isPickable = false;
-  
-  //     const rayLength = 100;
-  //     const rayPoints = [
-  //         new Vector3(0, 0, cubeSize / 2 + 0.01),
-  //         new Vector3(0, 0, cubeSize / 2 + 0.01 + rayLength),
-  //     ];
-  //     this.redRay = MeshBuilder.CreateLines("redRay", { points: rayPoints }, this.scene);
-  //     this.redRay.parent = this.centralCube;
-  //     const rayMaterial = new StandardMaterial("rayMaterial", this.scene);
-  //     rayMaterial.emissiveColor = new Color3(1, 0, 0);
-  //     this.redRay.color = rayMaterial.emissiveColor;
-  
-  //     const pointSize = 0.05;
-  //     this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
-  //     const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
-  //     pointMaterial.emissiveColor = new Color3(1, 0, 0);
-  //     this.intersectionPoint.material = pointMaterial;
-  //     this.intersectionPoint.isVisible = false;
-  
-  //     this.createAdditionalSpheres();
-  
-  //     // Переменные для линии и glowLayer
-  //     let dynamicLine: LinesMesh | null = null;
-  //     let glowLayer: GlowLayer | null = null;
-  
-  //     // Функция для создания или обновления линии
-  //     const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
-  //         if (!existingLine) {
-  //             // Создаем новую линию
-  //             const line = MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true }, this.scene);
-  //             line.color = new Color3(0, 1, 0);
-  //             line.isPickable = false;
-  
-  //             // Создаем GlowLayer, если не существует
-  //             if (!glowLayer) {
-  //                 glowLayer = new GlowLayer("glow", this.scene);
-  //                 glowLayer.intensity = 1;
-  //             }
-  
-  //             glowLayer.customEmissiveColorSelector = (mesh, subMesh, material, result) => {
-  //                 if (mesh === line) {
-  //                     result.r = 0;
-  //                     result.g = 1;
-  //                     result.b = 0;
-  //                 }
-  //             };
-  //             glowLayer.addIncludedOnlyMesh(line);
-  
-  //             return line;
-  //         } else {
-  //             // Обновляем существующую линию
-  //             MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true, instance: existingLine }, this.scene);
-  //             return existingLine;
-  //         }
-  //     };
-  
-  //     this.scene.registerBeforeRender(() => {
-  //         this.updateRayIntersection();
-  //         this.checkSphereIntersection();
-  
-  //         const staticPoint = new Vector3(-12.12, 7.84, -3.60);
-  //         if (this.intersectionPoint && this.intersectionPoint.position) {
-  //             // Обновляем или создаем линию между staticPoint и intersectionPoint
-  //             dynamicLine = createOrUpdateLineBetweenPoints(staticPoint, this.intersectionPoint.position, dynamicLine);
-  
-  //             // Расчет дистанции и углов
-  //             const distance = Vector3.Distance(staticPoint, this.intersectionPoint.position);
-  //             const euler = camera.rotation;
-  //             const angleX = Tools.ToDegrees(euler.x);
-  //             const angleY = Tools.ToDegrees(euler.y);
-  
-  //             eventEmitter.emit(
-  //                 "updateDistanceAngleText",
-  //                 `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние: ${distance.toFixed(2)} м`
-  //             );
-  //         } else {
-  //             // Если точки для intersectionPoint нет - убираем линию
-  //             if (dynamicLine) {
-  //                 dynamicLine.dispose();
-  //                 dynamicLine = null;
-  //             }
-  //         }
-  //     });
-  // }
-  
-
-
-
-
-
-  
-  
-
   activateLaserMode(): void {
     const camera = this.scene.activeCamera as FreeCamera;
 
@@ -942,49 +726,6 @@ exitLaserMode(): void {
       camera.keysRight.push(68); // D
     }
 
-
-    
-    // public activateLaserMode2(targetMesh: Mesh): void {
-    //   this.targetMeshLaser2 = targetMesh; // Сохраняем целевой меш
-
-    //   // Создаем куб
-    //   this.centralCube2 = MeshBuilder.CreateBox(
-    //     "centralCube2",
-    //     { size: 0.5 },
-    //     this.scene
-    //   );
-    //   this.centralCube2.rotationQuaternion = Quaternion.Identity();
-
-    //   // Создаем материал для куба
-    //   const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
-    //   cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
-    //   cubeMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет
-    //   this.centralCube2.material = cubeMaterial;
-
-    //   this.centralCube2.isPickable = false;
-
-    //   // Скрываем куб по умолчанию
-    //   this.centralCube2.isVisible = false;
-
-    //   // Добавляем обработчик движения указателя
-    //   this.pointerMoveHandler = (pointerInfo: PointerInfo) => {
-    //     if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
-    //       this.onPointerMove(pointerInfo);
-    //     }
-    //   };
-    //   this.scene.onPointerObservable.add(this.pointerMoveHandler);
-
-    //   // Добавляем обработчики клавиатуры
-    //   this.keyDownHandler = (evt: KeyboardEvent) => this.onKeyDown(evt);
-    //   this.keyUpHandler = (evt: KeyboardEvent) => this.onKeyUp(evt);
-    //   window.addEventListener("keydown", this.keyDownHandler);
-    //   window.addEventListener("keyup", this.keyUpHandler);
-
-    //   // Добавляем функцию в цикл рендера
-    //   this.scene.registerBeforeRender(this.beforeRenderHandler);
-    // }
-
-
     public activateLaserMode2(targetMesh: Mesh): void {
       this.targetMeshLaser2 = targetMesh; // Сохраняем целевой меш
     
@@ -1184,81 +925,6 @@ exitLaserMode(): void {
 
       this.targetMeshLaser2 = null;
     }
-
-
-  //   public distanceMode(): void {
-  //     // Создаем куб
-  //     this.centralCube2 = MeshBuilder.CreateBox(
-  //         "centralCube2",
-  //         { size: 0.5 },
-  //         this.scene
-  //     );
-  
-  //     // Создаем материал для куба
-  //     const cubeMaterial = new StandardMaterial("cubeMaterial", this.scene);
-  //     cubeMaterial.diffuseColor = new Color3(0, 1, 0); // Зеленый цвет
-  //     cubeMaterial.emissiveColor = new Color3(0, 1, 0); // Зеленый цвет
-  //     this.centralCube2.material = cubeMaterial;
-  
-  //     this.centralCube2.isPickable = false; // Куб не должен быть "пикэйбл"
-  //     this.centralCube2.isVisible = false;  // По умолчанию куб скрыт
-  
-  //     // Добавляем обработчик движения указателя
-  //     this.pointerMoveHandler = (pointerInfo: PointerInfo) => {
-  //         if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
-  //             this.onPointerDistanceMove();
-  //         }
-  //     };
-  //     this.scene.onPointerObservable.add(this.pointerMoveHandler);
-  
-  //     // Добавляем функцию в цикл рендера
-  //     this.scene.registerBeforeRender(this.beforeDisRenderHandler);
-  // }
-  
-  // private onPointerDistanceMove(): void {
-  //     // Выполняем ручное определение пересечения указателя с поверхностями
-  //     const pickResult = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-  
-  //     if (pickResult?.hit && pickResult.pickedMesh && this.centralCube2) {
-  //         // Делаем куб видимым при пересечении
-  //         this.centralCube2.isVisible = true;
-  //         this.targetPosition.copyFrom(pickResult.pickedPoint);
-  //     } else if (this.centralCube2) {
-  //         // Скрываем куб, если указатель не над поверхностью
-  //         this.centralCube2.isVisible = false;
-  //     }
-  // }
-  
-  // private onBeforeDisRender(): void {
-  //     if (this.centralCube2 && this.centralCube2.isVisible) {
-  //         // Плавное перемещение куба к целевой позиции
-  //         this.centralCube2.position = Vector3.Lerp(
-  //             this.centralCube2.position,
-  //             this.targetPosition,
-  //             0.2 // Скорость интерполяции
-  //         );
-  //     }
-  // }
-  
-  // public exitDisLaserMode2(): void {
-  //     // Удаляем обработчик движения указателя
-  //     if (this.pointerMoveHandler) {
-  //         this.scene.onPointerObservable.removeCallback(this.pointerMoveHandler);
-  //         this.pointerMoveHandler = null;
-  //     }
-  
-  //     // Удаляем функцию из цикла рендера
-  //     this.scene.unregisterBeforeRender(this.beforeRenderHandler);
-  
-  //     // Удаляем куб из сцены
-  //     if (this.centralCube2) {
-  //         this.centralCube2.dispose();
-  //         this.centralCube2 = null;
-  //     }
-  // }
-
-
-
 
   public distanceMode(): void {
     // Создаем маленький шарик вместо куба
@@ -1492,6 +1158,20 @@ enableDistanceMeasurement(): void {
   let line: LinesMesh | null = null;
   let axesViewer: AxesViewer | null = null;
 
+  // Переменная для дополнительного смещения по оси Y (в радианах)
+  let rotationOffsetY = 0;
+
+  // Обработчик нажатий клавиш для дополнительного вращения модели по оси Y
+  window.addEventListener("keydown", (evt) => {
+    // Изменение на 5 градусов за нажатие (около 0.0873 радиан)
+    const angleStep = (Math.PI / 180) * 10;
+    if (evt.key === "z") {
+      rotationOffsetY -= angleStep;
+    } else if (evt.key === "c") {
+      rotationOffsetY += angleStep;
+    }
+  });
+
   // Текстовый блок для углов (как у вас)
   if (!this.angleText) {
     this.angleText = new TextBlock();
@@ -1544,10 +1224,7 @@ enableDistanceMeasurement(): void {
               // Ставим родителя прямо в точку клика (без учета нормали)
               parentNode.position.copyFrom(this.firstPoint);
 
-              // Если нужно задать «исходный» поворот:
-              // parentNode.scaling.x *= -1; // например
-              // const correctionRotation = Quaternion.FromEulerAngles(0, -Math.PI / 2, 0);
-              // parentNode.rotationQuaternion = correctionRotation;
+              // Если требуется исходная корректировка модели, можно её сделать здесь
 
               modelNode = parentNode;
             },
@@ -1627,6 +1304,8 @@ enableDistanceMeasurement(): void {
           // Сброс состояния
           this.firstPoint = null;
           this.secondPoint = null;
+          rotationOffsetY = 0;
+
 
           // Удаляем всю служебную геометрию
           if (modelNode) {
@@ -1669,16 +1348,11 @@ enableDistanceMeasurement(): void {
         const globalY = new Vector3(0, 1, 0);
         const globalZ = new Vector3(0, 0, 1);
 
-        const angleX =
-          Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
-        const angleY =
-          Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
-        const angleZ =
-          Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
+        const angleX = Math.acos(Vector3.Dot(currentVector, globalX)) * (180 / Math.PI);
+        const angleY = Math.acos(Vector3.Dot(currentVector, globalY)) * (180 / Math.PI);
+        const angleZ = Math.acos(Vector3.Dot(currentVector, globalZ)) * (180 / Math.PI);
 
-        this.angleText.text = `Угол X: ${angleX.toFixed(
-          2
-        )}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
+        this.angleText.text = `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nУгол Z: ${angleZ.toFixed(2)}°`;
         this.angleText.isVisible = true;
 
         eventEmitter.emit("updateAngleText", this.angleText.text);
@@ -1713,24 +1387,26 @@ enableDistanceMeasurement(): void {
           const direction = pickResult.pickedPoint.subtract(this.firstPoint);
           if (direction.length() > 0.0001) {
             const forward = direction.normalize(); // куда «смотреть»
-            // Зададим "верх" модели = мировая Up (0,1,0)
-            // а "right" найдём через cross
+            // Задаём "верх" модели = мировой up (0,1,0)
             const up = new Vector3(0, 1, 0);
+            // Вычисляем правый вектор через cross
             const right = Vector3.Cross(up, forward).normalize();
             // Пересчитываем up, чтобы точно были перпендикуляры
             const realUp = Vector3.Cross(forward, right).normalize();
 
-            // Если у вашей модели "вперёд" — это локальная Z, а "верх" — это локальная Y:
-            // Значит FromXYZAxesToRef(<X>, <Y>, <Z>).
-            //   X = right
-            //   Y = up
-            //   Z = forward
+            // Если у вашей модели "вперёд" — это локальная Z, а "верх" — локальная Y,
+            // используем FromXYZAxesToRef для построения матрицы поворота:
             const rotMatrix = Matrix.Identity();
             Matrix.FromXYZAxesToRef(right, realUp, forward, rotMatrix);
             const rotationQ = Quaternion.FromRotationMatrix(rotMatrix);
+            // Дополнительная корректировка, если требуется (исходя из модели)
             const correction = Quaternion.FromEulerAngles(Math.PI, -Math.PI / 2, -Math.PI / 2);
-            const final = rotationQ.multiply(correction);
-            
+            let final = rotationQ.multiply(correction);
+
+            // Применяем дополнительный поворот по оси Y, задаваемый стрелками
+            const extraRotation = Quaternion.FromEulerAngles(0, rotationOffsetY, 0);
+            final = final.multiply(extraRotation);
+
             modelNode.rotationQuaternion = Quaternion.Slerp(
               modelNode.rotationQuaternion || Quaternion.Identity(),
               final,
@@ -1742,6 +1418,7 @@ enableDistanceMeasurement(): void {
     }
   });
 }
+
 
 //Версия с как в бетоне
 // enableDistanceMeasurement(): void {
