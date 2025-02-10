@@ -110,10 +110,10 @@ export class ModelLoader {
     "SM_GridDrainageSmall_LP",          // Дождеприемник
     // Добавьте дополнительные одиночные меши по необходимости
 
-          "SM_0_SpanStructureBeam_1_Armature_R",
-          "SM_0_SpanStructureBeam_1_Cable_R",
-          "SM_0_SpanStructureBeam_2_Armature_L",
-          "SM_0_SpanStructureBeam_2_Cable_L"
+          // "SM_0_SpanStructureBeam_1_Armature_R",
+          // "SM_0_SpanStructureBeam_1_Cable_R",
+          // "SM_0_SpanStructureBeam_2_Armature_L",
+          // "SM_0_SpanStructureBeam_2_Cable_L"
   ];
 
   constructor(scene: Scene) {
