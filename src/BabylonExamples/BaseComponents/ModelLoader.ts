@@ -21,6 +21,9 @@ export class ModelLoader {
   public meshGroups = [
     { groupName: "SpanStructureBeam_L_7", baseName: "SM_0_SpanStructureBeam_L_7" },
     { groupName: "SpanStructureBeam_L_4", baseName: "SM_0_SpanStructureBeam_L_4" },
+    { groupName: "Drain_UP_2", baseName: "SM_Drain_UP_2" },
+    { groupName: "Drain_Down_2", baseName: "SM_Drain_Down_2" },
+    { groupName: "Drain_2", baseName: "SM_Drain_2" },
     // Добавьте дополнительные группы по необходимости
   ];
 
@@ -42,13 +45,16 @@ export class ModelLoader {
     "SM_0_TransitionPlate8M_LP_L_primitive0", // Плита переходная
     "SM_0_PlotMonolithic",              // Плита над балками
     "SM_0_SupportLight_LP_Down_L",      // Фонари
-    "SM_0_Landscape_Gravel_LP",         // Водосточный монолит
     "SM_HalfPipe_LP",                   // Подвесной лоток
-    "SM_ConcreteTray_UP",               // Лоток верхняя часть
-    "SM_ConcreteTelescopicTray",        // Откосной лоток
+    "SM_Drain_Half_Pipe_2",        // Откосной лоток
     "SM_PipeWater_LP",                  // Водосточная система
     "SM_GridDrainageSmall_LP",          // Дождеприемник
     // Добавьте дополнительные одиночные меши по необходимости
+
+          "SM_0_SpanStructureBeam_1_Armature_R",
+          "SM_0_SpanStructureBeam_1_Cable_R",
+          "SM_0_SpanStructureBeam_2_Armature_L",
+          "SM_0_SpanStructureBeam_2_Cable_L"
   ];
 
   constructor(scene: Scene) {
@@ -67,7 +73,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Map_1_MOD.gltf",
+        "Map_1_MOD_V_4.gltf",
         this.scene
       );
       this.loadedMeshes["map"] = result.meshes;
@@ -82,7 +88,7 @@ export class ModelLoader {
         const result = await SceneLoader.ImportMeshAsync(
             "",
             "./models/",
-            "Laboratory_01.gltf",
+            "Laboratory_MOD_1.gltf",
             this.scene
         );
 
@@ -95,14 +101,14 @@ export class ModelLoader {
                 mesh.checkCollisions = true;
 
                 // Логируем меши для отладки
-                console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
+                // console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
             }
 
             // Переопределение точки вращения (pivot) для модели SM_Door
             if (mesh.name === "SM_Door") {
                 mesh.position.y = 0; // Установить модель на плоскость
                 mesh.rotationQuaternion = null; // Очистить кватернион поворота, чтобы ручное управление работало нормально
-                console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
+                // console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
             }
         });
     } catch (error) {
@@ -379,6 +385,90 @@ export class ModelLoader {
       throw error;
     }
   }
+
+
+  // Добавьте новые методы для штангенциркуля, линейки и рулетки
+public async loadCaliperModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_Caliper.gltf",
+      this.scene
+    );
+    this.loadedMeshes["caliper"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_Caliper.gltf:", error);
+    throw error;
+  }
+}
+
+public async loadRulerModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_Ruler_LP.gltf",
+      this.scene
+    );
+    this.loadedMeshes["ruler"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_Ruler_LP.gltf:", error);
+    throw error;
+  }
+}
+
+public async loadTapeMeasureModel(): Promise<void> {
+  try {
+    const result = await SceneLoader.ImportMeshAsync(
+      "",
+      "./models/",
+      "SM_TapeMeasure_LP_MOD_1.gltf",
+      this.scene
+    );
+    this.loadedMeshes["tape"] = result.meshes;
+  } catch (error) {
+    console.error("Ошибка при загрузке SM_TapeMeasure_LP_MOD_1.gltf:", error);
+    throw error;
+  }
+}
+
+  
+  public async loadTestCubeModel(): Promise<void> { 
+    try {
+        // Загрузка модели TestCube.gltf
+        const result = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "TestCube.gltf",
+            this.scene
+        );
+
+        // Сохранение загруженных мешей
+        this.loadedMeshes["TestCube"] = result.meshes;
+
+        // Настройка мешей модели TestCube
+        const meshes = this.loadedMeshes["TestCube"];
+        if (meshes.length === 0) {
+            console.error("TestCube.gltf не содержит мешей.");
+            return;
+        }
+
+        // Применение масштабирования и позиции
+        meshes.forEach((mesh) => {
+            mesh.isVisible = true;
+            mesh.scaling = new Vector3(0.1, 0.1, 0.1);
+            const offset = new Vector3(-0.55, -0.5, 0.86);
+            mesh.position = offset;
+            mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI / 6);
+        });
+
+        console.log("TestCube.gltf успешно загружен и настроен:", meshes);
+    } catch (error) {
+        console.error("Ошибка при загрузке TestCube.gltf", error);
+        throw error;
+    }
+}
   
 
   addGUIToTool(mesh, texts): void {

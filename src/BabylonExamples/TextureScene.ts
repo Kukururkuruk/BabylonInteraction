@@ -18,19 +18,26 @@ import {
     Rectangle, 
     StackPanel, 
     TextBlock, 
-    Grid 
+    Grid, 
+    Image,
+    ScrollViewer,
+    TextWrapping,
+    Button
 } from "@babylonjs/gui";
 import "@babylonjs/loaders";
 import { ModelLoader } from "./BaseComponents/ModelLoader";
+import { VideoGui } from "../BabylonExamples/BaseComponents/VideoGui"
 
 export class TextureScene {
     scene: Scene;
     engine: Engine;
     canvas: HTMLCanvasElement;
     camera: FreeCamera;
+    private guiTexture: AdvancedDynamicTexture;
     mediaRecorder: MediaRecorder | null = null;
     private modelLoader: ModelLoader;
     recordedChunks: Blob[] = [];
+    private currentDialogBox: Rectangle | null = null;
 
     // Свойства для куба, лазера и точки пересечения
     centralCube: Mesh | null = null;
@@ -43,6 +50,7 @@ export class TextureScene {
         this.engine.displayLoadingUI();
 
         this.scene = this.CreateScene();
+        this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
 
         this.modelLoader = new ModelLoader(this.scene);
         this.initializeScene();
@@ -323,9 +331,120 @@ export class TextureScene {
       textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
   }
 
+    private createFileBox(): void {
+  
+      // ------------------------
+      // Создаём контейнер
+      // ------------------------
+      const dialogContainer = new Rectangle("dialogContainer");
+      dialogContainer.width = "50%";
+      dialogContainer.height = "100%";
+      dialogContainer.thickness = 0;
+      dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+      dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      dialogContainer.top = "0%";
+      dialogContainer.left = "3%";
+      dialogContainer.zIndex = 1;
+      this.guiTexture.addControl(dialogContainer);
+  
+      this.currentDialogBox = dialogContainer;
+  
+      // ------------------------
+      // Фоновое изображение (папка)
+      // ------------------------
+      const dialogImage = new Image("dialogImage", "/models/filefolder.png");
+      dialogImage.width = "100%";
+      dialogImage.height = "100%";
+      dialogImage.zIndex = 1;
+      dialogContainer.addControl(dialogImage);
+  
+      // ------------------------
+      // Скролл с текстом
+      // ------------------------
+      const scrollViewer = new ScrollViewer("dialogScroll");
+      scrollViewer.width = "60%";
+      scrollViewer.height = "40%";
+      scrollViewer.barSize = 7;
+      scrollViewer.background = "red";
+      scrollViewer.thickness = 0;
+      scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+      scrollViewer.left = "2%";
+      scrollViewer.top = "5%";
+      scrollViewer.zIndex = 2; 
+  
+      const dialogText = new TextBlock("dialogText");
+      dialogText.text = "sdf";
+      dialogText.color = "#212529";
+      dialogText.fontSize = "4.5%";
+      dialogText.fontFamily = "Segoe UI";
+      dialogText.resizeToFit = true;
+      dialogText.textWrapping = TextWrapping.WordWrap;
+      dialogText.width = "100%";
+      dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+  
+      scrollViewer.addControl(dialogText);
+      dialogContainer.addControl(scrollViewer);
+  
+      // ------------------------
+      // Прямоугольник, где будет видео
+      // ------------------------
+      const videoRect = new Rectangle("videoRect");
+      videoRect.width = "60%";
+      videoRect.height = "40%";
+      videoRect.thickness = 0;
+      videoRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+      videoRect.left = "2%";
+      videoRect.paddingBottom = "5%";
+      videoRect.zIndex = 3;
+      dialogContainer.addControl(videoRect);
+  
+      // ------------------------
+      // Используем наш класс VideoGui
+      // ------------------------
+      const videoGUI = new VideoGui("videoGUI", "/models/film_1var_1_2K.mp4");
+      // Заполним весь родительский Rectangle
+      videoGUI.width = "100%";
+      videoGUI.height = "100%";
+  
+      // Можно выбрать режим растяжения:
+      //  - VideoGui.STRETCH_FILL     (заполняет целиком, может искажаться)
+      //  - VideoGui.STRETCH_UNIFORM  (сохраняет пропорции, может быть "пустое" поле по сторонам)
+      //  - VideoGui.STRETCH_EXTEND   (если надо растянуть родителя и т.д.)
+      // Выбираем "FILL" или "UNIFORM"
+      videoGUI.stretch = VideoGui.STRETCH_FILL;
+  
+      // Добавляем в контейнер
+      videoRect.addControl(videoGUI);
+  
+      // ------------------------
+      // Обновляем GUI каждый кадр, чтобы видео было "живым"
+      // ------------------------
+      this.scene.onBeforeRenderObservable.add(() => {
+        const vid = videoGUI.domVideo;
+        if (videoGUI.isLoaded && !vid.paused && vid.readyState >= vid.HAVE_CURRENT_DATA) {
+            this.guiTexture.markAsDirty();
+        }
+    });
+  
+    // Создаем GUI-кнопку
+  const playButton = Button.CreateSimpleButton("playBtn", "Play video");
+  playButton.width = "100px";
+  playButton.height = "40px";
+  playButton.color = "white";
+  playButton.background = "green";
+  playButton.onPointerUpObservable.add(() => {
+    videoGUI.domVideo.play().then(() => {
+      console.log("Video playing after user gesture");
+  }).catch(err => console.log("Play error:", err));
+  });
+  this.guiTexture.addControl(playButton);
+    
+  }
+
     async initializeScene(): Promise<void> {
         try {
             await this.CreateEnvironment();
+            this.createFileBox()
         } catch (error) {
             console.error("Ошибка при инициализации сцены:", error);
         } finally {

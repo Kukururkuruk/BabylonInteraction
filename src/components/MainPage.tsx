@@ -21,6 +21,7 @@ const Main: React.FC = () => {
           <button><Link to="/Бетонометр">Бетонометр</Link></button>
           <button><Link to="/Тахеометр">Тахеометр</Link></button>
           <button><Link to="/ТахеометрЗадание">Тахеометр Задание</Link></button>
+          <button><Link to="/ЛинейкаЗадание">ЛинейкаЗадание</Link></button>
         </div>
         <div className="column">
           <button><Link to="/КрашТест">Терминология-производительность</Link></button>
@@ -30,6 +31,7 @@ const Main: React.FC = () => {
         <div className="column">
           <button><Link to="/ЛабИнструменты">Просмотр инструментов</Link></button>
           <button><Link to="/ЛабКомпьютер">Просмотр Компьютера</Link></button>
+          <button><Link to="/ЛабДемо">Демо режим</Link></button>
         </div>
       </div>
     </div>
