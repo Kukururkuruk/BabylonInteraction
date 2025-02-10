@@ -882,6 +882,7 @@ export class DialogPage {
         const grid = new Grid();
         grid.width = "100%";
         grid.height = "10%";
+        grid.top = "20%"
         // grid.background = "red"
         grid.addColumnDefinition(0.7);
         grid.addColumnDefinition(0.3);
@@ -917,7 +918,7 @@ export class DialogPage {
         actionButton.background = "gray";
         actionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         actionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        actionButton.top = "-20%";
+        actionButton.top = "-5%";
     
         // Обработчик нажатия на кнопку
         actionButton.onPointerUpObservable.add(() => {

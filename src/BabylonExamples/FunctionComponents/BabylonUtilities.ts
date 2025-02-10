@@ -1,4 +1,4 @@
-import { Scene, FreeCamera, Vector3, Ray, MeshBuilder, StandardMaterial, Color3, Engine, Tools } from "@babylonjs/core";
+import { Scene, FreeCamera, Vector3, Ray, MeshBuilder, StandardMaterial, Color3, Engine, Tools, Mesh } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
 
 export class BabylonUtilities {
@@ -100,5 +100,16 @@ export class BabylonUtilities {
         console.log("Камера не инициализирована.");
       }
     });
+  }
+
+  patchCollisionDebug(): void {
+    // 1) Переопределяем _collideForSubMesh у Mesh
+    const originalCollideForSubMesh = Mesh.prototype._collideForSubMesh;
+    Mesh.prototype._collideForSubMesh = function (subMesh, transformMatrix, collider) {
+      // Здесь this = сам Mesh (потому что .call(this, ...))
+      console.log(`[DEBUG] _collideForSubMesh => mesh="${this.name}", subMeshID=${subMesh._id}`);
+      return originalCollideForSubMesh.call(this, subMesh, transformMatrix, collider);
+    };
+
   }
 }

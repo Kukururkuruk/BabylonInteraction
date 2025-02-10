@@ -18,6 +18,7 @@ const BabylonQuestion: React.FC = () => {
       example.openModal = (keyword: string) => {
         setCurrentKeyword(keyword);
         setIsModalOpen(true);
+        example.togglePointerLock();
       };
       exampleRef.current = example;
     }
@@ -26,6 +27,8 @@ const BabylonQuestion: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCurrentKeyword(null);
+    exampleRef.current?.togglePointerLock();
+    exampleRef.current?.canvas.focus();
   };
 
   // Функция для обновления счетчика правильных ответов

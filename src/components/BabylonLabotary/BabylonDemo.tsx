@@ -6,12 +6,16 @@ const BabylonDemo: React.FC = () => {
 
   useEffect(() => {
     if (canvasRef.current) {
-      new DemoScene(canvasRef.current); // Передаем функцию открытия модального окна
+      new DemoScene(canvasRef.current);
     }
   }, []);
 
   return (
-    <div id="app">
+    <div id="app"       style={{
+        position: 'relative', // важно: чтобы абсолютные дети могли позиционироваться внутри
+        width: '100%',
+        height: '100%'
+      }}>
       <canvas ref={canvasRef} style={{ width: '95%', height: '95%' }}></canvas>
     </div>
   );

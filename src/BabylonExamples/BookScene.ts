@@ -163,7 +163,7 @@ export class BookScene {
 
       group.meshes.forEach((mesh) => {
         mesh.checkCollisions = false;
-        mesh.position = new Vector3(20, 1, 0);
+        mesh.position = new Vector3(12, 10, 0);
         mesh.scaling = new Vector3(3, 3, 3);
         mesh.rotation.z = Math.PI / 2;
 
@@ -203,9 +203,10 @@ export class BookScene {
 
     // Обработка групп мешей
     this.modelLoader.meshGroups.forEach((group) => {
-      const groupMeshes = mapMeshes.filter(
-        (mesh) => mesh.name === group.baseName || mesh.name.startsWith(`${group.baseName}`)
-      );
+      const groupMeshes = mapMeshes.filter((mesh) => {
+        // Проверяем, начинается ли mesh.name c каким-либо из baseNames
+        return group.baseNames.some((base) => mesh.name.startsWith(base));
+      });
 
       if (groupMeshes.length > 0) {
         groupMeshes.forEach((mesh) => {
@@ -305,14 +306,14 @@ export class BookScene {
           "Нажимая кнопкой мыши на подсвеченные объекты, вы можете узнать про них информацию.\n" +
             "Синим подсвечиваются те, на которые вы уже нажимали.\n" +
             "В верхней части планшета расположена информация о найденых сооружениях.\n" +
-            "Как только осмотрите все и будете готовы переходить к тестированию перейдите на вторую станичку нажав на кнопку 'Вперед'."
+            "Как только осмотрите все и будете готовы переходить к тестированию перейдите на третью станичку. Для перемещения между страницами используйте кнопки 'Вперед' и 'Назад'."
         );
 
         const page3 = this.dialogPage.createStartPage(
           "Нажав на кнопку вы перейдете на страничку с тестированием",
           "Начать",
           () => {
-            window.location.href = "/тестирование";
+            window.location.href = "/тестирование?skipVideo=true";
           }
         );
 
@@ -326,7 +327,13 @@ export class BookScene {
             "Для возврата в режим с курсором нажмите E/У"
         );
 
-        this.guiManager.CreateDialogBox([page2, page3, page4], this.counterText);
+        const helpPage = this.dialogPage.createStartPage('Если застряли, для возвращения на стартовую точку нажмите на кнопку', 'Вернуться', () => {
+          if (this.scene.activeCamera) {
+            this.scene.activeCamera.position = new Vector3(35, 3, 0)
+          }
+        })
+
+        this.guiManager.CreateDialogBox([ page2, page4, page3, helpPage ], this.counterText);
       }
     );
 

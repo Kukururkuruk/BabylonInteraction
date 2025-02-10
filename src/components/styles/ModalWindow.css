@@ -1,24 +1,38 @@
-/* Повторное использование стилей modal-overlay из DesktopModal.css */
-
 .modal-window {
-    position: relative;
-    background-color: white;
-    padding: 30px;
-    border-radius: 8px;
-    width: 400px;
-    max-width: 90%;
-    text-align: left;
-    width: 60%;
-  }
-  
-  .modal-window .close-button {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: black
-  }
-  
+  position: relative;
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  width: 60%; /* Удалено дублирование ширины */
+  max-width: 90%;
+  max-height: 80vh; /* Устанавливаем максимальную высоту (80% от высоты окна браузера) */
+  overflow-y: auto; /* Добавляем вертикальную прокрутку при переполнении */
+  text-align: left;
+}
+
+.modal-window .close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: black;
+}
+
+/* Настройка полосы прокрутки для WebKit-браузеров */
+.modal-window::-webkit-scrollbar {
+  width: 12px; /* Ширина скролла */
+}
+
+.modal-window::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Цвет трека */
+  border-radius: 6px; /* Скругление углов трека */
+}
+
+.modal-window::-webkit-scrollbar-thumb {
+  background-color: #888; /* Цвет ползунка */
+  border-radius: 6px; /* Скругление углов ползунка */
+  border: 3px solid #f1f1f1; /* Отступ вокруг ползунка для создания эффекта скругления */
+}
