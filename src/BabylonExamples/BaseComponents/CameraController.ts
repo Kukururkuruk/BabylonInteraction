@@ -5,7 +5,7 @@ import {
   Vector3, 
   Ray, 
   ActionManager,
-  KeyboardEventTypes,  // <-- Добавили для удобной работы с onKeyboardObservable
+  KeyboardEventTypes 
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture, Rectangle } from "@babylonjs/gui";
 
@@ -18,10 +18,10 @@ export class CameraController {
   private isLocked: boolean = false;
   private cameraType: CameraType;
 
-  // --- Новые поля для бега (dash) и прыжка (jump) ---
-  private isDash: boolean = false;     // True, когда зажат Shift
-  private wantToJump: boolean = false; // True, когда нажали пробел
-  private isJumping: boolean = false;  // True, когда находимся на определённой высоте
+  // Поля для бега (dash) и прыжка (jump)
+  private isDash: boolean = false;     // true, когда зажат Shift
+  private wantToJump: boolean = false;   // true, когда нажали пробел
+  private isJumping: boolean = false;    // true, когда камера не касается земли
 
   constructor(scene: Scene, canvas: HTMLCanvasElement, cameraType: CameraType = 'simple') {
     this.scene = scene;
@@ -30,14 +30,14 @@ export class CameraController {
 
     this.createCamera();
 
-    // Если нужна "сложная" камера — добавим прицел, pointer lock и обработку мыши
+    // Если нужна "сложная" камера — добавляем прицел, pointer lock и обработку мыши
     if (this.cameraType === 'complex') {
       this.createCrosshair();
       this.setupPointerLock();
       this.setupMouseEvents();
     }
 
-    // В любом случае добавим логику прыжка/бега
+    // Подписываемся на события движения, прыжка и бега
     this.setupMovementEvents();
   }
 
@@ -46,27 +46,27 @@ export class CameraController {
     this.camera.attachControl(this.canvas, true);
 
     // Общие настройки камеры
-    this.camera.applyGravity = true;        // Включаем "гравитацию" для камеры
-    this.camera.checkCollisions = true;     // Столкновения с мешами, у которых checkCollisions = true
-    this.camera.ellipsoid = new Vector3(0.5,0.8, 0.5);
+    this.camera.applyGravity = true;        // Включаем гравитацию
+    this.camera.checkCollisions = true;       // Включаем столкновения (учитываются у мешей, у которых checkCollisions = true)
+    this.camera.ellipsoid = new Vector3(0.5, 0.8, 0.5); // Ellipsoid для камеры (важен для определения "ног")
     this.camera.minZ = 0.45;
-    this.camera.speed = 0.55;              // Базовая скорость
+    this.camera.speed = 0.55;                 // Базовая скорость
     this.camera.angularSensibility = 4000;
     this.camera.rotation.y = -Math.PI / 2;
     this.camera.inertia = 0.82;
 
-    // Настраиваем управление с клавиатуры (WASD)
+    // Настройка клавиш (WASD)
     this.camera.keysUp.push(87);    // W
     this.camera.keysLeft.push(65);  // A
     this.camera.keysDown.push(83);  // S
     this.camera.keysRight.push(68); // D
 
-    // Чтобы сразу реагировать на нажатия
+    // Фокусируемся на канвасе
     this.canvas.focus();
   }
 
   /**
-   * Создаём прицел в центре экрана
+   * Создаём прицел (crosshair) в центре экрана
    */
   private createCrosshair(): void {
     const crosshair = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
@@ -87,11 +87,10 @@ export class CameraController {
   }
 
   /**
-   * Включаем/выключаем Pointer Lock по нажатию E
+   * Включаем/выключаем Pointer Lock по нажатию E (или русской "У")
    */
   private setupPointerLock(): void {
     window.addEventListener("keydown", (event) => {
-      // E или русская У (для некоторых раскладок)
       if (event.key.toLowerCase() === "e" || event.key.toLowerCase() === "у") {
         this.togglePointerLock();
       }
@@ -104,8 +103,7 @@ export class CameraController {
   }
 
   /**
-   * Обработка кликов мышью.
-   * Левая кнопка мыши — проверяем попадание лучом.
+   * Обработка кликов мышью. Левая кнопка — проверка попадания лучом.
    */
   private setupMouseEvents(): void {
     this.scene.onPointerDown = (evt) => {
@@ -113,23 +111,18 @@ export class CameraController {
         this.togglePointerLock();
       }
 
-      // Проверка нажатия левой кнопки мыши (button === 0)
+      // Если нажата левая кнопка мыши (button === 0)
       if (evt.button === 0) {
         const origin = this.camera.globalPosition.clone();
         const forward = this.camera.getDirection(Vector3.Forward());
         const ray = new Ray(origin, forward, 200);
 
-        // Проверяем пересечение с мешами
         const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
-
         if (hit?.pickedMesh) {
           console.log("Попадание по объекту:", hit.pickedMesh.name);
-
           const pickedMesh = hit.pickedMesh;
           const actionManager = pickedMesh.actionManager;
-
           if (actionManager) {
-            // Обработка события клика (как пример)
             actionManager.processTrigger(ActionManager.OnRightPickTrigger);
           }
         }
@@ -138,20 +131,18 @@ export class CameraController {
   }
 
   /**
-   * Включаем/выключаем Pointer Lock
+   * Включаем/выключаем Pointer Lock.
    */
   public togglePointerLock(): void {
     if (this.isLocked) {
-      // Выход из режима PointerLock
       document.exitPointerLock?.();
     } else {
-      // Вход в режим PointerLock
       this.canvas.requestPointerLock();
     }
   }
 
   /**
-   * Срабатывает, когда браузер меняет состояние pointer lock
+   * Обработчик изменения состояния Pointer Lock.
    */
   private pointerLockChange(): void {
     const controlEnabled =
@@ -161,82 +152,69 @@ export class CameraController {
       (document as any).msPointerLockElement === this.canvas;
 
     this.isLocked = controlEnabled;
-
-    // Когда камера "захвачена", прячем курсор
-    if (this.isLocked) {
-      document.body.style.cursor = 'none';
-    } else {
-      document.body.style.cursor = '';
-    }
+    document.body.style.cursor = this.isLocked ? 'none' : '';
   }
 
   // -------------------------------------------------------
-  // НИЖЕ: Логика прыжка (Space) и ускорения (Shift)
+  // Логика прыжка (Space) и ускорения (Shift)
   // -------------------------------------------------------
 
   /**
-   * Подписываемся на события клавиатуры и раз в кадр обновляем камеру
+   * Подписываемся на события клавиатуры и обновляем движение камеры каждый кадр.
+   * Здесь используется первоначальный рабочий вариант прыжка,
+   * с доработкой: если камера находится на земле, вертикальная составляющая движения обнуляется,
+   * чтобы при движении (например, назад при наклоне вниз) камера не поднималась.
    */
   private setupMovementEvents(): void {
-    // Подписка на нажатие и отпускание клавиш
+    // Подписка на нажатие/отпускание клавиш
     this.scene.onKeyboardObservable.add((kbInfo) => {
-      // KEYDOWN
       if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
-        // console.log("[KeyboardDown]", kbInfo.event.code);
-        
         if (kbInfo.event.code === "ShiftLeft") {
           this.isDash = true;
-          // console.log("Shift зажат — включаем бег. isDash =", this.isDash);
         }
         if (kbInfo.event.code === "Space") {
           this.wantToJump = true;
-          // console.log("Пробел нажат — хотим прыгать. wantToJump =", this.wantToJump);
         }
-      }
-      // KEYUP
-      else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
-        // console.log("[KeyboardUp]", kbInfo.event.code);
-
+      } else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
         if (kbInfo.event.code === "ShiftLeft") {
           this.isDash = false;
-          // console.log("Shift отпущен — выключаем бег. isDash =", this.isDash);
         }
       }
     });
 
-    // Логика, которая срабатывает в каждом кадре
+    // Логика, выполняемая каждый кадр перед рендерингом
     this.scene.onBeforeRenderObservable.add(() => {
-      // 1. Лог скорости камеры
+      // 1. Устанавливаем скорость камеры (учитывая бег)
       this.camera.speed = this.isDash ? 1.1 : 0.55;
-      // Можно залогировать, какую скорость в итоге получаем:
-      // console.log("Camera speed =", this.camera.speed);
 
-      // 2. Луч вниз, чтобы проверить, "на земле" ли мы
+      // 2. Луч вниз для проверки, находится ли камера на земле
       const rayDown = new Ray(this.camera.position, Vector3.Down(), 10);
       const pickInfo = this.scene.pickWithRay(rayDown, (mesh) => true);
-      // console.log("pickInfo", pickInfo);
-
-      // 3. Определяем, "на земле" ли
       let onGround = false;
       if (pickInfo?.hit && pickInfo.distance < 2.1) {
         onGround = true;
       }
 
-      // Запоминаем, "в прыжке" ли мы. Если onGround, то нет
+      // 3. Определяем, на земле ли камера
       this.isJumping = !onGround;
 
-      // console.log(`onGround = ${onGround}, isJumping = ${this.isJumping}, wantToJump = ${this.wantToJump}`);
-
-      // 4. Сам прыжок: если хотим прыгнуть и мы на земле
+      // 4. Если хотим прыгнуть и камера на земле, задаём импульс прыжка
       if (this.wantToJump && onGround) {
-        this.camera.cameraDirection.y += 0.5;
-        // console.log(">>> Прыгаем! cameraDirection.y =", this.camera.cameraDirection.y);
+        // Применяем вертикальный импульс для прыжка
+        this.camera.cameraDirection.y += 0.7;
       }
 
-      // 5. Сбрасываем флаг, чтобы не прыгать бесконечно
+      /* 
+         5. Если камера на земле, обнуляем вертикальную составляющую направления движения.
+         Это предотвращает накопление вертикального компонента при движении назад, если камера наклонена вниз.
+         При этом, если был инициирован прыжок, импульс уже добавлен.
+      */
+      if (onGround && !this.wantToJump) {
+        this.camera.cameraDirection.y = 0;
+      }
+
+      // 6. Сбрасываем флаг желания прыгнуть, чтобы прыжок не повторялся каждый кадр
       this.wantToJump = false;
     });
-}
-
-
+  }
 }
