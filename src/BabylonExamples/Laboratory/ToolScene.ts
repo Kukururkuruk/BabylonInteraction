@@ -78,7 +78,7 @@ export class ToolScene {
 
     // Камера, управление и т.д.
     this.CreateController();
-    this.utilities.AddScreenshotButton();
+    // this.utilities.combinedMethod();
 
     // Рендер-цикл
     this.engine.runRenderLoop(() => {
@@ -183,7 +183,7 @@ export class ToolScene {
       this.scene
     );
     this.camera.rotation = new Vector3(0.1571380321207439, -1.5679675730797253, 0);
-    this.camera.attachControl(this.canvas, true);
+    // this.camera.attachControl(this.canvas, true);
     this.camera.applyGravity = false;
     this.camera.checkCollisions = true;
     this.camera.ellipsoid = new Vector3(0.5, 0.75, 0.5);
@@ -389,7 +389,7 @@ export class ToolScene {
               isFront: false,
               onFrontCallback: () => {
                 const text = "Штангенциркуль — измерительный инструмент для точного измерения внутренних и внешних размеров, глубины и других параметров объектов. Состоит из неподвижной и передвижной челюсти с градуированной шкалой, обеспечивающей высокую точность измерений. Применяется в машиностроении, металлообработке и других технических областях.";
-                const videoName = "Rangefinder_Preview_1K.mp4"; // Название видеофайла в папке /models/
+                const videoName = "Caliper_1K.mp4"; // Название видеофайла в папке /models/
                 this.guiManager.DeleteDialogBox()
                 this.labFunManager.createFileBox(text, videoName);
               },
@@ -408,8 +408,8 @@ export class ToolScene {
         if (rulerMeshes.length > 0) {
           const rulerRoot = this.makeRootFromMeshes(rulerMeshes);
           if (rulerRoot) {
-            rulerRoot.position = new Vector3(-3.71, 0.89, 2.4);
-            rulerRoot.rotation = Vector3.Zero(); // К примеру
+            rulerRoot.position = new Vector3(-3.37, 0.89, 1.88);
+            rulerRoot.rotation = new Vector3(Math.PI, -Math.PI / 2, 0);
             rulerRoot.scaling = new Vector3(1, -1, 1);
             if (!rulerRoot.rotationQuaternion) {
               rulerRoot.rotationQuaternion = Quaternion.FromEulerAngles(
@@ -429,7 +429,7 @@ export class ToolScene {
               isFront: false,
               onFrontCallback: () => {
                 const text = "Линейка — измерительный инструмент для определения длины и расстояний на плоских поверхностях. Изготавливается из различных материалов, таких как металл, пластик или дерево, и имеет прецизионно нанесённую шкалу с единицами измерения (миллиметры, сантиметры). Используется в черчении, инженерии, образовании и других сферах.";
-                const videoName = "Rangefinder_Preview_1K.mp4"; // Название видеофайла в папке /models/
+                const videoName = "Ruler_1K.mp4"; // Название видеофайла в папке /models/
                 this.guiManager.DeleteDialogBox()
                 this.labFunManager.createFileBox(text, videoName);
               },
@@ -472,7 +472,7 @@ export class ToolScene {
               isFront: false,
               onFrontCallback: () => {
                 const text = "Рулетка — гибкий измерительный инструмент, представляющий собой стальную или пластиковую ленту с нанесённой шкалой, свернутую в карман или обмотку. Предназначена для измерения расстояний и размеров объектов в строительстве, архитектуре, пошиве одежды и других областях, требующих гибких и мобильных измерений.";
-                const videoName = "Rangefinder_Preview_1K.mp4"; // Название видеофайла в папке /models/
+                const videoName = "TapeMeasure_1K.mp4"; // Название видеофайла в папке /models/
                 this.guiManager.DeleteDialogBox()
                 this.labFunManager.createFileBox(text, videoName);
               },

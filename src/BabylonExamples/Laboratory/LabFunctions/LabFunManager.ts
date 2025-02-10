@@ -129,17 +129,16 @@ export class LabFunManager {
 
         loadingContainer.appendChild(skipButton);
 
-        let videoPlay = true;
-
+        let videoPlay = true; // true = видео воспроизводится
         skipButton.addEventListener("click", () => {
-            videoPlay = !videoPlay;
             if (videoPlay) {
                 videoElement.pause();
-                skipButton.textContent = "Пауза";
+                skipButton.textContent = "Старт";  // Если видео играло – теперь остановлено, кнопка показывает "Старт"
             } else {
                 videoElement.play();
-                skipButton.textContent = "Старт";
+                skipButton.textContent = "Пауза";  // Если видео было остановлено – запускаем его, кнопка меняется на "Пауза"
             }
+            videoPlay = !videoPlay; // Меняем состояние после выполнения нужного действия
         });
 
         // 5.5 Наконец, пытаемся запустить видео

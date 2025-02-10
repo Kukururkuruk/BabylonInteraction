@@ -23,12 +23,22 @@ import {
   DynamicTexture,
   ActionManager,
   VideoTexture,
-  Texture
+  Texture,
+  Animation
 } from "@babylonjs/core";
 import { ExecuteCodeAction } from "@babylonjs/core/Actions";
 
 import "@babylonjs/loaders";
-import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, ScrollViewer, TextBlock, TextWrapping } from "@babylonjs/gui";
+import {
+  AdvancedDynamicTexture,
+  Button,
+  Control,
+  Image,
+  Rectangle,
+  ScrollViewer,
+  TextBlock,
+  TextWrapping
+} from "@babylonjs/gui";
 import { TriggerManager2 } from "../FunctionComponents/TriggerManager2";
 import { ModelLoader } from "../BaseComponents/ModelLoader";
 import { GUIManager } from "../FunctionComponents/GUIManager";
@@ -59,7 +69,7 @@ export class DemoScene {
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
   private utilities: BabylonUtilities;
-  private labFunManager: LabFunManager
+  private labFunManager: LabFunManager;
   private currentDialogBox: Rectangle | null = null;   // GUI-контейнер внутри Babylon
   private loadingContainer: HTMLDivElement | null = null; // DOM-элемент <div> c <video>
 
@@ -74,9 +84,11 @@ export class DemoScene {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
 
-  // NEW: Флаги, чтобы не запускать одно и то же повторно
+  // Флаги, чтобы не запускать одно и то же повторно
   private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
   private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
+
+  private isDoorOpen: boolean = false; // Флаг состояния двери (открыта/закрыта)
 
   private rangefinderMeshes: AbstractMesh[] = [];
 
@@ -96,7 +108,7 @@ export class DemoScene {
     this.initializeScene();
 
     this.CreateController();
-    this.utilities.AddScreenshotButton();
+    this.utilities.AddCameraPositionButton();
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -126,9 +138,9 @@ export class DemoScene {
   CreateController(): void {
     this.camera = new FreeCamera("camera", new Vector3(0, 1.5, 0), this.scene);
     this.camera.attachControl(this.canvas, true);
-    this.camera.applyGravity = false;
+    this.camera.applyGravity = true;
     this.camera.checkCollisions = true;
-    this.camera.ellipsoid = new Vector3(0.5, 0.75, 0.5);
+    this.camera.ellipsoid = new Vector3(0.3, 0.7, 0.3);
     this.camera.minZ = 0.45;
     this.camera.speed = 0.55;
     this.camera.inertia = 0.7;
@@ -175,7 +187,7 @@ export class DemoScene {
       // Пример добавления направленного света (опционально)
       const light = new DirectionalLight("dirLight", new Vector3(-1, -1, -1), this.scene);
       light.position = new Vector3(-20, 20, 20);
-      light.intensity = 2;
+      light.intensity = 0;
   
       // 1) Загружаем ВСЕ нужные модели параллельно (включая Rangefinder_LP)
       await Promise.all([
@@ -194,7 +206,7 @@ export class DemoScene {
       glowLayer.intensity = 1;
   
       lab.forEach((mesh) => {
-        mesh.checkCollisions = false;
+        mesh.checkCollisions = true;
         // Пример: подсветка конкретного меша (стол)
         if (mesh.name === "SM_0_Tools_Desk" && mesh instanceof Mesh) {
           const material = mesh.material;
@@ -211,27 +223,16 @@ export class DemoScene {
       });
   
       // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
-      const meshWall = lab.find((m) => m.name === "SM_0_Wall_R");
+      const meshWall = lab.find((m) => m.name === "SM_Door");
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
   
       if (meshWall) {
         meshWall.isPickable = true;
         meshWall.actionManager = new ActionManager(this.scene);
-        meshWall.actionManager.hoverCursor = "default"; // убираем курсор-палец
   
         meshWall.actionManager.registerAction(
           new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            // Если уже запущен бетон-триггер - ничего не делаем
-            if (this.isBetonTriggered) return;
-  
-            this.isBetonTriggered = true;
-            this.BetonTrigger();
-  
-            // Отключаем стол
-            if (meshDesk) {
-              meshDesk.isPickable = false;
-              meshDesk.actionManager = null;
-            }
+            this.toggleDoorState(meshWall as AbstractMesh);
           })
         );
       }
@@ -247,12 +248,6 @@ export class DemoScene {
   
             this.isToolDeskClicked = true;
             this.initToolHandling();
-  
-            // Отключаем стену
-            if (meshWall) {
-              meshWall.isPickable = false;
-              meshWall.actionManager = null;
-            }
           })
         );
       }
@@ -291,7 +286,7 @@ export class DemoScene {
             this.guiManager.DeleteDialogBox();
             this.labFunManager.createFileBox(text, videoName);
           },
-          frontPosition: new Vector3(-0.3, 0, 0.9),
+          frontPosition: new Vector3(-0.1, 0, 0.9),
           frontRotation: new Vector3(Math.PI, Math.PI / 2, 0),
         };
         console.log("Модели 'dist' успешно загружены (CreateEnvironment).");
@@ -370,7 +365,6 @@ export class DemoScene {
           }
         }
         console.log(tapeMeshes);
-        
       }
   
       // --- 6) Rangefinder_LP уже загружен (т.к. через Promise.all) ---
@@ -382,9 +376,77 @@ export class DemoScene {
       console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
   
       console.log("Все модели успешно загружены.");
+      
+      // Создаём зону через отдельный метод
+      this.setupZoneTriggerZone();
+      
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
+  }
+
+  /**
+   * Создаёт триггер-зону с координатами x=-3.7919586757716925, y=1.7547360114935204, z=-9.976929779260447 и радиусом 5.
+   * При входе в зону выполняется логика, аналогичная клику по meshWall (за исключением вызова toggleDoorState),
+   * а при выходе из зоны завершается измерительный режим (код, ранее привязанный к кнопке "Завершить").
+   */
+  private setupZoneTriggerZone(): void {
+    const zonePosition = new Vector3(-3.7919586757716925, 1.7547360114935204, -11);
+    this.triggerManager.setupZoneTrigger(
+      zonePosition,
+      // onEnter
+      () => {
+        if (this.isBetonTriggered) return;
+        this.isBetonTriggered = true;
+        const enterDialog = this.dialogPage.addText("Измерение начато");
+        this.guiManager.CreateDialogBox([enterDialog]);
+        this.BetonTrigger();
+  
+        // Отключаем стол
+        const labMeshes = this.modelLoader.getMeshes("lab") || [];
+        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
+        if (meshDesk) {
+          meshDesk.isPickable = false;
+          meshDesk.actionManager = null;
+        }
+      },
+      // onExit
+      () => {
+        this.isBetonTriggered = false;
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
+        this.triggerManager.disableDistanceMeasurement();
+        this.triggerManager.exitDisLaserMode2();
+        this.rangefinderMeshes.forEach((mesh) => {
+          mesh.position = new Vector3(0, -1, 0);
+        });
+
+      const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+      this.guiManager.CreateDialogBox([page4]);
+
+      // --------------------------------
+      // Возвращаем стол обратно в работу
+      // --------------------------------
+      const labMeshes = this.modelLoader.getMeshes("lab") || [];
+      const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
+      if (meshDesk) {
+        meshDesk.isPickable = true;
+        meshDesk.actionManager = new ActionManager(this.scene);
+        meshDesk.actionManager.hoverCursor = "default";
+
+        meshDesk.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            if (!this.isToolDeskClicked) {
+              this.isToolDeskClicked = true;
+              this.initToolHandling();
+            }
+          })
+        );
+      }
+
+      },
+      12
+    );
   }
 
   /**
@@ -525,7 +587,7 @@ export class DemoScene {
   }
 
   private showToolSelectionDialog(): void {
-    this.labFunManager.removeFileBox()
+    this.labFunManager.removeFileBox();
     const startPage = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
     const endPage = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
       const page4 = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
@@ -535,31 +597,6 @@ export class DemoScene {
       // Удаляем обработчик кликов
       this.scene.onPointerDown = undefined;
 
-      // ------------------------------------------------------
-      // Возвращаем стену в кликабельное состояние (если нужно)
-      // ------------------------------------------------------
-      const labMeshes = this.modelLoader.getMeshes("lab") || [];
-      const meshWall = labMeshes.find((m) => m.name === "SM_0_Wall_R");
-      if (meshWall) {
-        meshWall.isPickable = true;
-        meshWall.actionManager = new ActionManager(this.scene);
-        meshWall.actionManager.hoverCursor = "default";
-        meshWall.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            if (!this.isBetonTriggered) {
-              this.isBetonTriggered = true;
-              this.BetonTrigger();
-
-              // Отключаем стол
-              const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
-              if (meshDesk) {
-                meshDesk.isPickable = false;
-                meshDesk.actionManager = null;
-              }
-            }
-          })
-        );
-      }
     });
     this.guiManager.CreateDialogBox([startPage, endPage]);
   }
@@ -580,6 +617,7 @@ export class DemoScene {
       mesh.parent = this.camera;
       const offset = new Vector3(-0.7, -0.5, 1.1);
       mesh.position = offset;
+      mesh.renderingGroupId = 1; // отрисовывается после объектов группы 0
     });
   
     const thirdMesh = this.rangefinderMeshes[2];
@@ -596,7 +634,6 @@ export class DemoScene {
   
     const font = "bold 90px Arial";
     const ctx = dynamicTexture.getContext();
-    ctx.font = font;
     const maxTextWidth = dynamicTexture.getSize().width - 100;
   
     function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
@@ -651,6 +688,7 @@ export class DemoScene {
     textPlane.rotation.y = -Math.PI / 2;
     textPlane.scaling = new Vector3(-1, 1, 1);
     textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0);
+    textPlane.renderingGroupId = 1;
   
     console.log("Rangefinder_LP.glb успешно инициализирован в BetonTrigger.");
   
@@ -663,47 +701,146 @@ export class DemoScene {
     this.triggerManager.distanceMode();
     this.triggerManager.enableDistanceMeasurement();
   
-    // Кнопка "Завершить"
-    const page4 = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
-      const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-      this.guiManager.CreateDialogBox([page4]);
-      this.triggerManager.disableDistanceMeasurement();
-      this.triggerManager.exitDisLaserMode2();
-      this.isBetonTriggered = false;
-      this.rangefinderMeshes.forEach((mesh) => {
-        mesh.position = new Vector3(0, -1, 0);
-      });
-
-      // --------------------------------
-      // Возвращаем стол обратно в работу
-      // --------------------------------
-      const labMeshes = this.modelLoader.getMeshes("lab") || [];
-      const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
-      if (meshDesk) {
-        meshDesk.isPickable = true;
-        meshDesk.actionManager = new ActionManager(this.scene);
-        meshDesk.actionManager.hoverCursor = "default";
-
-        meshDesk.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            if (!this.isToolDeskClicked) {
-              this.isToolDeskClicked = true;
-              this.initToolHandling();
-
-              // Отключаем стену
-              const meshWall = labMeshes.find((m) => m.name === "SM_0_Wall_R");
-              if (meshWall) {
-                meshWall.isPickable = false;
-                meshWall.actionManager = null;
-              }
-            }
-          })
-        );
-      }
-    });
-  
-    this.guiManager.CreateDialogBox([page2, page3, page4]);
+    this.guiManager.CreateDialogBox([page2, page3]);
   }
+
+  toggleDoorState(doorMesh: AbstractMesh): void {
+    if (this.isDoorOpen) {
+      this.closeDoor(doorMesh);
+    } else {
+      this.openDoor(doorMesh);
+    }
+  }
+
+// Предположим, что этот флаг объявлен в классе
+private isDoorAnimating: boolean = false;
+
+openDoor(doorMesh: AbstractMesh): void {
+  // Если анимация уже идет — выходим
+  if (this.isDoorAnimating) {
+    return;
+  }
+  this.isDoorAnimating = true;
+  this.isDoorOpen = true;
+
+  // Найти ручку двери
+  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
+  if (!doorHandleMesh) {
+    console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
+  }
+
+  // Создаем анимацию для двери
+  const doorAnimation = new Animation(
+    "OpenDoor",
+    "rotation.y",
+    30,
+    Animation.ANIMATIONTYPE_FLOAT,
+    Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const doorKeys = [
+    { frame: 0, value: doorMesh.rotation.y },
+    { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 },
+  ];
+  doorAnimation.setKeys(doorKeys);
+  doorMesh.animations = [];
+  doorMesh.animations.push(doorAnimation);
+
+  // Создаем анимацию для ручки двери
+  if (doorHandleMesh) {
+    const handleAnimation = new Animation(
+      "MoveHandle",
+      "position.y",
+      30,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+
+    const handleKeys = [
+      { frame: 0, value: doorHandleMesh.position.y },
+      { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
+      { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
+    ];
+    handleAnimation.setKeys(handleKeys);
+    doorHandleMesh.animations = [];
+    doorHandleMesh.animations.push(handleAnimation);
+  }
+
+  // Запускаем анимацию двери с callback, который сбрасывает флаг по окончании
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+    this.isDoorAnimating = false;
+    console.log("Анимация открытия завершена.");
+  });
+  if (doorHandleMesh) {
+    this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
+  }
+
+  console.log("Дверь открывается.");
+}
+
+closeDoor(doorMesh: AbstractMesh): void {
+  // Если анимация уже идет — выходим
+  if (this.isDoorAnimating) {
+    return;
+  }
+  this.isDoorAnimating = true;
+  this.isDoorOpen = false;
+
+  // Найти ручку двери
+  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
+  if (!doorHandleMesh) {
+    console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
+  }
+
+  // Создаем анимацию для двери
+  const doorAnimation = new Animation(
+    "CloseDoor",
+    "rotation.y",
+    30,
+    Animation.ANIMATIONTYPE_FLOAT,
+    Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const doorKeys = [
+    { frame: 0, value: doorMesh.rotation.y },
+    { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 },
+  ];
+  doorAnimation.setKeys(doorKeys);
+  doorMesh.animations = [];
+  doorMesh.animations.push(doorAnimation);
+
+  // Создаем анимацию для ручки двери
+  if (doorHandleMesh) {
+    const handleAnimation = new Animation(
+      "MoveHandle",
+      "position.y",
+      30,
+      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONLOOPMODE_CONSTANT
+    );
+
+    const handleKeys = [
+      { frame: 0, value: doorHandleMesh.position.y },
+      { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
+      { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
+    ];
+    handleAnimation.setKeys(handleKeys);
+    doorHandleMesh.animations = [];
+    doorHandleMesh.animations.push(handleAnimation);
+  }
+
+  // Запускаем анимацию двери с callback, который сбрасывает флаг по окончании
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+    this.isDoorAnimating = false;
+    console.log("Анимация закрытия завершена.");
+  });
+  if (doorHandleMesh) {
+    this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
+  }
+
+  console.log("Дверь закрывается.");
+}
+
 
   public async initializeScene(): Promise<void> {
     try {
@@ -712,7 +849,6 @@ export class DemoScene {
       this.engine.hideLoadingUI();
       const page4 = this.dialogPage.addText("Сцена загружена. Можете кликать на стену или стол.");
       this.guiManager.CreateDialogBox([page4]);
-
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
       this.engine.hideLoadingUI();
@@ -726,8 +862,3 @@ export class DemoScene {
     },
   };
 }
-
-
-
-  
-  

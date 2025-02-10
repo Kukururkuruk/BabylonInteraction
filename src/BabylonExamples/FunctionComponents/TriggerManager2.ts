@@ -318,25 +318,26 @@ export class TriggerManager2 {
     // Обработка нажатия клавиши Q
     let isZoomedIn = false;
     this.scene.onKeyboardObservable.add((kbInfo) => {
-        if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
-            if (kbInfo.event.key === "q" || kbInfo.event.key === "Q") {
-                if (isZoomedIn) {
-                    // Если камера уже уменьшена, восстанавливаем оригинальный FOV
-                    camera.fov = originalFov;
-                } else {
-                    // Уменьшаем FOV камеры
-                    camera.fov /= 2;
-                }
-                // Переключаем флаг
-                isZoomedIn = !isZoomedIn;
-            }
+      if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+        const key = kbInfo.event.key.toLowerCase();
+        if (/q|й/.test(key)) {
+          // Переключатель для FOV
+          if (isZoomedIn) {
+            camera.fov = originalFov;
+          } else {
+            camera.fov /= 2;
+          }
+          isZoomedIn = !isZoomedIn;
         }
+      }
     });
 
 
-        // Ограничение угла поворота камеры по оси Y (вправо-влево)
-        const maxRotation = Math.PI;  // Максимальный угол 90 градусов
-        const minRotation = 0; // Минимальный угол -90 градусов
+    const fiveDegreesInRadians = 5 * Math.PI / 180;
+    const initialRotation = Math.PI / 2;
+    
+    const minRotation = initialRotation - fiveDegreesInRadians;
+    const maxRotation = initialRotation + fiveDegreesInRadians;
     
         this.scene.onBeforeRenderObservable.add(() => {
             // Ограничиваем вращение камеры по оси Y
@@ -421,9 +422,10 @@ export class TriggerManager2 {
             const euler = camera.rotation;
             const angleX = Tools.ToDegrees(euler.x);
             const angleY = Tools.ToDegrees(euler.y);
+            const displayedAngleX = -angleX; // инвертируем знак для удобства отображения
             eventEmitter.emit(
                 "updateDistanceAngleText",
-                `Угол X: ${angleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние:${distance.toFixed(2)} м`
+                `Угол X: ${displayedAngleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние:${distance.toFixed(2)} м`
             );
         } else {
             this.intersectionPoint.isVisible = false;
@@ -434,7 +436,7 @@ export class TriggerManager2 {
         }
     });
 
-        const page3 = this.dialogPage.createNumericInputPage("Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже.", "Штрина проезжей части", 11,11.20,() => {
+        const page3 = this.dialogPage.createNumericInputPage("Для управления камерой используйте мышь. Зажмите левую кнопку мыши и двигайте в нужном направлении. Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже. Чтобы приблизить или отдалить камеру нажмите Q/Й", "Штрина проезжей части", 11,11.20,() => {
         this.removeAdditionalSpheres();
         this.disableCameraMovement();
 
@@ -1204,7 +1206,7 @@ enableDistanceMeasurement(): void {
           SceneLoader.ImportMesh(
             "",
             "./models/",
-            "Rangefinder_LP.glb", // <-- Замените на свою модель
+            "Rangefinder_LP.gltf", // <-- Замените на свою модель
             this.scene,
             (meshes) => {
               if (meshes.length === 0) {
