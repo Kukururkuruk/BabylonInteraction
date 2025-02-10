@@ -157,6 +157,17 @@ export class ModelLoader {
       mesh.checkCollisions = true;
     });
 
+    const transitionMeshes = questionMapMeshes.filter((mesh) =>
+      mesh.name.includes("TransitionPlate8M")
+    );
+    if (transitionMeshes) {
+      transitionMeshes.forEach((mesh) => {
+        mesh.checkCollisions = false;
+      });
+    } else {
+      console.warn(`Меш с именем "${transitionMeshes}" не найден для отключения коллизий.`);
+    }
+
     // Отключаем коллизии для некоторых
     this.nonCollisionMeshNames.forEach((name) => {
       const mesh = this.scene.getMeshByName(name);
@@ -666,6 +677,18 @@ public async loadTapeMeasureModel(): Promise<void> {
       mapMeshes.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
+
+      const transitionMeshes = mapMeshes.filter((mesh) =>
+        mesh.name.includes("TransitionPlate8M")
+      );
+      if (transitionMeshes) {
+        transitionMeshes.forEach((mesh) => {
+          mesh.checkCollisions = false;
+        });
+      } else {
+        console.warn(`Меш с именем "${transitionMeshes}" не найден для отключения коллизий.`);
+      }
+
 
       // Отключаем коллизии и уменьшаем видимость для определённых мешей
       this.nonCollisionMeshNames.forEach((name) => {
