@@ -87,6 +87,7 @@ export class RulerScene {
     });
     this.CreateController();
     this.Page();
+    
     this.originalPosition = new BABYLON.Vector3(0, 0, 0); // Задаем начальное значение
     // Инициализация TabletManager
     //this.tabletManager = new TabletManager();
@@ -142,612 +143,208 @@ export class RulerScene {
     // Увеличиваем поле зрения (FOV) в 2 раза
     this.camera.fov /= 2;
     // Добавляем обработчик нажатия клавиши Esc
-    this.addEscapeKeyListener();
+
 }
 
-private async CreateEnvironment(): Promise<void> { 
+private async CreateEnvironment(): Promise<void> {
   try {
-    // Загрузка карты
-    const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
-    map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-    });
+    const map = await this.loadMap();
+    const boundaryMeshes = this.findBoundaryMeshes(map);
+    if (boundaryMeshes.length === 0) return;
 
-    this.setupWholeMeshes(map);
+    const { minBoundary, maxBoundary } = this.calculateBoundaries(boundaryMeshes);
 
-    // Поиск ограничивающих мешей
-    const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
-    if (boundaryMeshes.length === 0) {
-        console.error("Ошибка: ограничивающие меши не найдены.");
-        return;
-    }
-    console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
+    const meshes = await this.loadTapeMeasure();
+    if (meshes.length === 0) return;
 
-    // Вычисление объединённых границ
-    const minBoundary = new BABYLON.Vector3(
-        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.x)),
-        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.y)),
-        Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.z))
-    );
-
-    const maxBoundary = new BABYLON.Vector3(
-        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.x)),
-        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.y)),
-        Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.z))
-    );
-
-    console.log("Границы движения:", { minBoundary, maxBoundary });
-
-    // Загрузка модели штангенциркуля
-    console.log("Загрузка модели штангенциркуля начата...");
-    const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
-    if (this.handModel) {
-        this.handModel.checkCollisions = true;
-    }
-    console.log("Модели после загрузки:", meshes);
-
-    if (meshes.length > 0) {
-        this.handModel = meshes[0] as Mesh;
-
-        // Сохраняем исходные параметры
-        this.tools['originalHandModelPosition'] = this.handModel.position.clone();
-        this.tools['originalHandModelRotation'] = this.handModel.rotation.clone();
-
-        // Массив дочерних элементов
-        const childMeshesNames = [
-            "SM_10cm", "SM_20cm","SM_30cm","SM_40cm","SM_50cm",
-            //"SM_50cm","SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
-        ];
-
-        // Массив для хранения дочерних объектов Mesh
-        const childMeshes: Mesh[] = [];
-
-        // Перебираем дочерние элементы
-        childMeshesNames.forEach(childName => {
-            const childMesh = meshes.find(mesh => mesh.name === childName) as Mesh;
-
-            if (!childMesh) {
-                console.warn(`Ошибка: дочерний элемент ${childName} не найден.`);
-            } else {
-                console.log(`Дочерний элемент ${childName} найден:`, childMesh);
-
-                // Сохраняем параметры дочерних элементов
-                this.tools[`${childName}Model`] = {
-                    mesh: childMesh,
-                    originalPosition: childMesh.position.clone(),
-                    originalRotation: childMesh.rotation.clone(),
-                };
-
-                childMeshes.push(childMesh);
-            }
-        });
-
-        // Включаем масштабирование для дочерних элементов 
-        this.enableChildScaling(childMeshes, this.handModel);         
-        this.enableVerticalScaling(childMeshes, this.handModel);
-        const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
-        if (sm_10cm) {
-            sm_10cm.position.x += 0;  // Сдвигаем меш на 0.1 по оси X
-            console.log("Новая позиция SM_10cm: ", sm_10cm.position);
-        }
-
-        // Устанавливаем параметры для основной модели
-        this.handModel.position = new Vector3(13, 6.41004, 4.95);
-        this.handModel.scaling = new Vector3(-1, -1, -1);
-        this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
-        this.handModel.isVisible = true;
-
-        console.log("Модель штангенциркуля загружена и параметры установлены.");
-
-        // Привязка модели к курсору мыши
-        this.scene.onPointerObservable.add((event) => {
-            if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && this.handModel) {
-                const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
-                if (pickInfo.hit && this.handModel) {
-                    this.handModel.position = pickInfo.pickedPoint!;
-                }
-            }
-        });
-        
-    } else {
-        console.error("Ошибка: модель штангенциркуля не найдена в файле.");
-    }
-
-    /*// Создание кликабельных примитивов (мешей) серого цвета
-    const createClickableMesh = (position: BABYLON.Vector3): BABYLON.Mesh => {
-      // Измените размеры коробки для создания прямоугольной формы
-      const mesh = BABYLON.MeshBuilder.CreateBox("clickableMesh", { width: 0.2, height: 0.09, depth: 0.02 }, this.scene);
-      mesh.position = position;
-    
-      // Создание стандартного материала
-      const material = new BABYLON.StandardMaterial("grayMaterial", this.scene);
-      material.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);  // Серый цвет
-      mesh.material = material;
-    
-      // Обработчик клика на меш
-      mesh.actionManager = new BABYLON.ActionManager(this.scene);
-      mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnPickTrigger, (event) => {
-        console.log("Меш был кликнут!", mesh.position);
-        // Здесь можно добавить дополнительную логику, например, отправить данные на сервер или что-то другое
-      }));
-    
-      return mesh;
-    };
-
-    // Создание двух кликабельных мешей в заданных координатах
-    const mesh1 = createClickableMesh(new BABYLON.Vector3(12.6, 6.45, 5));
-    const mesh2 = createClickableMesh(new BABYLON.Vector3(12.44, 6.16411, 5.33));
-
-    console.log("Кликабельные меши созданы.");
-*/
-    // Плавное движение модели
-    let targetPosition: BABYLON.Vector3 | null = null;
-    const smoothingFactor = 0.1;
-    let isFixed = false;
-    let lastPosition: BABYLON.Vector3 | null = null;
-    let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero();
-
-    this.scene.onPointerObservable.add((event) => {
-        if (!this.handModel) return;
-
-        if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && !isFixed) {
-            const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
-            if (pickInfo.hit && pickInfo.pickedPoint) {
-                let newPosition = pickInfo.pickedPoint.clone();
-
-                // Ограничиваем движение в пределах границ
-                newPosition.x = Math.max(minBoundary.x, Math.min(maxBoundary.x, newPosition.x));
-                newPosition.y = Math.max(minBoundary.y, Math.min(maxBoundary.y, newPosition.y));
-                newPosition.z = Math.max(minBoundary.z, Math.min(maxBoundary.z, newPosition.z));
-
-                targetPosition = newPosition;
-            }
-        }
-
-        if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-            isFixed = true;
-            lastPosition = this.handModel.position.clone();
-        }
-    });
-
-    this.scene.onKeyboardObservable.add((event) => {
-        if (event.type === BABYLON.KeyboardEventTypes.KEYDOWN && event.event.key === "Escape") {
-            isFixed = false; // Разрешаем перемещение при нажатии Escape
-        }
-    });
-
-    // Обновляем позицию объекта
-    this.scene.onBeforeRenderObservable.add(() => {
-        if (this.handModel && targetPosition) {
-            currentPosition = BABYLON.Vector3.Lerp(currentPosition, targetPosition, smoothingFactor);
-            this.handModel.position = currentPosition;
-        }
-    });
-      // Создание полупрозрачной неактивной модели
-    await this.createTransparentModel(new BABYLON.Vector3(12.84, 6.16411, 5.31));
-    await this.createTransparentModel(new BABYLON.Vector3(12.84, 6.38411, 4.96));
-
-
+    this.handModel = meshes[0] as BABYLON.Mesh;
+    this.attachHandModel();
+    this.bindModelToCursor();
+    this.smoothMovement(minBoundary, maxBoundary);
+    this.bindRotationKeys(); // Вызовите метод здесь
   } catch (error) {
     console.error("Ошибка при загрузке окружения:", error);
   }
-}
-
-private async createTransparentModel(position: BABYLON.Vector3): Promise<void> {
-  try {
-    // Загружаем модель
-    const { meshes } = await BABYLON.SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP.gltf", this.scene);
-
-    if (meshes.length > 0) {
-      const modelCopy = meshes[0].clone("transparentModelCopy", null);
-
-      if (modelCopy) {
-        modelCopy.position = position;
-
-         // Если это конкретная позиция, поворачиваем на 90 градусов
-    if (position.equals(new BABYLON.Vector3(12.84, 6.16411, 5.31))) {
-      modelCopy.rotation = new BABYLON.Vector3(Math.PI / 2, Math.PI / 2, 0);
-  }
-
-   // Если это конкретная позиция, поворачиваем на 90 градусов
-   if (position.equals(new BABYLON.Vector3(12.84, 6.38411, 4.96))) {
-    //modelCopy.rotation = new BABYLON.Vector3(0, 0, 0);
-}
-   
-
-        // Применяем прозрачность ко всем подмешам
-        modelCopy.getChildMeshes().forEach((childMesh) => {
-          if (childMesh instanceof BABYLON.Mesh) {
-            let originalMaterial = childMesh.material;
-
-            if (!originalMaterial) {
-              // Если материала нет, создаем новый стандартный материал
-              originalMaterial = new BABYLON.StandardMaterial(`autoMaterial_${childMesh.name}`, this.scene);
-              childMesh.material = originalMaterial;
-            }
-
-            const transparentMaterial = originalMaterial.clone(`transparent_${originalMaterial.name}`);
-            if (transparentMaterial) {
-              transparentMaterial.alpha = 0.3; // 50% прозрачности
-
-              if (transparentMaterial instanceof BABYLON.PBRMaterial) {
-                transparentMaterial.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-              }
-
-              childMesh.material = transparentMaterial;
-            } else {
-              console.warn(`Не удалось клонировать материал для меша ${childMesh.name}`);
-            }
-          }
-        });
-
-        modelCopy.isPickable = false;
-        modelCopy.setEnabled(true);
-
-        console.log("Создана полупрозрачная модель в своих цветах", position);
-      } else {
-        console.error("Ошибка: не удалось клонировать модель.");
-      }
-    } else {
-      console.error("Ошибка: модель SM_TapeMeasure_LP не загружена.");
-    }
-    
-  } catch (error) {
-    console.error("Ошибка при создании полупрозрачной модели:", error);
-  }
-}
-
-
-
-
-private enableChildScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
-  if (this.isVerticalMeasurement || !this.isChildScalingEnabled) return; // Если вертикальное измерение или метод деактивирован, не выполняем
-
-  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
-
-  const moveMeshes = (delta: number) => {
-    const firstMesh1 = childMeshes[0];
-    //console.log(`🔵 Проверяем позицию первого меша: x = ${firstMesh.position.x}`);
-
-    // Если мы достигли порога (0.42), прекращаем движение и переключаем камеру
-    if (firstMesh1.position.x >= 0.42) {
-      this.isMoving = false;
-      if (this.moveInterval !== null) {
-        window.clearInterval(this.moveInterval);
-        this.moveInterval = null;
-      }
-
-      // Переключаем камеру на горизонтальное положение
-      if (!this.isVerticalMeasurement) {
-        console.log("Переключаем камеру на горизонтальное положение.");
-        this.zoomCamera();
-      }
-
-      return;
-    }
-
-    // Перемещаем все меши с учетом пороговых значений
-    for (let i = 0; i < childMeshes.length; i++) {
-      const childMesh = childMeshes[i];
-
-      if (i === 0) {
-        childMesh.position.x += delta;
-        //console.log(`Перемещаем первый меш на: ${delta}`);
-      } else {
-        let threshold = 0;
-        if (i === 1) threshold = 0.0485;
-        else if (i === 2) threshold = 0.144;
-        else if (i === 3) threshold = 0.240;
-        else if (i === 4) threshold = 0.336;
-        else if (i === 5) threshold = 0.432;
-        else if (i === 6) threshold = 0.530;
-        else if (i === 7) threshold = 0.638;
-        else if (i === 8) threshold = 0.738;
-        else if (i === 9) threshold = 0.838;
-        else if (i === 10) threshold = 0.938;
-
-        if (firstMesh1.position.x >= threshold) {
-          childMesh.position.x += delta;
-          //console.log(`Перемещаем меш ${i} на: ${delta}`);
-        }
-      }
-
-      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;
-    }
-  };
-
-  this.scene.onPointerObservable.add((event: BABYLON.PointerInfo) => { 
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-      const pointerEvent = event.event as PointerEvent;  // Используем event вместо pointerEvent
-
-      // Проверяем горизонтальное движение, используя previousX
-      const isHorizontal = Math.abs(pointerEvent.clientX - this.previousX) > 10; // Если движение по оси X значительное
-
-      //console.log(`🔵 Событие мыши: ${event.type}, isHorizontal = ${isHorizontal}`);
-
-      if (isHorizontal && !this.isMoving) {
-        this.isMoving = true;
-        //console.log("🔵 Запускаем setInterval для moveMeshes!");
-        this.moveInterval = window.setInterval(() => moveMeshes(0.003), 20);
-      }
-
-      // Сохраняем текущую позицию X
-      this.previousX = pointerEvent.clientX;
-    }
   
-    /*if (event.type === BABYLON.PointerEventTypes.POINTERUP) {
-      this.isMoving = false;
-      if (this.moveInterval !== null) {
-        window.clearInterval(this.moveInterval);
-        this.moveInterval = null;
-      }
-      //console.log("⏸ Остановка движения (POINTERUP)");
-    }*/
+}
+
+private async loadMap(): Promise<BABYLON.Mesh[]> {
+  const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+  const map = meshes as BABYLON.Mesh[]; // Приведение типа
+  map.forEach((mesh) => {
+    mesh.checkCollisions = true;
   });
+  this.setupWholeMeshes(map);
+  return map;
+}
 
-  window.addEventListener('keydown', (e) => {
-    console.log(`Клавиша нажата: ${e.key}`);
-    
-    if (e.key === 'Escape') {
-      console.log("Нажата Escape: сбрасываем позиции мешей");
-      childMeshes.forEach((mesh, i) => {
-        console.log(`Возвращаем ${mesh.name} в ${originalPositions[i]}`);
-        mesh.position.copyFrom(originalPositions[i]);
-      });
-  
-      this.isMoving = false;
-      if (this.moveInterval !== null) {
-        window.clearInterval(this.moveInterval);
-        this.moveInterval = null;
-      }
-    }
+private findBoundaryMeshes(map: BABYLON.Mesh[]): BABYLON.Mesh[] {
+  const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
+  if (boundaryMeshes.length === 0) {
+    console.error("Ошибка: ограничивающие меши не найдены.");
+  } else {
+    console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
+  }
+  return boundaryMeshes;
+}
 
-    if (e.key === 'q') {
-      console.log("Нажата клавиша 'q'");
-      this.isChildScalingEnabled = !this.isChildScalingEnabled; // Переключаем флаг
+private calculateBoundaries(boundaryMeshes: BABYLON.Mesh[]): { minBoundary: BABYLON.Vector3, maxBoundary: BABYLON.Vector3 } {
+  const minBoundary = new BABYLON.Vector3(
+    Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.x)),
+    Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.y)),
+    Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.z))
+  );
 
-      console.log(`Метод enableChildScaling теперь ${this.isChildScalingEnabled ? 'активен' : 'деактивирован'}`);
+  const maxBoundary = new BABYLON.Vector3(
+    Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.x)),
+    Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.y)),
+    Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.z))
+  );
 
-      if (!rulerModel) {
-        console.error("Ошибка: rulerModel не найден!");
-        return;
-      }
+  console.log("Границы движения:", { minBoundary, maxBoundary });
 
-      console.log(`Текущее положение модели: rotation = ${rulerModel.rotation.toString()}`);
+  return { minBoundary, maxBoundary };
+}
 
-      // Переключаем положение модели
-      if (this.isVerticalMeasurement) {
-        rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2); // Возвращаем горизонтальное положение
-        this.isVerticalMeasurement = false;
-        console.log("Модель повернута в горизонтальное положение.");
+private async loadTapeMeasure(): Promise<BABYLON.Mesh[]> {
+  const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP_MOD_3.gltf", this.scene);
+  const tapeMeasureMeshes = meshes as BABYLON.Mesh[]; // Приведение типа
+  console.log("Все меши после загрузки:", tapeMeasureMeshes.map(mesh => mesh.name));
+  return tapeMeasureMeshes;
+}
+
+
+private attachHandModel(): void {
+  const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
+  const sm_TapeMeasure_LP_MOD_3 = this.scene.meshes.find(mesh => mesh.name.includes("CorpTapeMeasure")) as BABYLON.Mesh;
+  // Выводим все меши в сцене для отладки
+  console.log("Все меши в сцене:", this.scene.meshes.map(mesh => mesh.name));
+
+  if (!sm_TapeMeasure_LP_MOD_3) {
+    console.warn("Меш SM_CorpTapeMeasure не найден, пробуем ещё раз...");
+    setTimeout(() => {
+      const retryMesh = this.scene.getMeshByName("SM_CorpTapeMeasure") as BABYLON.Mesh;
+      if (retryMesh) {
+        retryMesh.setParent(sm_10cm);
+        console.log("SM_CorpTapeMeasure теперь является дочерним элементом SM_10cm.");
       } else {
-        rulerModel.rotation = new BABYLON.Vector3(0, 0, Math.PI / 2); // Возвращаем вертикальное положение
-        this.isVerticalMeasurement = true;
-        console.log("Модель повернута в вертикальное положение.");
+        console.error("Меш SM_CorpTapeMeasure всё ещё не найден.");
       }
+    }, 500);
+  }
+}
 
-      // Лог после изменения
-      console.log(`После изменения: isVerticalMeasurement = ${this.isVerticalMeasurement}`);
-      console.log(`Положение модели: rotation = ${rulerModel.rotation.toString()}`);
 
-      // Выполняем соответствующую функцию в зависимости от положения модели
-      if (this.isVerticalMeasurement) {
-        this.enableVerticalScaling(childMeshes, rulerModel);  // Вертикальное измерение
-      } else {
-        this.enableChildScaling(childMeshes, rulerModel);  // Горизонтальное измерение
+private bindModelToCursor(): void {
+  this.scene.onPointerObservable.add((event) => {
+    if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && this.handModel) {
+      const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+      if (pickInfo.hit && this.handModel) {
+        this.handModel.position = pickInfo.pickedPoint!;
       }
     }
   });
 }
 
-
-private enableVerticalScaling(childMeshes: BABYLON.Mesh[], rulerModel: BABYLON.Mesh): void {
-  if (!this.isVerticalMeasurement) return; // Если вертикальное измерение не активно, не выполняем
-
-  let isMoving = false;
-  let moveInterval: number | null = null;
-  const originalPositions = childMeshes.map(mesh => mesh.position.clone());
-  let stopMoving = false;  // Флаг для остановки движения
-  let isInterfaceLocked = false;  // Флаг для блокировки интерфейса
-
-  const moveMeshes = (delta: number) => {
-    if (stopMoving) return;  // Если движение остановлено, не продолжаем
-
-    const firstMesh = childMeshes[0];
-
-    // Проверяем, если первый меш достиг предела X >= 0.10, останавливаем движение
-    // Если мы достигли порога (0.42), прекращаем движение и переключаем камеру
-    if (firstMesh.position.x >= 0.20) {
-      this.isMoving = false;
-      if (this.moveInterval !== null) {
-        window.clearInterval(this.moveInterval);
-        this.moveInterval = null;
-        this.zoomCameraVertical();
-      }
-
-      // Переключаем камеру на горизонтальное положение
-     /* if (!this.isVerticalMeasurement) {
-        console.log("Переключаем камеру на горизонтальное положение.");
-        this.zoomCameraVertical();
-      }*/
-
-      return;
-    }
-
-    for (let i = 0; i < childMeshes.length; i++) {
-      const childMesh = childMeshes[i];
-
-      if (i === 0) {
-        childMesh.position.x += delta;  // Двигаем только по оси X
-      } else {
-        let threshold = 0;
-        // Устанавливаем threshold для каждого меша
-        if (i === 1) threshold = 0.0485;
-        else if (i === 2) threshold = 0.144;
-        else if (i === 3) threshold = 0.240;
-        else if (i === 4) threshold = 0.336;
-        else if (i === 5) threshold = 0.432;
-        else if (i === 6) threshold = 0.530;
-        else if (i === 7) threshold = 0.638;
-        else if (i === 8) threshold = 0.738;
-        else if (i === 9) threshold = 0.838;
-        else if (i === 10) threshold = 0.938;
-
-        if (firstMesh.position.x >= threshold) {  // Проверяем ось X
-          childMesh.position.x += delta;  // Двигаем только по оси X
-        }
-      }
-
-      //console.log(`📍 Новая позиция ${childMesh.name}: X=${childMesh.position.x}`); // Лог позиции меша
-
-      if (childMesh.position.x > 1.50) childMesh.position.x = 1.50;  // Ограничиваем движение по оси X
-    }
-  };
+private smoothMovement(minBoundary: BABYLON.Vector3, maxBoundary: BABYLON.Vector3): void {
+  let targetPosition: BABYLON.Vector3 | null = null;
+  const smoothingFactor = 0.1;
+  let isFixed = false;
+  let lastPosition: BABYLON.Vector3 | null = null;
+  let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero();
+  
+  let firstClickDone = false;  // Флаг для отслеживания первого клика
 
   this.scene.onPointerObservable.add((event) => {
-    if (isInterfaceLocked) return;  // Игнорируем клики, если интерфейс заблокирован
+    if (!this.handModel) return;
 
-    //console.log(`🟢 Событие мыши: ${event.type}`); // Лог события мыши
+    if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && !firstClickDone) {
+      const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+      if (pickInfo.hit && pickInfo.pickedPoint) {
+        let newPosition = pickInfo.pickedPoint.clone();
 
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-      // Проверка, чтобы не запускать setInterval, если уже идет движение
-      if (!isMoving) {
-        isMoving = true;
-        this.scene.onBeforeRenderObservable.add(() => moveMeshes(0.003));
+        // Ограничиваем движение в пределах границ
+        newPosition.x = Math.max(minBoundary.x, Math.min(maxBoundary.x, newPosition.x));
+        newPosition.y = Math.max(minBoundary.y, Math.min(maxBoundary.y, newPosition.y));
+        newPosition.z = Math.max(minBoundary.z, Math.min(maxBoundary.z, newPosition.z));
+
+        targetPosition = newPosition;
       }
     }
+
+    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+      if (!firstClickDone) {
+        // Первый клик: выдвигаем SM_CorpTapeMeasure и делаем его дочерним для SM_10cm
+        const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
+        const sm_TapeMeasure_LP_MOD_3 = this.scene.getMeshByName("SM_CorpTapeMeasure") as BABYLON.Mesh;
+
+        if (sm_TapeMeasure_LP_MOD_3) {
+          sm_TapeMeasure_LP_MOD_3.position.x += 0.1; // Примерное значение для выдвижения
+          sm_TapeMeasure_LP_MOD_3.setParent(sm_10cm); // Делает SM_CorpTapeMeasure дочерним элементом sm_10cm
+          console.log("SM_CorpTapeMeasure выдвинут и стал дочерним элементом SM_10cm");
+          firstClickDone = true;  // Устанавливаем флаг после первого клика
+        }
+      }
+
+      // Фиксируем положение модели
+      isFixed = true;
+      lastPosition = this.handModel.position.clone();
+    }
   });
 
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      childMeshes.forEach((mesh, i) => mesh.position.copyFrom(originalPositions[i]));
-      isMoving = false;
-      stopMoving = false;
-      isInterfaceLocked = false;
-      // Убираем обработчик с обновлений, если движение уже было активным
-      this.scene.onBeforeRenderObservable.clear();
+  this.scene.onKeyboardObservable.add((event) => {
+    if (event.type === BABYLON.KeyboardEventTypes.KEYDOWN && event.event.key === "Escape") {
+      isFixed = false; // Разрешаем перемещение при нажатии Escape
+    }
+  });
+
+  // Обновляем позицию объекта
+  this.scene.onBeforeRenderObservable.add(() => {
+    if (this.handModel && targetPosition) {
+      currentPosition = BABYLON.Vector3.Lerp(currentPosition, targetPosition, smoothingFactor);
+      this.handModel.position = currentPosition;
     }
   });
 }
 
 
+private bindRotationKeys(): void {
+  const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
 
-// Функция для приближения камеры (аналог для горизонтального замера)
-private zoomCamera(): void {
-  const camera = this.scene.activeCamera as BABYLON.FreeCamera;
-  if (!camera) return;
-
-  const originalPosition = camera.position.clone();
-  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.1, 0.2));
-  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, 0, -0.4));
-
-  const zoomDuration = 1000;
-  const pauseDuration = 1000;
-
-  BABYLON.Animation.CreateAndStartAnimation(
-    "zoomCamera1",
-    camera,
-    "position",
-    30,
-    zoomDuration / 30,
-    originalPosition,
-    zoomPosition1,
-    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
-    undefined,
-    () => {
-      setTimeout(() => {
-        BABYLON.Animation.CreateAndStartAnimation(
-          "zoomCamera2",
-          camera,
-          "position",
-          30,
-          zoomDuration / 30,
-          zoomPosition1,
-          zoomPosition2,
-          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-        );
-      }, pauseDuration);
-    }
-  );
-}
-
-
-
-private resetCameraPosition(): void {
-  if (this.originalCameraPosition) {
-    const camera = this.camera;
-    const resetDuration = 500; // Продолжительность анимации возврата камеры
-
-    console.log("Попытка вернуть камеру в исходное положение...");
-
-    // Анимация возврата камеры в исходную позицию
-    BABYLON.Animation.CreateAndStartAnimation(
-      "resetCameraPosition", 
-      camera, 
-      "position", 
-      30, 
-      resetDuration / 30, 
-      camera.position, 
-      this.originalCameraPosition, 
-      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-    );
-    console.log("Анимация возвращения камеры запущена.");
-  } else {
-    console.log("Исходная позиция камеры не сохранена.");
+  if (!sm_10cm) {
+    console.error("Меш sm_10cm не найден!");
+    return;
   }
-}
 
-// Добавляем обработку нажатия клавиши Esc
-private addEscapeKeyListener(): void {
+  const rotationSpeed = 0.05; // Скорость вращения
+
   window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      // Восстанавливаем камеру в исходную позицию
-      this.resetCameraPosition();
+    console.log(`Нажата клавиша: ${e.key}`);
+
+    // Вращение по оси X (локальная ось X)
+    if (e.key === 'q') {
+      sm_10cm.rotate(BABYLON.Axis.X, -rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси X (влево):", sm_10cm.rotation.x);
     }
+    if (e.key === 'e') {
+      sm_10cm.rotate(BABYLON.Axis.X, rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси X (вправо):", sm_10cm.rotation.x);
+    }
+
+    // Вращение по оси Y (локальная ось Y)
+    if (e.key === 'w') {
+      sm_10cm.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси Y (вверх):", sm_10cm.rotation.y);
+    }
+    if (e.key === 's') {
+      sm_10cm.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси Y (вниз):", sm_10cm.rotation.y);
+    }
+
+    console.log("Текущая позиция модели:", sm_10cm.position);
+    console.log("Текущее вращение модели:", sm_10cm.rotation);
   });
 }
-
-
-
-// Функция для приближения камеры (аналог для вертикального замера)
-private zoomCameraVertical(): void {
-  const camera = this.scene.activeCamera as BABYLON.FreeCamera;
-  if (!camera) return;
-
-  const originalPosition = camera.position.clone();
-  const zoomPosition1 = originalPosition.subtract(new BABYLON.Vector3(0.8, 0.2, 0.03));
-  const zoomPosition2 = zoomPosition1.subtract(new BABYLON.Vector3(0, -0.25, 0));
-
-  const zoomDuration = 1000;
-  const pauseDuration = 1000;
-
-  BABYLON.Animation.CreateAndStartAnimation(
-    "zoomCamera1",
-    camera,
-    "position",
-    30,
-    zoomDuration / 30,
-    originalPosition,
-    zoomPosition1,
-    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT,
-    undefined,
-    () => {
-      setTimeout(() => {
-        BABYLON.Animation.CreateAndStartAnimation(
-          "zoomCamera2",
-          camera,
-          "position",
-          30,
-          zoomDuration / 30,
-          zoomPosition1,
-          zoomPosition2,
-          BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
-        );
-      }, pauseDuration);
-    }
-  );
-}
-
 
 
 
