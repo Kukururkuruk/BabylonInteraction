@@ -181,9 +181,9 @@ private async loadMap(): Promise<BABYLON.Mesh[]> {
 private findBoundaryMeshes(map: BABYLON.Mesh[]): BABYLON.Mesh[] {
   const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
   if (boundaryMeshes.length === 0) {
-    console.error("Ошибка: ограничивающие меши не найдены.");
+    //console.error("Ошибка: ограничивающие меши не найдены.");
   } else {
-    console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
+    //console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
   }
   return boundaryMeshes;
 }
@@ -218,7 +218,7 @@ private attachHandModel(): void {
   const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
   const sm_TapeMeasure_LP_MOD_3 = this.scene.meshes.find(mesh => mesh.name.includes("CorpTapeMeasure")) as BABYLON.Mesh;
   // Выводим все меши в сцене для отладки
-  console.log("Все меши в сцене:", this.scene.meshes.map(mesh => mesh.name));
+  //console.log("Все меши в сцене:", this.scene.meshes.map(mesh => mesh.name));
 
   if (!sm_TapeMeasure_LP_MOD_3) {
     console.warn("Меш SM_CorpTapeMeasure не найден, пробуем ещё раз...");
@@ -252,14 +252,14 @@ private smoothMovement(minBoundary: BABYLON.Vector3, maxBoundary: BABYLON.Vector
   let isFixed = false;
   let lastPosition: BABYLON.Vector3 | null = null;
   let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero();
-  
+
   let firstClickDone = false;  // Флаг для отслеживания первого клика
 
   this.scene.onPointerObservable.add((event) => {
     if (!this.handModel) return;
 
     if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && !firstClickDone) {
-      const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
+      const pickInfo: BABYLON.PickingInfo = this.scene.pick(event.event.clientX, event.event.clientY);  // Типизировано как PickingInfo
       if (pickInfo.hit && pickInfo.pickedPoint) {
         let newPosition = pickInfo.pickedPoint.clone();
 
@@ -274,14 +274,16 @@ private smoothMovement(minBoundary: BABYLON.Vector3, maxBoundary: BABYLON.Vector
 
     if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
       if (!firstClickDone) {
-        // Первый клик: выдвигаем SM_CorpTapeMeasure и делаем его дочерним для SM_10cm
+        // Первый клик: устанавливаем линейку (SM_CorpTapeMeasure) на 1 см от начальной позиции
         const sm_10cm = this.scene.getMeshByName("SM_10cm") as BABYLON.Mesh;
         const sm_TapeMeasure_LP_MOD_3 = this.scene.getMeshByName("SM_CorpTapeMeasure") as BABYLON.Mesh;
 
-        if (sm_TapeMeasure_LP_MOD_3) {
-          sm_TapeMeasure_LP_MOD_3.position.x += 0.1; // Примерное значение для выдвижения
-          sm_TapeMeasure_LP_MOD_3.setParent(sm_10cm); // Делает SM_CorpTapeMeasure дочерним элементом sm_10cm
-          console.log("SM_CorpTapeMeasure выдвинут и стал дочерним элементом SM_10cm");
+        if (sm_TapeMeasure_LP_MOD_3 && sm_10cm) {
+          // При клике линейка (sm_TapeMeasure_LP_MOD_3) перемещается в точку 1 см от начальной позиции (от sm_10cm)
+          sm_TapeMeasure_LP_MOD_3.position = sm_10cm.position.clone().add(new BABYLON.Vector3(0.01, 0, 0));  // Смещение на 1 см по оси X
+          sm_TapeMeasure_LP_MOD_3.setParent(sm_10cm);  // Делает линейку дочерним объектом для см_10см
+          console.log("SM_CorpTapeMeasure установлена на 1 см от начальной позиции и стала дочерним элементом SM_10cm");
+
           firstClickDone = true;  // Устанавливаем флаг после первого клика
         }
       }
@@ -306,6 +308,8 @@ private smoothMovement(minBoundary: BABYLON.Vector3, maxBoundary: BABYLON.Vector
     }
   });
 }
+
+
 
 
 private bindRotationKeys(): void {
@@ -338,6 +342,14 @@ private bindRotationKeys(): void {
     }
     if (e.key === 's') {
       sm_10cm.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси Y (вниз):", sm_10cm.rotation.y);
+    }
+    if (e.key === 'a') {
+      sm_10cm.rotate(BABYLON.Axis.Z, -rotationSpeed, BABYLON.Space.LOCAL);
+      console.log("Вращение по оси Y (вверх):", sm_10cm.rotation.y);
+    }
+    if (e.key === 'd') {
+      sm_10cm.rotate(BABYLON.Axis.Z, rotationSpeed, BABYLON.Space.LOCAL);
       console.log("Вращение по оси Y (вниз):", sm_10cm.rotation.y);
     }
 
