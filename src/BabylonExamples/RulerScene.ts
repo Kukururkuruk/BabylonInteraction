@@ -49,7 +49,7 @@ export class RulerScene {
   private secondClickPosition: BABYLON.Vector3 | null = null; // Переменная для второго клика
   private minBoundary: BABYLON.Vector3;
   private maxBoundary: BABYLON.Vector3;
-  
+  private isFirstClick: boolean = true;  // Флаг, показывающий, что это первый клик
   
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -351,47 +351,102 @@ private enableChildScaling(corpMesh: BABYLON.Mesh, childMeshes: BABYLON.Mesh[]):
   }
 
   this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL) {
-      const wheelEvent = event.event as WheelEvent;
-      const delta = wheelEvent.deltaY > 0 ? 0.001 : -0.001;
+    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+      const pointerEvent = event.event as PointerEvent;
+      const pickResult = this.scene.pick(pointerEvent.clientX, pointerEvent.clientY);
 
-      // Проверка наличия корпуса и его позиции
-      if (!corpMesh || !corpMesh.position) {
-        console.error("Корпус не найден!");
-        return;
-      }
+      if (pickResult && pickResult.hit) {
+        const clickedPosition = pickResult.pickedPoint;
 
-      // Вычисление нового значения по оси X для корпуса
-      const newPosX = corpMesh.position.x + delta;
+        if (this.isFirstClick) {
+          this.firstClickPosition = clickedPosition;
+          this.isFirstClick = false;
+          console.log("Первый клик: ", this.firstClickPosition);
+        } else {
+          if (this.firstClickPosition && clickedPosition) {
+            const distanceX = Math.abs(clickedPosition.x - this.firstClickPosition.x);
+            const distanceY = Math.abs(clickedPosition.y - this.firstClickPosition.y);
+            const distanceZ = Math.abs(clickedPosition.z - this.firstClickPosition.z);
 
-      // Проверка на границы движения
-      if (newPosX >= this.minBoundary.x && newPosX <= this.maxBoundary.x) {
-        corpMesh.position.x = newPosX;
-        console.log(`Новое значение по оси X для корпуса: ${corpMesh.position.x}`);
-      }
+            console.log(`Корпус перемещен на: X=${distanceX}, Y=${distanceY}, Z=${distanceZ}`);
 
-      // Обрабатываем только корпус, не изменяя позиции дочерних мешей
-      for (let i = 0; i < childMeshes.length; i++) {
-        const childMesh = childMeshes[i];
+            const newPosX = corpMesh.position.x + distanceX;
+            const newPosY = corpMesh.position.y + distanceY;
+            const newPosZ = corpMesh.position.z + distanceZ;
 
-        if (!childMesh || !childMesh.position) {
-          console.error(`Меш ${childMesh ? childMesh.name : 'неизвестен'} не найден или его позиция не доступна`);
-          continue;
-        }
+            if (
+              newPosX >= this.minBoundary.x && newPosX <= this.maxBoundary.x &&
+              newPosY >= this.minBoundary.y && newPosY <= this.maxBoundary.y &&
+              newPosZ >= this.minBoundary.z && newPosZ <= this.maxBoundary.z
+            ) {
+              corpMesh.position.x = newPosX;
+              corpMesh.position.y = newPosY;
+              corpMesh.position.z = newPosZ;
+              console.log(`Новая позиция корпуса: X=${corpMesh.position.x}, Y=${corpMesh.position.y}, Z=${corpMesh.position.z}`);
+            }
 
-        const threshold = this.getThresholdForMesh(i);
+            childMeshes.forEach((childMesh, index) => {
+              if (!childMesh || !childMesh.position) {
+                console.error(`Меш ${childMesh ? childMesh.name : 'неизвестен'} не найден`);
+                return;
+              }
 
-        if (corpMesh.position.x >= threshold) {
-          childMesh.setEnabled(true);  // Делаем видимым
-          console.log(`Меш ${childMesh.name} теперь видим`);
+              const threshold = this.getThresholdForMesh(index); // Получаем смещение для дочернего меша
 
-          // Убираем родителя, чтобы дочерний меш не двигался
-          childMesh.setParent(null);
+              console.log(`Проверяем меш ${childMesh.name}: threshold = ${threshold}, newPosX = ${newPosX}`);
+
+              if (newPosX >= threshold) {
+                childMesh.setEnabled(true);
+                childMesh.position.x = corpMesh.position.x + threshold; // Двигаем относительно нового положения корпуса
+                childMesh.position.y = corpMesh.position.y;
+                childMesh.position.z = corpMesh.position.z;
+                console.log(`Меш ${childMesh.name} теперь видим, новая позиция: X=${childMesh.position.x}, Y=${childMesh.position.y}, Z=${childMesh.position.z}`);
+              }
+            });
+
+            this.firstClickPosition = clickedPosition;
+            console.log("Второй клик: ", clickedPosition);
+          }
         }
       }
     }
   });
+
+  // Флаг, отслеживающий, все ли меши включены
+let allMeshesEnabled = false;
+
+this.scene.onBeforeRenderObservable.add(() => {
+  if (allMeshesEnabled) return; // Если все меши уже включены, выходим
+
+  let allEnabled = true; // Флаг для проверки всех мешей
+
+  childMeshes.forEach((childMesh, index) => {
+    const threshold = this.getThresholdForMesh(index);
+    
+    if (corpMesh.position.x >= threshold && !childMesh.isEnabled()) {
+      childMesh.setEnabled(true);
+      console.log(`🟢 Меш ${childMesh.name} теперь включен!`);
+    }
+
+    console.log(`ℹ️ Состояние меша [${index}] ${childMesh.name}:`, {
+      position: childMesh.position.clone(),
+      visible: childMesh.isVisible,
+      enabled: childMesh.isEnabled(),
+      visibility: childMesh.visibility,
+    });
+
+    if (!childMesh.isEnabled()) {
+      allEnabled = false; // Если хоть один меш еще выключен, продолжаем проверку
+    }
+  });
+
+  if (allEnabled) {
+    allMeshesEnabled = true; // Фиксируем, что больше проверять не нужно
+    console.log("✅ Все меши включены, отписываемся от события.");
+  }
+});
 }
+
 
 private getThresholdForMesh(index: number): number {
   switch (index) {
