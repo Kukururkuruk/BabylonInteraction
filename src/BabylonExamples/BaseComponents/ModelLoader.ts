@@ -12,19 +12,79 @@ export class ModelLoader {
   private nonCollisionMeshNames: string[] = [
     "SM_ConcreteFence_LP.015",
     "SM_ConcreteFence_LP.030",
-    "SM_0_FencePost_Road.087",
-    "SM_0_FencePost_Road.088",
+    "SM_0_FencePost_Road.016",
+    "SM_0_FencePost_Road.020",
   ];
 
   private brokenMeshSubstring: string = "broken";
 
+    // Одиночные меши, характерные для QuestionScene
+    public questionSceneSingleMeshNames = [
+      // Стена
+      "SM_0_Retaining_wall_Block_LP_L",
+      // Колонна монолит
+      "SM_0_MonolithicRack_R",
+      // Колонна
+      "SM_0_MonolithicRack_L_Column",
+      // Колонна ростверк основание
+      "SM_0_MonolithicRack_L_Rostverc",
+      // Колонна ригель вверх
+      "SM_0_MonolithicRack_L_Support",
+      // Лестница
+      "SM_0_Stairs",
+      // Барьерное ограждение что
+      "SM_0_FencePostBridge_base_.002",
+      // Барьерное ограждение зачем
+      "SM_0_FencePost_Road.002",
+      // Барьерное ограждение тип
+      "SM_0_FencePostBridge_base_.004",
+      // Барьер стойка
+      "SM_FenctRack_LP",
+      // Барьер балка
+      "SM_FenceWave_LP_1",
+      // Барьер соединение
+      "SM_FenceConsole_LP",
+      // Шов что
+      "SM_0_connectingShaft_1",
+      // Шов тип
+      "SM_0_connectingShaft_2",
+      // Дорожное полотно
+      "SM_0_Road_Down",
+      // Насыпь
+      "SM_0_Landscape_R",
+      // Асфальт на мосту
+      "SM_0_BridgeAsfalt",
+      // Кирпич
+      "SM_0_Retaining_wall_Block_LP_R_5",
+      // Подферменник
+      "SM_0_Stand_R",
+      // Ограждение на дороге
+      "SM_0_FencePost_Road.001",
+      // Добавьте остальные одиночные меши по необходимости
+    ];
+
+    public questionSceneMeshGroups = [
+      // Пример
+      { groupName: "SpanStructureBeam_L_4", baseNames: ["SM_0_SpanStructureBeam_L_4"] },
+      { groupName: "SpanStructureBeam_L_5", baseNames: ["SM_0_SpanStructureBeam_L_5"] },
+      // ... добавьте все остальные
+    ];
+
   public meshGroups = [
-    { groupName: "SpanStructureBeam_L_7", baseName: "SM_0_SpanStructureBeam_L_7" },
-    { groupName: "SpanStructureBeam_L_4", baseName: "SM_0_SpanStructureBeam_L_4" },
-    { groupName: "Drain_UP_2", baseName: "SM_Drain_UP_2" },
-    { groupName: "Drain_Down_2", baseName: "SM_Drain_Down_2" },
-    { groupName: "Drain_2", baseName: "SM_Drain_2" },
-    // Добавьте дополнительные группы по необходимости
+    { groupName: "SpanStructureBeam_L_4", baseNames: ["SM_0_SpanStructureBeam_L_7"] },
+    { groupName: "SpanStructureBeam_L_7", baseNames: ["SM_0_SpanStructureBeam_L_1","SM_0_SpanStructureBeam_L_2","SM_0_SpanStructureBeam_L_3","SM_0_SpanStructureBeam_L_4","SM_0_SpanStructureBeam_L_5","SM_0_SpanStructureBeam_L_6","SM_0_SpanStructureBeam_R",] },
+    { groupName: "Drain_UP_2",           baseNames: ["SM_Drain_UP_2"] },
+    { groupName: "Drain_Down_2",         baseNames: ["SM_Drain_Down_2"] },
+    { groupName: "Drain_2",             baseNames: ["SM_Drain_2"] },
+    // А вот пример, где мы явно кладём несколько разных мешей в одну группу
+    { 
+      groupName: "WaterPipes", 
+      baseNames: [
+        "SM_PipeWater_LP", 
+        "SM_PipeWaterCollection_LP", 
+        "SM_HalfPipe_LP_1"
+      ] 
+    },
   ];
 
   public singleMeshNames = [
@@ -37,7 +97,7 @@ export class ModelLoader {
     "SM_0_FencePost_Road.002",          // Барьерное ограждение (тип 1)
     "SM_0_FencePostBridge_base_.004",   // Барьерное ограждение (тип 2)
     "SM_0_connectingShaft_1",           // Шов
-    "SM_0_Road_Down.001",               // Дорожное полотно
+    "SM_0_Road_Down",               // Дорожное полотно
     "SM_0_BridgeAsfalt",                // Асфальт на мосту
     "SM_0_Stand_R",                     // Подферменник
     "SM_0_Road_1_R",                    // Дорога сверху
@@ -47,18 +107,98 @@ export class ModelLoader {
     "SM_0_SupportLight_LP_Down_L",      // Фонари
     "SM_HalfPipe_LP",                   // Подвесной лоток
     "SM_Drain_Half_Pipe_2",        // Откосной лоток
-    "SM_PipeWater_LP",                  // Водосточная система
     "SM_GridDrainageSmall_LP",          // Дождеприемник
     // Добавьте дополнительные одиночные меши по необходимости
 
-          "SM_0_SpanStructureBeam_1_Armature_R",
-          "SM_0_SpanStructureBeam_1_Cable_R",
-          "SM_0_SpanStructureBeam_2_Armature_L",
-          "SM_0_SpanStructureBeam_2_Cable_L"
+          // "SM_0_SpanStructureBeam_1_Armature_R",
+          // "SM_0_SpanStructureBeam_1_Cable_R",
+          // "SM_0_SpanStructureBeam_2_Armature_L",
+          // "SM_0_SpanStructureBeam_2_Cable_L"
   ];
 
   constructor(scene: Scene) {
     this.scene = scene;
+  }
+
+  public async loadAllQuestionModels(): Promise<void> {
+    // Пример: загружаем карту "Map_1_MOD.gltf" (как в вашем коде для QuestionScene)
+    await this.loadMapModelForQuestion();
+
+    // После загрузки настраиваем меши (коллизии, скрыть "broken" и т.д.)
+    this.setupQuestionSceneMeshes();
+  }
+
+  private async loadMapModelForQuestion(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        // ИМЯ ФАЙЛА, соответствующее QuestionScene:
+        "Map_1_MOD_V_7.gltf",
+        this.scene
+      );
+      this.loadedMeshes["questionMap"] = result.meshes; 
+      // ключ "questionMap" — чтобы отличать от "map", используемого в BookScene, 
+      // если это разные файлы.
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты для QuestionScene:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Настройки мешей для QuestionScene: включаем/отключаем коллизии,
+   * скрываем "broken", и т.д.
+   */
+  private setupQuestionSceneMeshes(): void {
+    const questionMapMeshes = this.loadedMeshes["questionMap"];
+    if (!questionMapMeshes) {
+      console.warn("Меши для QuestionScene не найдены (questionMap).");
+      return;
+    }
+
+    // Включаем коллизии для всех
+    questionMapMeshes.forEach((mesh) => {
+      mesh.checkCollisions = true;
+    });
+
+    const transitionMeshes = questionMapMeshes.filter((mesh) =>
+      mesh.name.includes("TransitionPlate8M")
+    );
+    if (transitionMeshes) {
+      transitionMeshes.forEach((mesh) => {
+        mesh.checkCollisions = false;
+      });
+    } else {
+      console.warn(`Меш с именем "${transitionMeshes}" не найден для отключения коллизий.`);
+    }
+
+    // Отключаем коллизии для некоторых
+    this.nonCollisionMeshNames.forEach((name) => {
+      const mesh = this.scene.getMeshByName(name);
+      if (mesh) {
+        mesh.checkCollisions = false;
+        mesh.visibility = 0.5;
+      } else {
+        console.warn(`(QuestionScene) Меш "${name}" не найден для отключения коллизий.`);
+      }
+    });
+
+    // Скрываем "сломанные" меши
+    const brokenMeshes = questionMapMeshes.filter((mesh) =>
+      mesh.name.toLowerCase().includes(this.brokenMeshSubstring)
+    );
+    brokenMeshes.forEach((mesh) => {
+      mesh.visibility = 0;
+    });
+  }
+
+  /**
+   * Метод для получения мешей, соответствующих *QuestionScene* (карта).
+   * Возвращает массив `AbstractMesh[]` или `undefined`.
+   */
+  public getQuestionMapMeshes(): AbstractMesh[] | undefined {
+    return this.loadedMeshes["questionMap"];
   }
 
   // Метод для загрузки всех моделей
@@ -73,7 +213,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Map_1_MOD_V_4.gltf",
+        "Map_1_MOD_V_7.gltf",
         this.scene
       );
       this.loadedMeshes["map"] = result.meshes;
@@ -578,6 +718,17 @@ public async loadTapeMeasureModel(): Promise<void> {
       mapMeshes.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
+
+      const transitionMeshes = mapMeshes.filter((mesh) =>
+        mesh.name.includes("TransitionPlate8M")
+      );
+      if (transitionMeshes) {
+        transitionMeshes.forEach((mesh) => {
+          mesh.checkCollisions = false;
+        });
+      } else {
+        console.warn(`Меш с именем "${transitionMeshes}" не найден для отключения коллизий.`);
+      }
 
       // Отключаем коллизии и уменьшаем видимость для определённых мешей
       this.nonCollisionMeshNames.forEach((name) => {
