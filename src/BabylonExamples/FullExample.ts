@@ -45,15 +45,18 @@ export class FullExample {
   private isCaliperMoved = false; // Переменная для отслеживания состояния
 private initialPosition: Vector3; // Переменная для хранения начальной позиции
 private initialRotation: number; // Переменная для хранения начального вращения
+private isFirstClick = true; // Флаг для отслеживания первого клика
+private isHighlighted = false; // Флаг для отслеживания подсветки (включаем по умолчанию)
+
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
     this.engine.displayLoadingUI();
 
     this.scene = this.CreateScene();
-    this.highlightLayer = new HighlightLayer("hl1", this.scene);
-    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
-    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+    //this.highlightLayer = new HighlightLayer("hl1", this.scene);
+   // this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
+    //this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
     this.guiManager = new GUIManager(this.scene, this.textMessages);
     this.dialogPage = new DialogPage();
     
@@ -122,7 +125,7 @@ private initialRotation: number; // Переменная для хранения
 }
   async CreateEnvironment(): Promise<void> {
     try {
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_TapeMeasure_Caliper_MOD.gltf", this.scene);
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
@@ -327,8 +330,6 @@ private rotateCaliperModel(): void {
   private highlightSpecificMeshes(): void {
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R_8",  // Основной меш для клика
-        //"SM_0_SpanStructureBeam_1_Armature_R_3",  // Меш, который нужно сделать неактивным при первом клике
-        //"SM_0_SpanStructureBeam_1_Cable_R"        // Другой меш, который нужно сделать неактивным
     ];
 
     const meshesToHighlight = meshNames
@@ -347,10 +348,18 @@ private rotateCaliperModel(): void {
     const targetNoniusPosition = new Vector3(-0.004, 0, 0);
 
     let isFirstClick = true; // Флаг для отслеживания первого клика на "SM_0_SpanStructureBeam_1_Armature_R_8"
+    let isHighlighted = true; // Флаг для отслеживания состояния подсветки (включаем по умолчанию)
 
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
+    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+
+    // Включаем подсветку сразу при старте
     meshesToHighlight.forEach(mesh => {
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+    });
 
+    meshesToHighlight.forEach(mesh => {
         mesh.isPickable = true;
 
         mesh.actionManager = new ActionManager(this.scene);
@@ -365,10 +374,19 @@ private rotateCaliperModel(): void {
                         // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - делаем другие меши неактивными
                         this.toggleMeshPickability(false);
                         isFirstClick = false; // Устанавливаем флаг, что клик был совершен
+
+                        // Подсветка продолжает оставаться включенной
+                        isHighlighted = true;
                     } else {
                         // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - возвращаем кликабельность
                         this.toggleMeshPickability(true);
                         isFirstClick = true; // Возвращаем флаг в исходное состояние
+
+                        // Отключаем подсветку
+                        if (isHighlighted) {
+                            this.highlightLayer.removeMesh(mesh); // Убираем подсветку
+                            isHighlighted = false; // Подсветка выключена
+                        }
                     }
                 }
 
@@ -491,7 +509,7 @@ private highlightSpecificMeshesCable_R(): void {
   let isObstructingMeshesVisible = true; // Флаг для отслеживания видимости мешей
 
   meshesToHighlight.forEach(mesh => {
-      this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+      //this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
       mesh.isPickable = true;
 
@@ -628,7 +646,7 @@ private highlightSpecificMeshesArmature_R_3(): void {
 
     let isFirstClick = true; // Флаг для отслеживания первого клика
     meshesToHighlight.forEach(mesh => {
-        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+        //this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
         mesh.isPickable = true;
 
