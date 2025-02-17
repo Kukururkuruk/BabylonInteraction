@@ -45,9 +45,6 @@ export class FullExample {
   private isCaliperMoved = false; // Переменная для отслеживания состояния
 private initialPosition: Vector3; // Переменная для хранения начальной позиции
 private initialRotation: number; // Переменная для хранения начального вращения
-private isFirstClick = true; // Флаг для отслеживания первого клика
-private isHighlighted = false; // Флаг для отслеживания подсветки (включаем по умолчанию)
-
   constructor(private canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.engine = new Engine(this.canvas, true);
@@ -330,11 +327,13 @@ private rotateCaliperModel(): void {
   private highlightSpecificMeshes(): void {
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R_8",  // Основной меш для клика
+        "SM_0_SpanStructureBeam_1_Armature_R_3",  // Дополнительный меш для подсветки
+        "SM_0_SpanStructureBeam_1_Cable_R",      // Добавлен сюда
     ];
 
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
-        .filter((mesh): mesh is Mesh => mesh instanceof Mesh);
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убеждаемся, что это Mesh
 
     let isZoomed = false; // Флаг для отслеживания состояния камеры
     const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
@@ -354,10 +353,22 @@ private rotateCaliperModel(): void {
     this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
     this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
 
-    // Включаем подсветку сразу при старте
+    // Включаем подсветку на "SM_0_SpanStructureBeam_1_Armature_R_8" изначально
     meshesToHighlight.forEach(mesh => {
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
     });
+
+    // Создаем меши для подсветки SM_0_SpanStructureBeam_1_Cable_R и SM_0_SpanStructureBeam_1_Armature_R_3
+    const cableMesh = this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Cable_R") as Mesh | null;
+    const armatureMesh = this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_3") as Mesh | null;
+
+    if (cableMesh) {
+        this.highlightLayer.removeMesh(cableMesh); // Изначально подсветка выключена
+    }
+
+    if (armatureMesh) {
+        this.highlightLayer.removeMesh(armatureMesh); // Изначально подсветка выключена
+    }
 
     meshesToHighlight.forEach(mesh => {
         mesh.isPickable = true;
@@ -371,21 +382,26 @@ private rotateCaliperModel(): void {
                 // Проверка, кликнули ли на основной меш "SM_0_SpanStructureBeam_1_Armature_R_8"
                 if (mesh.name === "SM_0_SpanStructureBeam_1_Armature_R_8") {
                     if (isFirstClick) {
-                        // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - делаем другие меши неактивными
-                        this.toggleMeshPickability(false);
+                        // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - оставляем подсветку включенной
                         isFirstClick = false; // Устанавливаем флаг, что клик был совершен
 
                         // Подсветка продолжает оставаться включенной
                         isHighlighted = true;
                     } else {
-                        // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - возвращаем кликабельность
-                        this.toggleMeshPickability(true);
-                        isFirstClick = true; // Возвращаем флаг в исходное состояние
-
-                        // Отключаем подсветку
+                        // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - выключаем подсветку на нем
                         if (isHighlighted) {
-                            this.highlightLayer.removeMesh(mesh); // Убираем подсветку
+                            this.highlightLayer.removeMesh(mesh); // Убираем подсветку с этого меша
                             isHighlighted = false; // Подсветка выключена
+                        }
+
+                        // Включаем подсветку на "SM_0_SpanStructureBeam_1_Cable_R"
+                        if (cableMesh) {
+                            this.highlightLayer.addMesh(cableMesh, Color3.FromHexString("#00ffd9"));
+                        }
+
+                        // Включаем подсветку на "SM_0_SpanStructureBeam_1_Armature_R_3"
+                        if (armatureMesh) {
+                            this.highlightLayer.addMesh(armatureMesh, Color3.FromHexString("#00ffd9"));
                         }
                     }
                 }
@@ -454,6 +470,8 @@ private rotateCaliperModel(): void {
         ));
     });
 }
+
+
 
 // Функция для управления кликабельностью мешей
 private toggleMeshPickability(isPickable: boolean): void {
