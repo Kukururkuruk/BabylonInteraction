@@ -931,10 +931,10 @@ Page(): void {
     const page1_3 = this.dialogPage.addText("Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. ");
     const page1_4 = this.dialogPage.addText("Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. ");
     const page1_5 = this.dialogPage.addText("Вам нужно умножить получившиеся значение на цену деления шкалы нониуса (обычно 0,1 или 0,05 мм) и получить десятые или сотые значения.");
-    const page1_6 = this.dialogPage.addText("Сложить данные из 3 и 6 пунктов. ");
+    const page1_6 = this.dialogPage.addText("Сложите данные из 3 и 6 пунктов. ");
     const page2 = this.dialogPage.addText("Повторно нажмите на подсвеченную арматуру для окончания замеров. Теперь проведите измерения оставшейся арматуры и внесите данные на следующей странице");
     const page3 = this.dialogPage.addInputFields("Конструкции");
-    const page4 = this.dialogPage.addText("Заполните все поля перед продолжением.");
+    const page4 = this.dialogPage.addText("Отлично! Вы справились с заданием, теперь перейдите на следующую страницу для заверешения.");
 
     const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
         const routePage = this.dialogPage.createStartPage(
