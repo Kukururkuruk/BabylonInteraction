@@ -924,33 +924,34 @@ private toggleMeshPickabilityArmature_R_3(isPickable: boolean): void {
   
 
 
-Page(): void {const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-  this.guiManager.CreateDialogBox([page1])
+Page(): void { 
+    const page1 = this.dialogPage.addText("Нажми на подсвеченную арматуру для начала измерения.");
+    const page1_1 = this.dialogPage.addText("Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. ");
+    const page1_2 = this.dialogPage.addText("Вам необходимо изучить полученные показатели с основной шкалы в мм. Если показатель совпал с нулем на шкале нониуса, то это и есть точная целая цифра размера детали. ");
+    const page1_3 = this.dialogPage.addText("Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. ");
+    const page1_4 = this.dialogPage.addText("Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. ");
+    const page1_5 = this.dialogPage.addText("Вам нужно умножить получившиеся значение на цену деления шкалы нониуса (обычно 0,1 или 0,05 мм) и получить десятые или сотые значения.");
+    const page1_6 = this.dialogPage.addText("Сложить данные из 3 и 6 пунктов. ");
+    const page2 = this.dialogPage.addText("Повторно нажмите на подсвеченную арматуру для окончания замеров. Теперь проведите измерения оставшейся арматуры и внесите данные на следующей странице");
+    const page3 = this.dialogPage.addInputFields("Конструкции");
+    const page4 = this.dialogPage.addText("Заполните все поля перед продолжением.");
 
-          this.triggerManager1.createStartButton('Начать', () => {
-          // Показываем сообщение
-          const page2 = this.dialogPage.addText("Нажмите на подсвеченную арматуру")
-          const page3 = this.dialogPage.addText("Таким образом штангенциркуль замеряет арматуру")
-          const page4 = this.dialogPage.addText("Проведите замеры оставшейся арматуры и кабеля и введите значения на следующей странице планшета")
-          const page5 = this.dialogPage.addInputFields("Конструкции")
-          this.guiManager.CreateDialogBox([page2, page3, page4, page5])
+    const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
+        const routePage = this.dialogPage.createStartPage(
+            "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
+            "Перейти на основную карту",
+            () => {
+                window.location.href = '/ВыборИнструмента';
+            }
+        );
 
-            // Активируем режим лазера для второй триггер-зоны
-            //this.triggerManager2.distanceMode();
-            //this.triggerManager2.enableDistanceMeasurement()
-            this.triggerManager1.createStartButton('Завершить', () => {
-              const page6 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-              this.guiManager.CreateDialogBox([page6])
-              this.triggerManager1.disableDistanceMeasurement()
+        this.guiManager.CreateDialogBox([routePage]);
+    });
 
-              //this.triggerManager2.exitDisLaserMode2();
-              this.guiManager.createRouteButton('/test')
-          })
-
-          
-          })
-
+    this.guiManager.CreateDialogBox([page1, page1_1, page1_2, page1_3, page1_4, page1_5, page1_6, page2, page3, page4, endPage]);
 }
+
+
 
 
 

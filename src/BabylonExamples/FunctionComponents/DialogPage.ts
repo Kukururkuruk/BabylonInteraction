@@ -156,7 +156,7 @@ export class DialogPage {
         return grid
     }
 
-    addInputFields(header: string): void {
+    addInputFields(header: string): void { 
         const grid = new Grid();
         grid.width = "60%";  // Ограничим ширину сетки
         grid.height = "75%";  // Ограничим высоту сетки
@@ -185,14 +185,14 @@ export class DialogPage {
     
         // Поля ввода
         const fields = [
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Кабель (мм)" }
+            { placeholder: "арматура горизонтальная" },
+            { placeholder: "арматура верикальная" },
+            { placeholder: "Кабель" }
         ];
     
         fields.forEach((field, index) => {
             // Кликабельная кнопка
-            const clickableButton = Button.CreateSimpleButton(`button${index}`, field.placeholder);
+            const clickableButton = Button.CreateSimpleButton(`button${index}`, "Готово");
             clickableButton.width = "90%";  // Ширина кнопки
             clickableButton.height = "40px";  // Высота кнопки
             clickableButton.color = "white";  // Цвет текста
@@ -213,7 +213,7 @@ export class DialogPage {
     
             // Логика нажатия
             clickableButton.onPointerUpObservable.add(() => {
-                console.log(`${field.placeholder} clicked`);
+                console.log(`Готово clicked`);
                 // Добавьте сюда вашу логику
             });
     
@@ -230,7 +230,17 @@ export class DialogPage {
             inputField.focusedBackground = "#f0f0f0";  // Фон не меняется при фокусе
             inputField.focusedColor = "black";  // Цвет текста при фокусе остается черным
             inputField.placeholderColor = "gray";  // Цвет текста-заполнителя
-    
+            inputField.fontSize = "9px"; // Размер шрифта для текста и placeholder
+
+inputField.onBeforeKeyAddObservable.add(() => {
+    inputField.fontSize = "14px"; // Увеличиваем размер шрифта при вводе
+});
+
+inputField.onBlurObservable.add(() => {
+    if (!inputField.text) {
+        inputField.fontSize = "9px"; // Возвращаем меньший размер, если поле пустое
+    }
+});  // Размер шрифта для placeholder
             grid.addControl(inputField, index + 1, 1);  // Поля ввода во второй столбец
         });
     
