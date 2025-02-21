@@ -185,7 +185,7 @@ private initialRotation: number; // Переменная для хранения
                 console.log("Параметры SM_Nonius установлены.");
 
                 // Включаем управление масштабированием по колесику мыши для SM_Nonius
-                this.enableNoniusScaling(noniusMesh);
+                //this.enableNoniusScaling(noniusMesh);
             }
 
             // Устанавливаем параметры для основной модели
@@ -330,7 +330,7 @@ private rotateCaliperModel(): void {
         "SM_0_SpanStructureBeam_1_Armature_R_3",  // Дополнительный меш для подсветки
         "SM_0_SpanStructureBeam_1_Cable_R",      // Добавлен сюда
     ];
-
+    let isClickable = true;
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
         .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убеждаемся, что это Mesh
@@ -352,6 +352,24 @@ private rotateCaliperModel(): void {
     this.highlightLayer = new HighlightLayer("hl1", this.scene);
     this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
     this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+
+
+    // Получаем меши, которые нужно скрывать/показывать
+  const obstructingMeshes = [
+ 
+    this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_4"),
+    
+];
+
+// Проверяем, все ли меши найдены
+obstructingMeshes.forEach(mesh => {
+    if (!mesh) {
+        console.warn("Один или несколько мешей для скрытия не найдены.");
+    }
+});
+
+let isObstructingMeshesVisible = true; // Флаг для отслеживания видимости мешей
+
 
     // Включаем подсветку на "SM_0_SpanStructureBeam_1_Armature_R_8" изначально
     meshesToHighlight.forEach(mesh => {
@@ -377,6 +395,8 @@ private rotateCaliperModel(): void {
         mesh.actionManager.registerAction(new ExecuteCodeAction(
             ActionManager.OnPickTrigger,
             () => {
+                if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
                 console.log(`${mesh.name} был кликнут!`);
 
                 // Проверка, кликнули ли на основной меш "SM_0_SpanStructureBeam_1_Armature_R_8"
@@ -404,6 +424,9 @@ private rotateCaliperModel(): void {
                             this.highlightLayer.addMesh(armatureMesh, Color3.FromHexString("#00ffd9"));
                         }
                     }
+                    setTimeout(() => {
+                        isClickable = true; // Разрешаем клик через 2 секунды
+                    }, 4000);
                 }
 
                 const camera = this.scene.activeCamera;
@@ -466,6 +489,16 @@ private rotateCaliperModel(): void {
                 this.moveCaliperWithAnimation(endCaliperPosition);
 
                 isZoomed = !isZoomed;
+
+                // Переключение видимости obstructingMeshes
+              isObstructingMeshesVisible = !isObstructingMeshesVisible;
+              obstructingMeshes.forEach(obstructingMesh => {
+                  if (obstructingMesh) {
+                      obstructingMesh.setEnabled(isObstructingMeshesVisible);
+                      console.log(`Меш ${obstructingMesh.name} теперь ${isObstructingMeshesVisible ? "видим" : "скрыт"}.`);
+                  }
+              });
+
             }
         ));
     });
@@ -493,7 +526,7 @@ private highlightSpecificMeshesCable_R(): void {
   const meshNames = [
       "SM_0_SpanStructureBeam_1_Cable_R",
   ];
-
+  let isClickable = true;
   const meshesToHighlight = meshNames
       .map(name => this.scene.getMeshByName(name))
       .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
@@ -515,6 +548,9 @@ private highlightSpecificMeshesCable_R(): void {
   const obstructingMeshes = [
       this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_7"),
       this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_0"),
+      
+      this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_4"),
+      
   ];
 
   // Проверяем, все ли меши найдены
@@ -535,6 +571,8 @@ private highlightSpecificMeshesCable_R(): void {
       mesh.actionManager.registerAction(new ExecuteCodeAction(
           ActionManager.OnPickTrigger,
           () => {
+            if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
               console.log(`${mesh.name} был кликнут!`);
 
 
@@ -548,6 +586,9 @@ private highlightSpecificMeshesCable_R(): void {
                     this.toggleMeshPickabilityCable_R(true);
                     isFirstClick = true; // Возвращаем флаг в исходное состояние
                 }
+                setTimeout(() => {
+                    isClickable = true; // Разрешаем клик через 2 секунды
+                }, 4000);
             }
 
               const camera = this.scene.activeCamera;
@@ -645,7 +686,7 @@ private highlightSpecificMeshesArmature_R_3(): void {
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R_3",
     ];
-
+    let isClickable = true;
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
         .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
@@ -655,11 +696,11 @@ private highlightSpecificMeshesArmature_R_3(): void {
     const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164);
 
     const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0);
-    const targetCaliperPosition = new Vector3(12.444, 6.3068, 5.06); // Новая позиция
+    const targetCaliperPosition = new Vector3(12.440, 6.3268, 5.06); // Новая позиция
 
     let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
     const initialNoniusPosition = new Vector3(-0.03, 0, 0);
-    const targetNoniusPosition = new Vector3(-0.004, 0, 0);
+    const targetNoniusPosition = new Vector3(-0.0035, 0, 0);
 
 
     let isFirstClick = true; // Флаг для отслеживания первого клика
@@ -672,6 +713,8 @@ private highlightSpecificMeshesArmature_R_3(): void {
         mesh.actionManager.registerAction(new ExecuteCodeAction(
             ActionManager.OnPickTrigger,
             () => {
+                if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
                 console.log(`${mesh.name} был кликнут!`);
 
 
@@ -685,6 +728,9 @@ private highlightSpecificMeshesArmature_R_3(): void {
                       this.toggleMeshPickabilityArmature_R_3(true);
                       isFirstClick = true; // Возвращаем флаг в исходное состояние
                   }
+                  setTimeout(() => {
+                    isClickable = true; // Разрешаем клик через 2 секунды
+                }, 4000);
               }
 
                 const camera = this.scene.activeCamera;
@@ -925,8 +971,8 @@ private toggleMeshPickabilityArmature_R_3(isPickable: boolean): void {
 
 
 Page(): void { 
-    const page1 = this.dialogPage.addText("Нажми на подсвеченную арматуру для начала измерения.");
-    const page1_1 = this.dialogPage.addText("Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. ");
+    const page1 = this.dialogPage.addText("Здравствуйте, сейчас вы измерите диаметры арматуры при помощи штангенциркуля ШЦ-1-150 0,1. Для начала нажмите на подсвеченную арматуру левой кнопкой мыши.");
+    const page1_1 = this.dialogPage.addText("Порядок измерения штангенциркулем: Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. ");
     const page1_2 = this.dialogPage.addText("Вам необходимо изучить полученные показатели с основной шкалы в мм. Если показатель совпал с нулем на шкале нониуса, то это и есть точная целая цифра размера детали. ");
     const page1_3 = this.dialogPage.addText("Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. ");
     const page1_4 = this.dialogPage.addText("Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. ");
