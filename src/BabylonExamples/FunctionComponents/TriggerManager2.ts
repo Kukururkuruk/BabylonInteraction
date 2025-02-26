@@ -408,7 +408,10 @@ export class TriggerManager2 {
             this.intersectionPoint.isVisible = true;
 
             // Получаем позицию дальномера
-            const rangefinderPosition = this.rangefinderMesh.absolutePosition;
+            const rangefinderPosition = this.rangefinderMesh.parent ? 
+    Vector3.TransformCoordinates(this.rangefinderMesh.position, this.rangefinderMesh.parent.getWorldMatrix()) : 
+    this.rangefinderMesh.getAbsolutePosition();
+
 
             // Определяем, на сколько единиц смещать точку
             const offsetDistance = 1.4; // например, 0.5 единицы вперед
@@ -448,6 +451,79 @@ export class TriggerManager2 {
     })
     this.guiManager.CreateDialogBox([page3])
 }
+
+activateLaserMode1(): void {
+  const camera = this.scene.activeCamera as FreeCamera;
+
+  camera.detachControl();
+  camera.inputs.clear(); // Удаляем все входы
+  camera.inputs.addMouse(); // Добавляем только вращение мышью
+  camera.attachControl(this.canvas, true);
+
+  // Сфера пересечения
+  const pointSize = 0.05;
+  this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
+  const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
+  pointMaterial.emissiveColor = new Color3(1, 0, 0);
+  this.intersectionPoint.material = pointMaterial;
+  this.intersectionPoint.isVisible = false;
+  this.intersectionPoint.isPickable = false; // Сфера не участвует в пересечении
+
+  let dynamicLine: LinesMesh | null = null;
+
+  const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
+      if (!existingLine) {
+          const line = MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true }, this.scene);
+          line.color = new Color3(0, 1, 0);
+          line.isPickable = false; // Линия не участвует в пересечении
+          return line;
+      } else {
+          MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true, instance: existingLine }, this.scene);
+          return existingLine;
+      }
+  };
+
+  this.scene.registerBeforeRender(() => {
+      const origin = camera.globalPosition.clone();
+      const forward = camera.getDirection(Vector3.Forward());
+      const ray = new Ray(origin, forward, 200);
+
+      // Исключаем служебные объекты из пересечения (сферу и динамическую линию)
+      const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable && mesh !== this.intersectionPoint && mesh.name !== "dynamicLine");
+
+      if (hit && hit.pickedPoint) {
+          this.intersectionPoint.position.copyFrom(hit.pickedPoint);
+          this.intersectionPoint.isVisible = true;
+
+          // Получаем стартовую точку как позицию дальномера
+          const rangefinderPosition = this.rangefinderMesh.parent ? 
+    Vector3.TransformCoordinates(this.rangefinderMesh.position, this.rangefinderMesh.parent.getWorldMatrix()) : 
+    this.rangefinderMesh.getAbsolutePosition();
+
+
+          const start = rangefinderPosition;
+
+          dynamicLine = createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, dynamicLine);
+
+          const distance = Vector3.Distance(rangefinderPosition, this.intersectionPoint.position);
+          const euler = camera.rotation;
+          const angleX = Tools.ToDegrees(euler.x);
+          const angleY = Tools.ToDegrees(euler.y);
+          const displayedAngleX = -angleX + 6; // инвертируем знак для удобства отображения
+          eventEmitter.emit(
+              "updateDistanceAngleText",
+              `Угол X: ${displayedAngleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние: ${distance.toFixed(2)} м`
+          );
+      } else {
+          this.intersectionPoint.isVisible = false;
+          if (dynamicLine) {
+              dynamicLine.dispose();
+              dynamicLine = null;
+          }
+      }
+  });
+}
+
 
 
 

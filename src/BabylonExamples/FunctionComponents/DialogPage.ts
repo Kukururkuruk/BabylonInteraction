@@ -156,6 +156,95 @@ export class DialogPage {
         return grid
     }
 
+    addInputGrid1(
+        header: string,
+        items: string[],
+        ranges: { min: number; max: number }[],
+        totalRows: number = 8 // Общее количество строк
+      ): Grid {
+        const grid = new Grid();
+        grid.width = "60%";
+        grid.height = "50%";
+        grid.top = "-15%";
+      
+        // Создаем три колонки:
+        grid.addColumnDefinition(1); // Первая колонка (текст)
+        grid.addColumnDefinition(1); // Вторая колонка (InputText)
+        grid.addColumnDefinition(0.5); // Третья колонка (статус)
+      
+        // Создаем заданное количество строк
+        for (let i = 0; i < totalRows; i++) {
+          grid.addRowDefinition(0.2); // Фиксированная высота строки
+        }
+      
+        // Заголовок
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = header;
+        headerTextBlock.color = "black";
+        headerTextBlock.fontSize = "20px";
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        headerTextBlock.columnSpan = 3;
+        grid.addControl(headerTextBlock, 0, 0);
+      
+        // Заполняем строки контентом
+        items.forEach((item, i) => {
+          if (i + 1 >= totalRows) {
+            console.warn(`Количество элементов превышает доступные строки (${totalRows - 1})`);
+            return;
+          }
+      
+          const currentRow = i + 1;
+      
+          // Первая колонка: подпись
+          const textBlock = new TextBlock();
+          textBlock.text = item;
+          textBlock.color = "black";
+          textBlock.fontSize = "18px";
+          grid.addControl(textBlock, currentRow, 0);
+      
+          // Вторая колонка: поле ввода
+          const inputField = new InputText();
+          inputField.width = "90%";
+          inputField.height = "70%"; // уменьшаем высоту полей ввода
+          inputField.color = "white";
+          inputField.background = "grey";
+          grid.addControl(inputField, currentRow, 1);
+      
+          // Третья колонка: статусная иконка
+          const statusIcon = new TextBlock();
+          statusIcon.text = "";
+          statusIcon.color = "transparent";
+          statusIcon.fontSize = "18px";
+          statusIcon.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          statusIcon.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          grid.addControl(statusIcon, currentRow, 2);
+      
+          // Проверка значения
+          inputField.onTextChangedObservable.add(() => {
+            const value = parseFloat(inputField.text);
+            const range = ranges[i];
+            if (isNaN(value)) {
+              statusIcon.text = "";
+              statusIcon.color = "transparent";
+            } else if (value >= range.min && value <= range.max) {
+              statusIcon.text = "✔";
+              statusIcon.color = "green";
+            } else {
+              statusIcon.text = "✖";
+              statusIcon.color = "red";
+            }
+          });
+        });
+      
+        this.pageContainer.addControl(grid);
+        return grid;
+      }
+      
+      
+      
+      
+
     addInputFields(header: string): void {
         const grid = new Grid();
         grid.width = "60%";  // Ограничим ширину сетки

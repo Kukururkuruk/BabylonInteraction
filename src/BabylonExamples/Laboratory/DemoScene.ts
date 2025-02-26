@@ -48,6 +48,14 @@ import { VideoGui } from "../BaseComponents/VideoGui";
 import eventEmitter from "../../../EventEmitter";
 import { LabFunManager } from "./LabFunctions/LabFunManager";
 
+
+interface ZoneData {
+  position: Vector3;
+  name: string;
+  onEnter: () => void;
+  onExit: () => void;
+}
+
 interface ToolData {
   meshes: AbstractMesh[];
   originalAbsolutePositions: Vector3[];
@@ -72,6 +80,7 @@ export class DemoScene {
   private labFunManager: LabFunManager;
   private currentDialogBox: Rectangle | null = null;   // GUI-контейнер внутри Babylon
   private loadingContainer: HTMLDivElement | null = null; // DOM-элемент <div> c <video>
+  private zoneData: { [key: string]: ZoneData } = {};
 
   private tools: { [key: string]: ToolData } = {};
 
@@ -87,8 +96,6 @@ export class DemoScene {
   // Флаги, чтобы не запускать одно и то же повторно
   private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
   private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
-
-  private isDoorOpen: boolean = false; // Флаг состояния двери (открыта/закрыта)
 
   private rangefinderMeshes: AbstractMesh[] = [];
 
@@ -134,6 +141,52 @@ export class DemoScene {
 
     return scene;
   }
+
+//   CreateController(): void {
+//     // Основная камера
+//     this.camera = new FreeCamera("camera", new Vector3(0, 1.5, 0), this.scene);
+//     this.camera.attachControl(this.canvas, true);
+//     this.camera.applyGravity = false;
+//     this.camera.checkCollisions = false;
+//     this.camera.ellipsoid = new Vector3(0.3, 0.7, 0.3);
+//     this.camera.minZ = 0.45;
+//     this.camera.speed = 0.55;
+//     this.camera.inertia = 0.7;
+//     this.camera.angularSensibility = 2000;
+//     this.camera.keysUp.push(87); // W
+//     this.camera.keysLeft.push(65); // A
+//     this.camera.keysDown.push(83); // S
+//     this.camera.keysRight.push(68); // D
+
+//     const originalFov = this.camera.fov;
+//     let isZoomedIn = false;
+//     this.scene.onKeyboardObservable.add((kbInfo) => {
+//         if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+//             const key = kbInfo.event.key.toLowerCase();
+//             if (/q|й/.test(key)) {
+//                 // Переключатель для FOV
+//                 if (isZoomedIn) {
+//                     this.camera.fov = originalFov;
+//                 } else {
+//                     this.camera.fov /= 2;
+//                 }
+//                 isZoomedIn = !isZoomedIn;
+//             }
+//         }
+//     });
+
+//     // Вторая камера
+//     const secondaryCamera = new FreeCamera("secondaryCamera", new Vector3(-3.779559965579198, 3.463724273694613, -10.171039255933092), this.scene);
+//     secondaryCamera.rotation = new Vector3(1.0622217105770924, -0.7056874750273754, 0);
+
+//     // Устанавливаем вьюпорт для второй камеры
+//     secondaryCamera.viewport = new Viewport(0, 0.8, 0.2, 0.2); // Левый верхний угол
+
+//     // Устанавливаем активной камеру для ввода (основная камера)
+//     this.scene.activeCameras = [this.camera, secondaryCamera]
+
+
+// }
 
   CreateController(): void {
     this.camera = new FreeCamera("camera", new Vector3(0, 1.5, 0), this.scene);
@@ -223,18 +276,28 @@ export class DemoScene {
       });
   
       // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
-      const meshWall = lab.find((m) => m.name === "SM_Door");
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
-  
-      if (meshWall) {
-        meshWall.isPickable = true;
-        meshWall.actionManager = new ActionManager(this.scene);
-  
-        meshWall.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            this.toggleDoorState(meshWall as AbstractMesh);
-          })
-        );
+      const doorMeshes = lab.filter((m) => 
+        m.name.startsWith("SM_Door") && !m.name.includes("Handle")
+      );
+      console.log(doorMeshes);
+      
+
+      if (doorMeshes) {
+        doorMeshes.forEach((mesh) => {
+          mesh.metadata = {
+            isOpen: false,
+            isAnimating: false
+          };
+          mesh.isPickable = true;
+          mesh.actionManager = new ActionManager(this.scene);
+        
+          mesh.actionManager.registerAction(
+            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              this.toggleDoorState(mesh as AbstractMesh);
+            })
+          );
+        });
       }
   
       if (meshDesk) {
@@ -373,12 +436,36 @@ export class DemoScene {
       this.rangefinderMeshes.forEach((mesh) => {
         mesh.position = new Vector3(0, -1, 0);
       });
+
+      // this.modelLoader.addGUIRange(this.camera, this.rangefinderMeshes);
+      // this.triggerManager.setRangefinderMesh(this.rangefinderMeshes[1]);
+
       console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
+
+      const circle = MeshBuilder.CreateDisc("circle", { radius: 0.2, tessellation: 64 }, this.scene);
+      circle.position = new Vector3(-4.087509897212741, 0.02, -5.988414339504485);
+      circle.rotation.x = Math.PI / 2; // Повернуть на 90 градусов по оси X
+      // Настраиваем материал для круга
+      const material = new StandardMaterial("circleMaterial", this.scene);
+      material.diffuseColor = new Color3(1, 0, 0); // Красный цвет
+      material.specularColor = new Color3(0, 0, 0); // Убираем блики
+      circle.material = material;
+      // Добавляем ActionManager для обработки кликов
+      circle.actionManager = new ActionManager(this.scene);
+      circle.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          // Фиксируем положение камеры
+            this.camera.position = new Vector3(-4.087509897212741, 1.407, -5.988414339504485);
+            // this.camera.attachControl(false); // Отключение управления камерой
+            // this.triggerManager.disableCameraMovement()
+        })
+      );
   
       console.log("Все модели успешно загружены.");
       
       // Создаём зону через отдельный метод
-      this.setupZoneTriggerZone();
+      this.createZoneObj()
+      this.setupMultipleZoneTriggers();
       
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
@@ -390,12 +477,219 @@ export class DemoScene {
    * При входе в зону выполняется логика, аналогичная клику по meshWall (за исключением вызова toggleDoorState),
    * а при выходе из зоны завершается измерительный режим (код, ранее привязанный к кнопке "Завершить").
    */
-  private setupZoneTriggerZone(): void {
-    const zonePosition = new Vector3(-3.7919586757716925, 1.7547360114935204, -11);
-    this.triggerManager.setupZoneTrigger(
-      zonePosition,
-      // onEnter
-      () => {
+  createZoneObj(): void {
+    this.zoneData['1'] = {
+      position: new Vector3(-4.087509897212741, 1.407, -5.988414339504485),
+      name: 'firstZoneSign',
+      onEnter: () => {
+        if (this.isBetonTriggered) return;
+        this.isBetonTriggered = true;
+
+        const page1 = this.dialogPage.addText(
+          "Здесь вы можете измерить длину, ширину и высоту этой комнаты (в метрах). Для удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы перенесетесь ровно в центр. Замеры производятся правой кнопкой мыши"
+        );
+        const page2 = this.dialogPage.addInputGrid1(
+          "Конструкции",
+          ["Длина комнаты", "Ширина комнаты", "Высота комнаты"],
+          [
+            { min: 4.9, max: 5.1 }, // диапазон для "Длина комнаты"
+            { min: 3.9, max: 3.96}, // диапазон для "Ширина комнаты"
+            { min: 3.97, max: 4.01 },  // диапазон для "Высота комнаты"
+          ]
+        );  
+        this.guiManager.CreateDialogBox([page1, page2]);
+
+        this.BetonTrigger();
+  
+        // Отключаем стол
+        const labMeshes = this.modelLoader.getMeshes("lab") || [];
+        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
+        if (meshDesk) {
+          meshDesk.isPickable = false;
+          meshDesk.actionManager = null;
+        }
+      },
+
+    }
+    this.zoneData['2'] = {
+      position: new Vector3(-4.087509897212741, 1.407, -9.98841433950448),
+      name: 'secondZoneSign',
+      onEnter: () => {
+        if (this.isBetonTriggered) return;
+        this.isBetonTriggered = true;
+
+        const page1 = this.dialogPage.addText(
+          "Здесь вы можете увидеть как производтся замер со стороны дальномера. Наведитесь на мишень, начиная слева и запишите длину до мишени"
+        );
+        const page2 = this.dialogPage.addInputGrid1(
+          "Конструкции",
+          ["Первая мишень", "Вторая мишень", "Третья мишень"],
+          [
+            { min: 4.9, max: 5.1 }, // диапазон для "Длина комнаты"
+            { min: 3.9, max: 3.96}, // диапазон для "Ширина комнаты"
+            { min: 3.97, max: 4.01 },  // диапазон для "Высота комнаты"
+          ]
+        );  
+        this.guiManager.CreateDialogBox([page1, page2]);
+
+        const circle = MeshBuilder.CreateDisc("circle", { radius: 0.2, tessellation: 64 }, this.scene);
+        circle.position = new Vector3(-4.087509897212741, 0.02, -9.98841433950448);
+        circle.rotation.x = Math.PI / 2; // Повернуть на 90 градусов по оси X
+        // Настраиваем материал для круга
+        const material = new StandardMaterial("circleMaterial", this.scene);
+        material.diffuseColor = new Color3(1, 0, 0); // Красный цвет
+        material.specularColor = new Color3(0, 0, 0); // Убираем блики
+        circle.material = material;
+        // Добавляем ActionManager для обработки кликов
+        circle.actionManager = new ActionManager(this.scene);
+        circle.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+            // Фиксируем положение камеры
+              this.camera.position = new Vector3(-4.087509897212741, 1.407, -9.98841433950448);
+
+                    this.rangefinderMeshes.forEach((mesh) => {
+                      mesh.scaling = new Vector3(2, 2, -2); // Масштабируем в 3 раза и отражаем по Z
+                      mesh.rotation.y = Math.PI / 2;
+                      mesh.rotation.z = 0.4;
+                
+                      // Закрепление модели за камерой
+                      mesh.parent = this.camera;
+                
+                      // Установка позиции относительно камеры
+                      const offset = new Vector3(0, -0.4, 0.6); // Настройте значения по необходимости
+                      mesh.position = offset;
+                      mesh.isVisible = true;
+                      
+                    });
+
+                    const thirdMesh = this.rangefinderMeshes[2];
+
+                    // Получение размеров меша
+                    const boundingInfo = thirdMesh.getBoundingInfo();
+                    const boundingBox = boundingInfo.boundingBox;
+                    const size = boundingBox.maximum.subtract(boundingBox.minimum);
+                    const width = size.z;
+                    const height = size.y;
+                  
+                    // Определение размеров плоскости
+                    const planeWidth = width; // Ширина плоскости равна ширине меша
+                    const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
+                  
+                    // Создание DynamicTexture с достаточным разрешением
+                    const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+                    dynamicTexture.hasAlpha = true;
+                  
+                    // Установка шрифта перед измерением текста
+                    const font = "bold 90px Arial";
+                    const ctx = dynamicTexture.getContext();
+                    ctx.font = font;
+                  
+                    // Определение максимальной ширины текста с учётом отступов
+                    const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
+                  
+                    // Функция для разбиения текста на строки с учётом символов \n и ширины
+                    function wrapText(context, text, maxWidth) {
+                        const lines = [];
+                        const paragraphs = text.split('\n');
+                  
+                        paragraphs.forEach(paragraph => {
+                            const words = paragraph.split(' ');
+                            let currentLine = '';
+                  
+                            words.forEach(word => {
+                                const testLine = currentLine + word + ' ';
+                                const metrics = context.measureText(testLine);
+                                const testWidth = metrics.width;
+                  
+                                if (testWidth > maxWidth && currentLine !== '') {
+                                    lines.push(currentLine.trim());
+                                    currentLine = word + ' ';
+                                } else {
+                                    currentLine = testLine;
+                                }
+                            });
+                  
+                            lines.push(currentLine.trim());
+                        });
+                  
+                        return lines;
+                    }
+                  
+                    // Функция для обновления текста с переносом
+                    function updateDynamicText(newText) {
+                        ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+                  
+                        // Устанавливаем шрифт
+                        ctx.font = font;
+                  
+                        // Разбиваем текст на строки с учетом \n и ширины
+                        const lines = wrapText(ctx, newText, maxTextWidth);
+                  
+                        // Рисуем каждую строку с увеличивающимся смещением по Y
+                        const lineHeight = 90; // Можно настроить в зависимости от шрифта
+                        lines.forEach((line, index) => {
+                            ctx.fillStyle = "white"; // Цвет текста
+                            ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
+                        });
+                  
+                        // Обновляем текстуру
+                        dynamicTexture.update();
+                    }
+                  
+                    eventEmitter.on("updateDistanceAngleText", (newText) => {
+                      if (dynamicTexture) {
+                          updateDynamicText(newText);
+                      }
+                  });
+                  
+                    // Создание материала для текста
+                    const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+                    textMaterial.diffuseTexture = dynamicTexture;
+                    textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
+                    textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
+                  
+                    // Создание плоскости для текста
+                    const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+                    textPlane.material = textMaterial;
+                  
+                    // Позиционируем плоскость относительно меша
+                    textPlane.parent = thirdMesh;
+                    textPlane.rotation.y = -Math.PI / 2;
+                  
+                    // Компенсируем отражение родителя по оси Z
+                    textPlane.scaling = new Vector3(-1, 1, 1);
+                  
+                    // Устанавливаем позицию
+                    textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
+
+                    this.triggerManager.setRangefinderMesh(this.rangefinderMeshes[1]);
+                    this.triggerManager.activateLaserMode1()
+
+
+
+
+
+
+
+
+          })
+        );
+
+        // this.BetonTrigger();
+  
+        // Отключаем стол
+        const labMeshes = this.modelLoader.getMeshes("lab") || [];
+        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
+        if (meshDesk) {
+          meshDesk.isPickable = false;
+          meshDesk.actionManager = null;
+        }
+      }
+    }
+    this.zoneData['3'] = {
+      position: new Vector3(-4.087509897212741, 1.407, -13.98841433950448),
+      name: 'thirdZoneSign',
+      onEnter: () => {
         if (this.isBetonTriggered) return;
         this.isBetonTriggered = true;
         const enterDialog = this.dialogPage.addText("Измерение начато");
@@ -409,44 +703,58 @@ export class DemoScene {
           meshDesk.isPickable = false;
           meshDesk.actionManager = null;
         }
-      },
-      // onExit
-      () => {
-        this.isBetonTriggered = false;
-        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-        this.guiManager.CreateDialogBox([exitDialog]);
-        this.triggerManager.disableDistanceMeasurement();
-        this.triggerManager.exitDisLaserMode2();
-        this.rangefinderMeshes.forEach((mesh) => {
-          mesh.position = new Vector3(0, -1, 0);
-        });
-
-      const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-      this.guiManager.CreateDialogBox([page4]);
-
-      // --------------------------------
-      // Возвращаем стол обратно в работу
-      // --------------------------------
-      const labMeshes = this.modelLoader.getMeshes("lab") || [];
-      const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
-      if (meshDesk) {
-        meshDesk.isPickable = true;
-        meshDesk.actionManager = new ActionManager(this.scene);
-        meshDesk.actionManager.hoverCursor = "default";
-
-        meshDesk.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            if (!this.isToolDeskClicked) {
-              this.isToolDeskClicked = true;
-              this.initToolHandling();
-            }
-          })
-        );
       }
+    }
 
-      },
-      12
-    );
+  }
+
+  
+
+  private setupMultipleZoneTriggers(): void {
+    Object.keys(this.zoneData).forEach(key => {
+      const zone = this.zoneData[key];
+  
+      this.triggerManager.setupZoneTrigger(
+        zone.position,
+        // onEnter: вызываем колбэк, заданный для конкретной зоны
+        () => {
+          zone.onEnter();
+        },
+        // onExit: оставляем логику из исходного метода
+        () => {
+          this.isBetonTriggered = false;
+          const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+          this.guiManager.CreateDialogBox([exitDialog]);
+          this.triggerManager.disableDistanceMeasurement();
+          this.triggerManager.exitDisLaserMode2();
+          this.rangefinderMeshes.forEach((mesh) => {
+            mesh.position = new Vector3(0, -1, 0);
+          });
+  
+          const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+          this.guiManager.CreateDialogBox([page4]);
+  
+          // Возвращаем стол обратно в работу
+          const labMeshes = this.modelLoader.getMeshes("lab") || [];
+          const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
+          if (meshDesk) {
+            meshDesk.isPickable = true;
+            meshDesk.actionManager = new ActionManager(this.scene);
+            meshDesk.actionManager.hoverCursor = "default";
+  
+            meshDesk.actionManager.registerAction(
+              new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                if (!this.isToolDeskClicked) {
+                  this.isToolDeskClicked = true;
+                  this.initToolHandling();
+                }
+              })
+            );
+          }
+        },
+        3 // радиус или другая настройка триггера
+      );
+    });
   }
 
   /**
@@ -602,9 +910,6 @@ export class DemoScene {
   }
 
   public BetonTrigger(): void {
-    // Показываем диалог перед началом
-    const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
-    this.guiManager.CreateDialogBox([page1]);
   
     if (!this.rangefinderMeshes || this.rangefinderMeshes.length === 0) {
       console.error("RangefinderMeshes не загружены. Проверьте CreateEnvironment().");
@@ -692,154 +997,112 @@ export class DemoScene {
   
     console.log("Rangefinder_LP.glb успешно инициализирован в BetonTrigger.");
   
-    const page2 = this.dialogPage.addText(
-      "Вам нужно измерить длину конструкций... Кликните правой кнопкой, чтобы начать измерение и т.д."
-    );
-    const page3 = this.dialogPage.addInputGrid("Конструкции", ["Ширина двери", "Высота стола", "Шкаф", "Что-то еще"]);
-  
     // Активируем режим измерения
     this.triggerManager.distanceMode();
     this.triggerManager.enableDistanceMeasurement();
   
-    this.guiManager.CreateDialogBox([page2, page3]);
+    
   }
 
   toggleDoorState(doorMesh: AbstractMesh): void {
-    if (this.isDoorOpen) {
+    const doorState = doorMesh.metadata;
+    if (doorState.isAnimating) {
+      return;
+    }
+    if (doorState.isOpen) {
       this.closeDoor(doorMesh);
     } else {
       this.openDoor(doorMesh);
     }
   }
-
-// Предположим, что этот флаг объявлен в классе
-private isDoorAnimating: boolean = false;
-
-openDoor(doorMesh: AbstractMesh): void {
-  // Если анимация уже идет — выходим
-  if (this.isDoorAnimating) {
-    return;
-  }
-  this.isDoorAnimating = true;
-  this.isDoorOpen = true;
-
-  // Найти ручку двери
-  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
-  if (!doorHandleMesh) {
-    console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
-  }
-
-  // Создаем анимацию для двери
-  const doorAnimation = new Animation(
-    "OpenDoor",
-    "rotation.y",
-    30,
-    Animation.ANIMATIONTYPE_FLOAT,
-    Animation.ANIMATIONLOOPMODE_CONSTANT
-  );
-
-  const doorKeys = [
-    { frame: 0, value: doorMesh.rotation.y },
-    { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 },
-  ];
-  doorAnimation.setKeys(doorKeys);
-  doorMesh.animations = [];
-  doorMesh.animations.push(doorAnimation);
-
-  // Создаем анимацию для ручки двери
-  if (doorHandleMesh) {
-    const handleAnimation = new Animation(
-      "MoveHandle",
-      "position.y",
-      30,
-      Animation.ANIMATIONTYPE_FLOAT,
+  
+  openDoor(doorMesh: AbstractMesh): void {
+    // Предполагаем, что для каждой двери в metadata уже заданы флаги isOpen и isAnimating
+    const doorState = doorMesh.metadata;
+    if (doorState.isAnimating) {
+      return;
+    }
+    doorState.isAnimating = true;
+    doorState.isOpen = true;
+  
+    // Если у меша установлен rotationQuaternion, сбрасываем его, чтобы использовать rotation (Euler)
+    doorMesh.rotationQuaternion = null;
+  
+    // Сохраняем начальное состояние вращения
+    const startRotation = doorMesh.rotation.clone();
+    // Вычисляем целевое вращение: прибавляем Math.PI/2 к оси Y
+    const targetRotation = startRotation.clone();
+    targetRotation.y += Math.PI / 2;
+  
+    // Создаем анимацию для свойства rotation (тип VECTOR3)
+    const doorAnimation = new Animation(
+      "OpenDoor",
+      "rotation",
+      30, // FPS
+      Animation.ANIMATIONTYPE_VECTOR3,
       Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-
-    const handleKeys = [
-      { frame: 0, value: doorHandleMesh.position.y },
-      { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
-      { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
-    ];
-    handleAnimation.setKeys(handleKeys);
-    doorHandleMesh.animations = [];
-    doorHandleMesh.animations.push(handleAnimation);
+  
+    // Задаем ключевые кадры
+    doorAnimation.setKeys([
+      { frame: 0, value: startRotation },
+      { frame: 30, value: targetRotation },
+    ]);
+  
+    // Привязываем анимацию к двери
+    doorMesh.animations = [doorAnimation];
+  
+    // Запускаем анимацию
+    this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      doorState.isAnimating = false;
+      console.log(`Анимация открытия ${doorMesh.name} завершена.`);
+    });
+    console.log(`${doorMesh.name} открывается.`);
   }
-
-  // Запускаем анимацию двери с callback, который сбрасывает флаг по окончании
-  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
-    this.isDoorAnimating = false;
-    console.log("Анимация открытия завершена.");
-  });
-  if (doorHandleMesh) {
-    this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
-  }
-
-  console.log("Дверь открывается.");
-}
-
-closeDoor(doorMesh: AbstractMesh): void {
-  // Если анимация уже идет — выходим
-  if (this.isDoorAnimating) {
-    return;
-  }
-  this.isDoorAnimating = true;
-  this.isDoorOpen = false;
-
-  // Найти ручку двери
-  const doorHandleMesh = this.scene.getMeshByName("SM_Door_Handle_1");
-  if (!doorHandleMesh) {
-    console.warn("Меш ручки двери SM_Door_Handle_1 не найден.");
-  }
-
-  // Создаем анимацию для двери
-  const doorAnimation = new Animation(
-    "CloseDoor",
-    "rotation.y",
-    30,
-    Animation.ANIMATIONTYPE_FLOAT,
-    Animation.ANIMATIONLOOPMODE_CONSTANT
-  );
-
-  const doorKeys = [
-    { frame: 0, value: doorMesh.rotation.y },
-    { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 },
-  ];
-  doorAnimation.setKeys(doorKeys);
-  doorMesh.animations = [];
-  doorMesh.animations.push(doorAnimation);
-
-  // Создаем анимацию для ручки двери
-  if (doorHandleMesh) {
-    const handleAnimation = new Animation(
-      "MoveHandle",
-      "position.y",
+  
+  closeDoor(doorMesh: AbstractMesh): void {
+    const doorState = doorMesh.metadata;
+    if (doorState.isAnimating) {
+      return;
+    }
+    doorState.isAnimating = true;
+    doorState.isOpen = false;
+  
+    // Сброс rotationQuaternion, чтобы анимация шла по rotation
+    doorMesh.rotationQuaternion = null;
+  
+    // Сохраняем текущее вращение
+    const startRotation = doorMesh.rotation.clone();
+    // Вычисляем целевое вращение для закрытия (вычитаем Math.PI/2)
+    const targetRotation = startRotation.clone();
+    targetRotation.y -= Math.PI / 2;
+  
+    // Создаем анимацию закрытия
+    const doorAnimation = new Animation(
+      "CloseDoor",
+      "rotation",
       30,
-      Animation.ANIMATIONTYPE_FLOAT,
+      Animation.ANIMATIONTYPE_VECTOR3,
       Animation.ANIMATIONLOOPMODE_CONSTANT
     );
-
-    const handleKeys = [
-      { frame: 0, value: doorHandleMesh.position.y },
-      { frame: 15, value: doorHandleMesh.position.y - 0.05 }, // Опускаем ручку
-      { frame: 30, value: doorHandleMesh.position.y },       // Возвращаем в исходное положение
-    ];
-    handleAnimation.setKeys(handleKeys);
-    doorHandleMesh.animations = [];
-    doorHandleMesh.animations.push(handleAnimation);
+  
+    doorAnimation.setKeys([
+      { frame: 0, value: startRotation },
+      { frame: 30, value: targetRotation },
+    ]);
+  
+    doorMesh.animations = [doorAnimation];
+  
+    // Запускаем анимацию
+    this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      doorState.isAnimating = false;
+      console.log(`Анимация закрытия ${doorMesh.name} завершена.`);
+    });
+    console.log(`${doorMesh.name} закрывается.`);
   }
+  
+  
 
-  // Запускаем анимацию двери с callback, который сбрасывает флаг по окончании
-  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
-    this.isDoorAnimating = false;
-    console.log("Анимация закрытия завершена.");
-  });
-  if (doorHandleMesh) {
-    this.scene.beginAnimation(doorHandleMesh, 0, 30, false);
-  }
-
-  console.log("Дверь закрывается.");
-}
 
 
   public async initializeScene(): Promise<void> {

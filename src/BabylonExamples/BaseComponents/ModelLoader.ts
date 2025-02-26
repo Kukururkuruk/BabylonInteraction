@@ -208,6 +208,11 @@ export class ModelLoader {
     this.setupMeshes();
   }
 
+  public async loadBridge(hide = true): Promise<void> {
+    await this.loadMapModel();
+    this.setupMeshes(hide);
+  }
+
   private async loadMapModel(): Promise<void> {
     try {
       const result = await SceneLoader.ImportMeshAsync(
@@ -711,7 +716,7 @@ public async loadTapeMeasureModel(): Promise<void> {
 
 
   // Метод для настройки мешей после загрузки
-  private setupMeshes(): void {
+  private setupMeshes(hide: boolean): void {
     const mapMeshes = this.loadedMeshes["map"];
     if (mapMeshes) {
       // Включаем коллизии для всех мешей
@@ -741,13 +746,21 @@ public async loadTapeMeasureModel(): Promise<void> {
         }
       });
 
-      // Скрываем "сломанные" меши
-      const brokenMeshes = mapMeshes.filter((mesh) =>
-        mesh.name.toLowerCase().includes(this.brokenMeshSubstring)
-      );
-      brokenMeshes.forEach((mesh) => {
-        mesh.visibility = 0;
+      // Находим сломаные меши
+      const BrokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+      const WholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+
+      if (hide) {
+      BrokenMeshes.forEach((mesh) => {
+        mesh.visibility = 0; // Полностью видимый
       });
+      } else {
+        WholeMeshes.forEach((mesh) => {
+          mesh.visibility = 0; // Полностью невидимый
+        });
+      }
+
+
     } else {
       console.warn("Меши карты не найдены для настройки.");
     }
