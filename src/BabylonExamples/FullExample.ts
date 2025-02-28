@@ -424,6 +424,13 @@ let isObstructingMeshesVisible = true; // Флаг для отслеживани
                             this.highlightLayer.addMesh(armatureMesh, Color3.FromHexString("#00ffd9"));
                         }
                     }
+
+                   
+
+
+
+
+                        
                     setTimeout(() => {
                         isClickable = true; // Разрешаем клик через 2 секунды
                     }, 4000);
@@ -970,18 +977,59 @@ private toggleMeshPickabilityArmature_R_3(isPickable: boolean): void {
   
 
 
-Page(): void { 
+Page(): void {
+    // Добавляем текстовые страницы
     const page1 = this.dialogPage.addText("Здравствуйте, сейчас вы измерите диаметры арматуры при помощи штангенциркуля ШЦ-1-150 0,1. Для начала нажмите на подсвеченную арматуру левой кнопкой мыши.");
-    const page1_1 = this.dialogPage.addText("Порядок измерения штангенциркулем: Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. ");
-    const page1_2 = this.dialogPage.addText("Вам необходимо изучить полученные показатели с основной шкалы в мм. Если показатель совпал с нулем на шкале нониуса, то это и есть точная целая цифра размера детали. ");
-    const page1_3 = this.dialogPage.addText("Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. ");
-    const page1_4 = this.dialogPage.addText("Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. ");
-    const page1_5 = this.dialogPage.addText("Вам нужно умножить получившиеся значение на цену деления шкалы нониуса (обычно 0,1 или 0,05 мм) и получить десятые или сотые значения.");
-    const page1_6 = this.dialogPage.addText("Сложите данные из 3 и 6 пунктов. ");
+    const page1_1 = this.dialogPage.addText("Порядок измерения штангенциркулем: Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. Вам необходимо изучить полученные показатели с основной шкалы в мм. Если показатель совпал с нулем на шкале нониуса, то это и есть точная целая цифра размера детали. Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. Вам нужно умножить получившиеся значение на цену деления шкалы нониуса (обычно 0,1 или 0,05 мм) и получить десятые или сотые значения. Сложите данные из 3 и 6 пунктов.");
     const page2 = this.dialogPage.addText("Повторно нажмите на подсвеченную арматуру для окончания замеров. Теперь проведите измерения оставшейся арматуры и внесите данные на следующей странице");
     const page3 = this.dialogPage.addInputFields("Конструкции");
     const page4 = this.dialogPage.addText("Отлично! Вы справились с заданием, теперь перейдите на следующую страницу для заверешения.");
 
+    // Страница с видео
+    const page1_2 = this.dialogPage.addText("Теперь, пожалуйста, посмотрите видео, которое демонстрирует принцип работы прибора.");
+    const videoContainer = this.dialogPage.addVideoContainer(); // Инициализация контейнера для видео
+
+    // Добавление текста на страницу с видео
+    const videoText = document.createElement("div");
+    videoText.innerText = "Краткое описание и принцип работы прибора";
+    videoText.style.color = "white";
+    videoText.style.fontSize = "20px";
+    videoText.style.textAlign = "center";
+    videoText.style.marginBottom = "10px";
+    videoContainer.appendChild(videoText);
+
+    // Добавление видео в контейнер
+    const videoElement = document.createElement("video");
+    videoElement.src = "models/Caliper_1K.mp4"; // Укажите путь к вашему видео
+    videoElement.controls = true;
+    videoElement.style.width = "100%";
+    videoElement.style.height = "80%";
+    videoElement.style.borderRadius = "10px";
+    videoContainer.appendChild(videoElement);
+
+    // Кнопка для открытия видео на весь экран
+    const fullScreenButton = document.createElement("button");
+    fullScreenButton.innerText = "На весь экран";
+    fullScreenButton.style.position = "absolute";
+    fullScreenButton.style.bottom = "10px";
+    fullScreenButton.style.right = "10px";
+    fullScreenButton.style.padding = "5px 10px";
+    fullScreenButton.style.backgroundColor = "green";
+    fullScreenButton.style.color = "white";
+    fullScreenButton.style.border = "none";
+    fullScreenButton.style.borderRadius = "5px";
+    fullScreenButton.style.cursor = "pointer";
+
+    fullScreenButton.addEventListener("click", () => {
+        if (videoElement.requestFullscreen) {
+            videoElement.requestFullscreen(); // Используем requestFullscreen
+        }
+        videoElement.play();
+    });
+
+    videoContainer.appendChild(fullScreenButton);
+
+    // Кнопка завершения задания
     const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
         const routePage = this.dialogPage.createStartPage(
             "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
@@ -994,7 +1042,10 @@ Page(): void {
         this.guiManager.CreateDialogBox([routePage]);
     });
 
-    this.guiManager.CreateDialogBox([page1, page1_1, page1_2, page1_3, page1_4, page1_5, page1_6, page2, page3, page4, endPage]);
+    // Создаем диалоговое окно с последовательностью страниц
+    this.guiManager.CreateDialogBox([
+        page1, page1_1, page1_2, page2, page3, page4, endPage
+    ]);
 }
 
 

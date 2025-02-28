@@ -38,6 +38,7 @@ export class GUIManager {
   private hideButton: Button
   private clickSound: Sound;
   dialogVisible: boolean = true;
+  public nextPageButton: Button | null = null;
 
   constructor(scene: Scene, textMessages?: string[]) {
     this.scene = scene;
