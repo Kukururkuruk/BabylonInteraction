@@ -49,6 +49,7 @@ export class TriggerManager2 {
   private centralCube: Mesh | null = null;
   private redRay: LinesMesh | null = null;
   private intersectionPoint: Mesh | null = null;
+  private dynamicLine: LinesMesh | null = null;
   private sphere1: Mesh | null = null;
   private sphere2: Mesh | null = null;
   private sphere3: Mesh | null = null;
@@ -455,10 +456,10 @@ export class TriggerManager2 {
 activateLaserMode1(): void {
   const camera = this.scene.activeCamera as FreeCamera;
 
-  camera.detachControl();
-  camera.inputs.clear(); // Удаляем все входы
-  camera.inputs.addMouse(); // Добавляем только вращение мышью
-  camera.attachControl(this.canvas, true);
+  // camera.detachControl();
+  // camera.inputs.clear(); // Удаляем все входы
+  // camera.inputs.addMouse(); // Добавляем только вращение мышью
+  // camera.attachControl(this.canvas, true);
 
   // Сфера пересечения
   const pointSize = 0.05;
@@ -468,8 +469,6 @@ activateLaserMode1(): void {
   this.intersectionPoint.material = pointMaterial;
   this.intersectionPoint.isVisible = false;
   this.intersectionPoint.isPickable = false; // Сфера не участвует в пересечении
-
-  let dynamicLine: LinesMesh | null = null;
 
   const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
       if (!existingLine) {
@@ -503,7 +502,7 @@ activateLaserMode1(): void {
 
           const start = rangefinderPosition;
 
-          dynamicLine = createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, dynamicLine);
+          this.dynamicLine = createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, this.dynamicLine);
 
           const distance = Vector3.Distance(rangefinderPosition, this.intersectionPoint.position);
           const euler = camera.rotation;
@@ -516,9 +515,9 @@ activateLaserMode1(): void {
           );
       } else {
           this.intersectionPoint.isVisible = false;
-          if (dynamicLine) {
-              dynamicLine.dispose();
-              dynamicLine = null;
+          if (this.dynamicLine) {
+            this.dynamicLine.dispose();
+            this.dynamicLine = null;
           }
       }
   });
@@ -689,6 +688,22 @@ exitLaserMode(): void {
   // Удаление сообщения
   this.removeMessage();
   this.removeAngle();
+
+  this.scene.render();
+}
+
+exitLaserMode1(): void {
+
+  if (this.dynamicLine) {
+      this.dynamicLine.dispose(); // Удаляем линию
+      this.dynamicLine = null;
+  }
+
+  // Очистка сферы пересечения
+  if (this.intersectionPoint) {
+      this.intersectionPoint.dispose(); // Удаляем точку пересечения
+      this.intersectionPoint = null;
+  }
 
   this.scene.render();
 }

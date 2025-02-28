@@ -160,24 +160,26 @@ export class DialogPage {
         header: string,
         items: string[],
         ranges: { min: number; max: number }[],
-        totalRows: number = 8 // Общее количество строк
+        onCheckCallback?: () => void, // Новый параметр - коллбэк
+        totalRows: number = 8
       ): Grid {
+        const innerContainer = new Rectangle();
+        innerContainer.width = "100%";
+        innerContainer.height = "100%";
+        innerContainer.thickness = 0
         const grid = new Grid();
         grid.width = "60%";
         grid.height = "50%";
         grid.top = "-15%";
       
-        // Создаем три колонки:
-        grid.addColumnDefinition(1); // Первая колонка (текст)
-        grid.addColumnDefinition(1); // Вторая колонка (InputText)
-        grid.addColumnDefinition(0.5); // Третья колонка (статус)
+        grid.addColumnDefinition(1);
+        grid.addColumnDefinition(0.5);
+        grid.addColumnDefinition(0.5);
       
-        // Создаем заданное количество строк
         for (let i = 0; i < totalRows; i++) {
-          grid.addRowDefinition(0.2); // Фиксированная высота строки
+          grid.addRowDefinition(0.2);
         }
       
-        // Заголовок
         const headerTextBlock = new TextBlock();
         headerTextBlock.text = header;
         headerTextBlock.color = "black";
@@ -187,7 +189,9 @@ export class DialogPage {
         headerTextBlock.columnSpan = 3;
         grid.addControl(headerTextBlock, 0, 0);
       
-        // Заполняем строки контентом
+        const statusIcons: TextBlock[] = [];
+        const inputFields: InputText[] = [];
+      
         items.forEach((item, i) => {
           if (i + 1 >= totalRows) {
             console.warn(`Количество элементов превышает доступные строки (${totalRows - 1})`);
@@ -196,34 +200,46 @@ export class DialogPage {
       
           const currentRow = i + 1;
       
-          // Первая колонка: подпись
           const textBlock = new TextBlock();
           textBlock.text = item;
           textBlock.color = "black";
           textBlock.fontSize = "18px";
           grid.addControl(textBlock, currentRow, 0);
       
-          // Вторая колонка: поле ввода
           const inputField = new InputText();
           inputField.width = "90%";
-          inputField.height = "70%"; // уменьшаем высоту полей ввода
+          inputField.height = "70%";
           inputField.color = "white";
           inputField.background = "grey";
           grid.addControl(inputField, currentRow, 1);
+          inputFields.push(inputField);
       
-          // Третья колонка: статусная иконка
           const statusIcon = new TextBlock();
           statusIcon.text = "";
           statusIcon.color = "transparent";
           statusIcon.fontSize = "18px";
           statusIcon.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
           statusIcon.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          statusIcon.isVisible = false;
           grid.addControl(statusIcon, currentRow, 2);
+          statusIcons.push(statusIcon);
+        });
       
-          // Проверка значения
-          inputField.onTextChangedObservable.add(() => {
+        const checkButton = Button.CreateSimpleButton("CheckBtn", "Проверка");
+        checkButton.width = "150px";
+        checkButton.height = "40px";
+        checkButton.color = "white";
+        checkButton.background = "green";
+        checkButton.thickness = 2;
+        checkButton.top = "20%"
+        innerContainer.addControl(checkButton);
+      
+        checkButton.onPointerClickObservable.add(() => {
+          statusIcons.forEach((statusIcon, index) => {
+            statusIcon.isVisible = true;
+            const inputField = inputFields[index];
             const value = parseFloat(inputField.text);
-            const range = ranges[i];
+            const range = ranges[index];
             if (isNaN(value)) {
               statusIcon.text = "";
               statusIcon.color = "transparent";
@@ -235,16 +251,19 @@ export class DialogPage {
               statusIcon.color = "red";
             }
           });
+      
+          // Вызываем коллбэк для управления видимостью мешей
+          if (onCheckCallback) {
+            onCheckCallback();
+          }
+          
         });
       
-        this.pageContainer.addControl(grid);
-        return grid;
+        innerContainer.addControl(grid);
+        this.pageContainer.addControl(innerContainer);
+        return innerContainer;
       }
       
-      
-      
-      
-
     addInputFields(header: string): void {
         const grid = new Grid();
         grid.width = "60%";  // Ограничим ширину сетки
@@ -328,12 +347,6 @@ export class DialogPage {
     
         return grid;
     }
-    
-    
-    
-    
-    
-
 
     // createStartPage(ref: string): void {
     //     // Создаем отдельный контейнер для этой страницы

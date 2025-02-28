@@ -24,7 +24,10 @@ import {
   ActionManager,
   VideoTexture,
   Texture,
-  Animation
+  Animation,
+  LinesMesh,
+  Nullable,
+  Observer
 } from "@babylonjs/core";
 import { ExecuteCodeAction } from "@babylonjs/core/Actions";
 
@@ -98,6 +101,16 @@ export class DemoScene {
   private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
 
   private rangefinderMeshes: AbstractMesh[] = [];
+  private mapMeshes: AbstractMesh[] = [];
+
+  private intersectionPoint: Mesh | null = null;
+  private dynamicLine: LinesMesh | null = null;
+  private rangefinderMesh: Mesh | null = null;
+  private laserUpdateObserver: Nullable<Observer<any>> = null;
+  private updateTextCallback: ((newText: string) => void) | null = null;
+  public updateTextPlaneHandler: ((newText: string) => void) | null = null;
+  public updateAngleTextHandler: ((newText: string) => void) | null = null;
+
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -115,7 +128,7 @@ export class DemoScene {
     this.initializeScene();
 
     this.CreateController();
-    this.utilities.AddCameraPositionButton();
+    this.utilities.combinedMethod();
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -255,19 +268,73 @@ export class DemoScene {
   
       // --- 2) Обрабатываем сцену (lab) ---
       const lab = this.modelLoader.getMeshes("lab") || [];
+      this.mapMeshes = lab
       const glowLayer = new GlowLayer("glow", this.scene);
       glowLayer.intensity = 1;
   
       lab.forEach((mesh) => {
         mesh.checkCollisions = true;
-        // Пример: подсветка конкретного меша (стол)
+        const material = mesh.material;
+      
+        // Применяем прозрачность и устанавливаем позиции для первой группы мешей
+        if (
+          mesh.name === "SM_Length_Flat_LP" ||
+          mesh.name === "SM_Height_Flat_LP" ||
+          mesh.name === "SM_Width_Flat_LP"
+        ) {
+          mesh.isVisible = false;
+          if (material && material instanceof PBRMaterial) {
+            material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
+          }
+          if (mesh instanceof Mesh) {
+            switch (mesh.name) {
+              case "SM_Length_Flat_LP":
+                mesh.position.z = -4.06;
+                break;
+              case "SM_Height_Flat_LP":
+                mesh.position.x = 8.52;
+                break;
+              case "SM_Width_Flat_LP":
+                mesh.position.y = 0.05;
+                break;
+            }
+          }
+        }
+      
+        // Устанавливаем позиции для новой группы мешей
+        if (
+          mesh.name === "SM_0_Column" ||
+          mesh.name === "SM_0_Cube" ||
+          mesh.name === "SM_0_Torso"
+        ) {
+          if (mesh instanceof Mesh) {
+            switch (mesh.name) {
+              case "SM_0_Column":
+                mesh.position.x = 11.97;
+                mesh.position.y = -0.00;
+                mesh.position.z = -10;
+                break;
+              case "SM_0_Cube":
+                mesh.position.x = 16.53;
+                mesh.position.y = 0.00;
+                mesh.position.z = -10.19;
+                break;
+              case "SM_0_Torso":
+                mesh.position.x = 14.46;
+                mesh.position.y = 0.00;
+                mesh.position.z = -9.8;
+                break;
+            }
+          }
+        }
+      
+        // Отдельная логика для стола
         if (mesh.name === "SM_0_Tools_Desk" && mesh instanceof Mesh) {
-          const material = mesh.material;
           if (material && material instanceof PBRMaterial) {
             material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
             material.emissiveColor = new Color3(1, 1, 1);
             material.emissiveIntensity = 2;
-  
+      
             if (material.emissiveTexture) {
               glowLayer.addIncludedOnlyMesh(mesh);
             }
@@ -314,6 +381,34 @@ export class DemoScene {
           })
         );
       }
+
+      // Создание невидимой стены
+const wall = MeshBuilder.CreateBox("invisibleWall", {
+  width: 4,    // ширина 4
+  height: 4,   // высота 4
+  depth: 0.1   // тонкая стена
+}, this.scene);     // предполагается, что переменная scene доступна
+
+// Установка позиции стены
+wall.position.x = -5.77;
+wall.position.y = -0.00;
+wall.position.z = -10.07;
+wall.rotation.y = Math.PI / 2
+wall.isPickable = false
+
+// Включаем столкновения
+wall.checkCollisions = true;
+
+// Создаём материал для стены
+const wallMaterial = new PBRMaterial("wallMaterial", this.scene);
+wallMaterial.albedoColor = new Color3(1, 0, 0); // Красный цвет для отладки
+wallMaterial.alpha = 0; // Полностью прозрачный по умолчанию
+
+// Назначаем материал стене
+wall.material = wallMaterial;
+
+// Для отладки можно переключать видимость (например, через консоль или условие)
+// wallMaterial.alpha = 1; // Раскомментируйте для видимости стены
   
       console.log("Основные модели (LAB) успешно загружены.");
   
@@ -442,22 +537,32 @@ export class DemoScene {
 
       console.log("Rangefinder_LP.glb загружен (CreateEnvironment).");
 
-      const circle = MeshBuilder.CreateDisc("circle", { radius: 0.2, tessellation: 64 }, this.scene);
-      circle.position = new Vector3(-4.087509897212741, 0.02, -5.988414339504485);
-      circle.rotation.x = Math.PI / 2; // Повернуть на 90 градусов по оси X
+      const circle1 = MeshBuilder.CreateDisc("circle1", { radius: 0.2, tessellation: 64 }, this.scene);
+      circle1.position = new Vector3(-4.087509897212741, 0.02, -5.988414339504485);
+      circle1.rotation.x = Math.PI / 2; // Повернуть на 90 градусов по оси X
+      const circle2 = MeshBuilder.CreateDisc("circle2", { radius: 0.2, tessellation: 64 }, this.scene);
+      circle2.position = new Vector3(-4.087509897212741, 0.02, -9.98841433950448);
+      circle2.rotation.x = Math.PI / 2;
       // Настраиваем материал для круга
       const material = new StandardMaterial("circleMaterial", this.scene);
       material.diffuseColor = new Color3(1, 0, 0); // Красный цвет
       material.specularColor = new Color3(0, 0, 0); // Убираем блики
-      circle.material = material;
+      circle1.material = material;
+      circle2.material = material;
       // Добавляем ActionManager для обработки кликов
-      circle.actionManager = new ActionManager(this.scene);
-      circle.actionManager.registerAction(
+      circle1.actionManager = new ActionManager(this.scene);
+      circle1.actionManager.registerAction(
         new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
           // Фиксируем положение камеры
             this.camera.position = new Vector3(-4.087509897212741, 1.407, -5.988414339504485);
             // this.camera.attachControl(false); // Отключение управления камерой
             // this.triggerManager.disableCameraMovement()
+        })
+      );
+      circle2.actionManager = new ActionManager(this.scene);
+      circle2.actionManager.registerAction(
+        new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+          this.camera.position = new Vector3(-4.087509897212741, 1.407, -9.98841433950448);
         })
       );
   
@@ -484,7 +589,7 @@ export class DemoScene {
       onEnter: () => {
         if (this.isBetonTriggered) return;
         this.isBetonTriggered = true;
-
+    
         const page1 = this.dialogPage.addText(
           "Здесь вы можете измерить длину, ширину и высоту этой комнаты (в метрах). Для удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы перенесетесь ровно в центр. Замеры производятся правой кнопкой мыши"
         );
@@ -492,16 +597,27 @@ export class DemoScene {
           "Конструкции",
           ["Длина комнаты", "Ширина комнаты", "Высота комнаты"],
           [
-            { min: 4.9, max: 5.1 }, // диапазон для "Длина комнаты"
-            { min: 3.9, max: 3.96}, // диапазон для "Ширина комнаты"
-            { min: 3.97, max: 4.01 },  // диапазон для "Высота комнаты"
-          ]
-        );  
+            { min: 6.92, max: 6.98 }, 
+            { min: 3.91, max: 3.97 },
+            { min: 3.97, max: 4.03 },
+          ],
+          () => {
+            // Логика видимости мешей
+            this.mapMeshes.forEach((mesh) => {
+              if (
+                mesh.name === "SM_Length_Flat_LP" ||
+                mesh.name === "SM_Height_Flat_LP" ||
+                mesh.name === "SM_Width_Flat_LP"
+              ) {
+                mesh.isVisible = true;
+              }
+            });
+          }
+        );
         this.guiManager.CreateDialogBox([page1, page2]);
-
+    
         this.BetonTrigger();
-  
-        // Отключаем стол
+    
         const labMeshes = this.modelLoader.getMeshes("lab") || [];
         const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
         if (meshDesk) {
@@ -509,15 +625,62 @@ export class DemoScene {
           meshDesk.actionManager = null;
         }
       },
-
-    }
+      onExit: () => {
+        this.isBetonTriggered = false;
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
+        this.triggerManager.disableDistanceMeasurement();
+        this.triggerManager.exitDisLaserMode2();
+        this.rangefinderMeshes.forEach(mesh => {
+          mesh.position = new Vector3(0, -1, 0);
+          mesh.parent = null;
+        });
+    
+        const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([page4]);
+    
+        const labMeshes = this.modelLoader.getMeshes("lab") || [];
+        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
+        if (meshDesk) {
+          meshDesk.isPickable = true;
+          meshDesk.actionManager = new ActionManager(this.scene);
+          meshDesk.actionManager.hoverCursor = "default";
+    
+          meshDesk.actionManager.registerAction(
+            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+              if (!this.isToolDeskClicked) {
+                this.isToolDeskClicked = true;
+                this.initToolHandling();
+              }
+            })
+          );
+        }
+    
+        // Очистка текстуры и плоскости
+        const textPlane = this.scene.getMeshByName("TextPlaneZone1");
+        if (textPlane) {
+          textPlane.material?.dispose();
+          textPlane.dispose();
+        }
+    
+        // Очистка слушателей eventEmitter
+        if (this.updateTextPlaneHandler) {
+          eventEmitter.off("updateTextPlane", this.updateTextPlaneHandler);
+          this.updateTextPlaneHandler = null;
+        }
+        if (this.updateAngleTextHandler) {
+          eventEmitter.off("updateAngleText", this.updateAngleTextHandler);
+          this.updateAngleTextHandler = null;
+        }
+      }
+    };
     this.zoneData['2'] = {
       position: new Vector3(-4.087509897212741, 1.407, -9.98841433950448),
       name: 'secondZoneSign',
       onEnter: () => {
         if (this.isBetonTriggered) return;
         this.isBetonTriggered = true;
-
+    
         const page1 = this.dialogPage.addText(
           "Здесь вы можете увидеть как производтся замер со стороны дальномера. Наведитесь на мишень, начиная слева и запишите длину до мишени"
         );
@@ -525,167 +688,121 @@ export class DemoScene {
           "Конструкции",
           ["Первая мишень", "Вторая мишень", "Третья мишень"],
           [
-            { min: 4.9, max: 5.1 }, // диапазон для "Длина комнаты"
-            { min: 3.9, max: 3.96}, // диапазон для "Ширина комнаты"
-            { min: 3.97, max: 4.01 },  // диапазон для "Высота комнаты"
-          ]
-        );  
-        this.guiManager.CreateDialogBox([page1, page2]);
-
-        const circle = MeshBuilder.CreateDisc("circle", { radius: 0.2, tessellation: 64 }, this.scene);
-        circle.position = new Vector3(-4.087509897212741, 0.02, -9.98841433950448);
-        circle.rotation.x = Math.PI / 2; // Повернуть на 90 градусов по оси X
-        // Настраиваем материал для круга
-        const material = new StandardMaterial("circleMaterial", this.scene);
-        material.diffuseColor = new Color3(1, 0, 0); // Красный цвет
-        material.specularColor = new Color3(0, 0, 0); // Убираем блики
-        circle.material = material;
-        // Добавляем ActionManager для обработки кликов
-        circle.actionManager = new ActionManager(this.scene);
-        circle.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            // Фиксируем положение камеры
-              this.camera.position = new Vector3(-4.087509897212741, 1.407, -9.98841433950448);
-
-                    this.rangefinderMeshes.forEach((mesh) => {
-                      mesh.scaling = new Vector3(2, 2, -2); // Масштабируем в 3 раза и отражаем по Z
-                      mesh.rotation.y = Math.PI / 2;
-                      mesh.rotation.z = 0.4;
-                
-                      // Закрепление модели за камерой
-                      mesh.parent = this.camera;
-                
-                      // Установка позиции относительно камеры
-                      const offset = new Vector3(0, -0.4, 0.6); // Настройте значения по необходимости
-                      mesh.position = offset;
-                      mesh.isVisible = true;
-                      
-                    });
-
-                    const thirdMesh = this.rangefinderMeshes[2];
-
-                    // Получение размеров меша
-                    const boundingInfo = thirdMesh.getBoundingInfo();
-                    const boundingBox = boundingInfo.boundingBox;
-                    const size = boundingBox.maximum.subtract(boundingBox.minimum);
-                    const width = size.z;
-                    const height = size.y;
-                  
-                    // Определение размеров плоскости
-                    const planeWidth = width; // Ширина плоскости равна ширине меша
-                    const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
-                  
-                    // Создание DynamicTexture с достаточным разрешением
-                    const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
-                    dynamicTexture.hasAlpha = true;
-                  
-                    // Установка шрифта перед измерением текста
-                    const font = "bold 90px Arial";
-                    const ctx = dynamicTexture.getContext();
-                    ctx.font = font;
-                  
-                    // Определение максимальной ширины текста с учётом отступов
-                    const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
-                  
-                    // Функция для разбиения текста на строки с учётом символов \n и ширины
-                    function wrapText(context, text, maxWidth) {
-                        const lines = [];
-                        const paragraphs = text.split('\n');
-                  
-                        paragraphs.forEach(paragraph => {
-                            const words = paragraph.split(' ');
-                            let currentLine = '';
-                  
-                            words.forEach(word => {
-                                const testLine = currentLine + word + ' ';
-                                const metrics = context.measureText(testLine);
-                                const testWidth = metrics.width;
-                  
-                                if (testWidth > maxWidth && currentLine !== '') {
-                                    lines.push(currentLine.trim());
-                                    currentLine = word + ' ';
-                                } else {
-                                    currentLine = testLine;
-                                }
-                            });
-                  
-                            lines.push(currentLine.trim());
-                        });
-                  
-                        return lines;
-                    }
-                  
-                    // Функция для обновления текста с переносом
-                    function updateDynamicText(newText) {
-                        ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
-                  
-                        // Устанавливаем шрифт
-                        ctx.font = font;
-                  
-                        // Разбиваем текст на строки с учетом \n и ширины
-                        const lines = wrapText(ctx, newText, maxTextWidth);
-                  
-                        // Рисуем каждую строку с увеличивающимся смещением по Y
-                        const lineHeight = 90; // Можно настроить в зависимости от шрифта
-                        lines.forEach((line, index) => {
-                            ctx.fillStyle = "white"; // Цвет текста
-                            ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
-                        });
-                  
-                        // Обновляем текстуру
-                        dynamicTexture.update();
-                    }
-                  
-                    eventEmitter.on("updateDistanceAngleText", (newText) => {
-                      if (dynamicTexture) {
-                          updateDynamicText(newText);
-                      }
-                  });
-                  
-                    // Создание материала для текста
-                    const textMaterial = new StandardMaterial("TextMaterial", this.scene);
-                    textMaterial.diffuseTexture = dynamicTexture;
-                    textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
-                    textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
-                  
-                    // Создание плоскости для текста
-                    const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
-                    textPlane.material = textMaterial;
-                  
-                    // Позиционируем плоскость относительно меша
-                    textPlane.parent = thirdMesh;
-                    textPlane.rotation.y = -Math.PI / 2;
-                  
-                    // Компенсируем отражение родителя по оси Z
-                    textPlane.scaling = new Vector3(-1, 1, 1);
-                  
-                    // Устанавливаем позицию
-                    textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
-
-                    this.triggerManager.setRangefinderMesh(this.rangefinderMeshes[1]);
-                    this.triggerManager.activateLaserMode1()
-
-
-
-
-
-
-
-
-          })
+            { min: 7, max: 7.3 },
+            { min: 11.5, max: 11.7 },
+            { min: 9.55, max: 9.95 }
+          ],
+          
         );
-
-        // this.BetonTrigger();
-  
-        // Отключаем стол
+        this.guiManager.CreateDialogBox([page1, page2]);
+    
+            this.rangefinderMeshes.forEach((mesh) => {
+              mesh.scaling = new Vector3(2, 2, -2);
+              mesh.rotation.y = Math.PI / 2;
+              mesh.rotation.z = 0.4;
+              mesh.parent = this.camera;
+              const offset = new Vector3(0, -0.4, 0.6);
+              mesh.position = offset;
+              mesh.isVisible = true;
+            });
+    
+            const thirdMesh = this.rangefinderMeshes[2];
+            const boundingInfo = thirdMesh.getBoundingInfo();
+            const boundingBox = boundingInfo.boundingBox;
+            const size = boundingBox.maximum.subtract(boundingBox.minimum);
+            const width = size.z;
+            const height = size.y;
+    
+            const planeWidth = width;
+            const planeHeight = height;
+    
+            const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+            dynamicTexture.hasAlpha = true;
+    
+            const font = "bold 90px Arial";
+            const ctx = dynamicTexture.getContext();
+            ctx.font = font;
+            const maxTextWidth = dynamicTexture.getSize().width - 100;
+    
+            function wrapText(context, text, maxWidth) {
+              const lines = [];
+              const paragraphs = text.split('\n');
+              paragraphs.forEach(paragraph => {
+                const words = paragraph.split(' ');
+                let currentLine = '';
+                words.forEach(word => {
+                  const testLine = currentLine + word + ' ';
+                  const metrics = context.measureText(testLine);
+                  const testWidth = metrics.width;
+                  if (testWidth > maxWidth && currentLine !== '') {
+                    lines.push(currentLine.trim());
+                    currentLine = word + ' ';
+                  } else {
+                    currentLine = testLine;
+                  }
+                });
+                lines.push(currentLine.trim());
+              });
+              return lines;
+            }
+    
+            function updateDynamicText(newText) {
+              ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+              ctx.font = font;
+              const lines = wrapText(ctx, newText, maxTextWidth);
+              const lineHeight = 90;
+              lines.forEach((line, index) => {
+                ctx.fillStyle = "white";
+                ctx.fillText(line, 50, 100 + index * lineHeight);
+              });
+              dynamicTexture.update();
+            }
+    
+            this.updateTextCallback = (newText) => {
+              if (dynamicTexture) {
+                updateDynamicText(newText);
+              }
+            };
+    
+            const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+            textMaterial.diffuseTexture = dynamicTexture;
+            textMaterial.emissiveColor = new Color3(1, 1, 1);
+            textMaterial.backFaceCulling = false;
+    
+            const textPlane = MeshBuilder.CreatePlane("TextPlaneZone2", { width: planeWidth, height: planeHeight }, this.scene);
+            textPlane.material = textMaterial;
+            textPlane.parent = thirdMesh;
+            textPlane.rotation.y = -Math.PI / 2;
+            textPlane.scaling = new Vector3(-1, 1, 1);
+            textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0);
+    
+            this.rangefinderMesh = this.rangefinderMeshes[1];
+            this.activateLaserMode1();
+    
         const labMeshes = this.modelLoader.getMeshes("lab") || [];
         const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
         if (meshDesk) {
           meshDesk.isPickable = false;
           meshDesk.actionManager = null;
         }
+      },
+      onExit: () => {
+        this.isBetonTriggered = false;
+    
+        this.rangefinderMeshes.forEach(mesh => {
+          mesh.position = new Vector3(0, -1, 0);
+        });
+
+                // Очистка текстуры и плоскости
+                const textPlane = this.scene.getMeshByName("TextPlaneZone2");
+                if (textPlane) {
+                  textPlane.material?.dispose();
+                  textPlane.dispose();
+                }
+    
+        this.exitLaserMode1();
       }
-    }
+    };
     this.zoneData['3'] = {
       position: new Vector3(-4.087509897212741, 1.407, -13.98841433950448),
       name: 'thirdZoneSign',
@@ -703,6 +820,9 @@ export class DemoScene {
           meshDesk.isPickable = false;
           meshDesk.actionManager = null;
         }
+      },
+      onExit: () => {
+        this.isBetonTriggered = false;
       }
     }
 
@@ -722,40 +842,107 @@ export class DemoScene {
         },
         // onExit: оставляем логику из исходного метода
         () => {
-          this.isBetonTriggered = false;
-          const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-          this.guiManager.CreateDialogBox([exitDialog]);
-          this.triggerManager.disableDistanceMeasurement();
-          this.triggerManager.exitDisLaserMode2();
-          this.rangefinderMeshes.forEach((mesh) => {
-            mesh.position = new Vector3(0, -1, 0);
-          });
-  
-          const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-          this.guiManager.CreateDialogBox([page4]);
-  
-          // Возвращаем стол обратно в работу
-          const labMeshes = this.modelLoader.getMeshes("lab") || [];
-          const meshDesk = labMeshes.find((m) => m.name === "SM_0_Tools_Desk");
-          if (meshDesk) {
-            meshDesk.isPickable = true;
-            meshDesk.actionManager = new ActionManager(this.scene);
-            meshDesk.actionManager.hoverCursor = "default";
-  
-            meshDesk.actionManager.registerAction(
-              new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-                if (!this.isToolDeskClicked) {
-                  this.isToolDeskClicked = true;
-                  this.initToolHandling();
-                }
-              })
-            );
-          }
+          zone.onExit();
         },
         3 // радиус или другая настройка триггера
       );
     });
   }
+
+  activateLaserMode1(): void {
+    const camera = this.scene.activeCamera as FreeCamera;
+  
+    const pointSize = 0.05;
+    this.intersectionPoint = MeshBuilder.CreateSphere("intersectionPoint", { diameter: pointSize }, this.scene);
+    const pointMaterial = new StandardMaterial("pointMaterial", this.scene);
+    pointMaterial.emissiveColor = new Color3(1, 0, 0);
+    this.intersectionPoint.material = pointMaterial;
+    this.intersectionPoint.isVisible = false;
+    this.intersectionPoint.isPickable = false;
+  
+    const createOrUpdateLineBetweenPoints = (start: Vector3, end: Vector3, existingLine?: LinesMesh): LinesMesh => {
+      if (!existingLine) {
+        this.dynamicLine = MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true }, this.scene);
+        this.dynamicLine.color = new Color3(0, 1, 0);
+        this.dynamicLine.isPickable = false;
+        return this.dynamicLine;
+      } else {
+        MeshBuilder.CreateLines("dynamicLine", { points: [start, end], updatable: true, instance: existingLine }, this.scene);
+        return existingLine;
+      }
+    };
+  
+    this.laserUpdateObserver = this.scene.onBeforeRenderObservable.add(() => {
+      const origin = camera.globalPosition.clone();
+      const forward = camera.getDirection(Vector3.Forward());
+      const ray = new Ray(origin, forward, 200);
+  
+      const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable && mesh !== this.intersectionPoint && mesh.name !== "dynamicLine");
+  
+      if (hit && hit.pickedPoint) {
+        this.intersectionPoint.position.copyFrom(hit.pickedPoint);
+        this.intersectionPoint.isVisible = true;
+  
+        const rangefinderPosition = this.rangefinderMesh.parent
+          ? Vector3.TransformCoordinates(this.rangefinderMesh.position, this.rangefinderMesh.parent.getWorldMatrix())
+          : this.rangefinderMesh.getAbsolutePosition();
+  
+        const start = rangefinderPosition;
+  
+        createOrUpdateLineBetweenPoints(start, this.intersectionPoint.position, this.dynamicLine);
+  
+        const distance = Vector3.Distance(rangefinderPosition, this.intersectionPoint.position);
+        const euler = camera.rotation;
+        const angleX = Tools.ToDegrees(euler.x);
+        const angleY = Tools.ToDegrees(euler.y);
+        const displayedAngleX = -angleX + 3;
+  
+        if (this.updateTextCallback) {
+          this.updateTextCallback(`Угол X: ${displayedAngleX.toFixed(2)}°\nУгол Y: ${angleY.toFixed(2)}°\nРасстояние: ${distance.toFixed(2)} м`);
+        }
+      } else {
+        this.intersectionPoint.isVisible = false;
+        if (this.dynamicLine) {
+          this.dynamicLine.dispose();
+          this.dynamicLine = null;
+        }
+      }
+    });
+  }
+  
+
+exitLaserMode1(): void {
+    // Удаляем линию
+    if (this.dynamicLine) {
+      this.dynamicLine.parent = null;
+        this.dynamicLine.dispose();
+        this.dynamicLine = null;
+    }
+
+    // Удаляем сферу пересечения
+    if (this.intersectionPoint) {
+      this.intersectionPoint.parent = null; // Убираем родителя
+        this.intersectionPoint.dispose();
+        this.intersectionPoint = null;
+    }
+
+    // Убираем обновление сцены
+    if (this.laserUpdateObserver) {
+      const removed = this.scene.onBeforeRenderObservable.remove(this.laserUpdateObserver);
+      if (removed) {
+          console.log("laserUpdateObserver успешно удалён");
+      } else {
+          console.error("Не удалось удалить laserUpdateObserver");
+      }
+      this.laserUpdateObserver = null;
+    }
+
+    if (this.updateTextCallback) {
+      this.updateTextCallback("");
+      this.updateTextCallback = null;
+    }
+}
+
 
   /**
    * Метод, который вызывается по клику на SM_0_Tools_Desk.
@@ -922,7 +1109,7 @@ export class DemoScene {
       mesh.parent = this.camera;
       const offset = new Vector3(-0.7, -0.5, 1.1);
       mesh.position = offset;
-      mesh.renderingGroupId = 1; // отрисовывается после объектов группы 0
+      // mesh.renderingGroupId = 1;
     });
   
     const thirdMesh = this.rangefinderMeshes[2];
@@ -975,19 +1162,20 @@ export class DemoScene {
       dynamicTexture.update();
     }
   
-    eventEmitter.on("updateTextPlane", (newText: string) => {
-      updateDynamicText(newText);
-    });
-    eventEmitter.on("updateAngleText", (newText: string) => {
-      updateDynamicText(newText);
-    });
+// Сохраняем обработчики как свойства объекта
+this.updateTextPlaneHandler = (newText: string) => updateDynamicText(newText);
+this.updateAngleTextHandler = (newText: string) => updateDynamicText(newText);
+
+// Подписываемся на события
+eventEmitter.on("updateTextPlane", this.updateTextPlaneHandler);
+eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
   
     const textMaterial = new StandardMaterial("TextMaterial", this.scene);
     textMaterial.diffuseTexture = dynamicTexture;
     textMaterial.emissiveColor = new Color3(1, 1, 1);
     textMaterial.backFaceCulling = false;
   
-    const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+    const textPlane = MeshBuilder.CreatePlane("TextPlaneZone1", { width: planeWidth, height: planeHeight }, this.scene);
     textPlane.material = textMaterial;
     textPlane.parent = thirdMesh;
     textPlane.rotation.y = -Math.PI / 2;
