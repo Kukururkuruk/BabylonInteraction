@@ -986,67 +986,74 @@ Page(): void {
     const page4 = this.dialogPage.addText("Отлично! Вы справились с заданием, теперь перейдите на следующую страницу для заверешения.");
 
     // Страница с видео
-    const page1_2 = this.dialogPage.addText("Теперь, пожалуйста, посмотрите видео, которое демонстрирует принцип работы прибора.");
-    const videoContainer = this.dialogPage.addVideoContainer(); // Инициализация контейнера для видео
+     // Страница с видео
+     const page1_2 = this.dialogPage.addText("Теперь, когда вы ознакомились с порядком измерения штангенциркулем, перейдите на следующую страницу для просмотра видео, которое демонстрирует принцип работы прибора.");
 
-    // Добавление текста на страницу с видео
-    const videoText = document.createElement("div");
-    videoText.innerText = "Краткое описание и принцип работы прибора";
-    videoText.style.color = "white";
-    videoText.style.fontSize = "20px";
-    videoText.style.textAlign = "center";
-    videoText.style.marginBottom = "10px";
-    videoContainer.appendChild(videoText);
+     // Контейнер для видео (инициализируем один раз)
+     let videoContainer: HTMLElement | null = null;
+ 
+     // Кнопка для перехода на страницу с видео и добавления видео
+     const videoPageButton = this.dialogPage.createStartPage(
+         "Перейти к видео",
+         "Посмотреть видео",
+         () => {
+             // Проверяем, есть ли уже контейнер для видео
+             if (!videoContainer) {
+                 videoContainer = this.dialogPage.addVideoContainer(); // Инициализация контейнера для видео
+                 
+                 // Добавляем видео
+                 const videoElement = document.createElement("video");
+                 videoElement.src = "models/Caliper_1K.mp4"; // Укажите путь к вашему видео
+                 videoElement.controls = true;
+                 videoElement.style.width = "100%";
+                 videoElement.style.height = "80%";
+                 videoElement.style.borderRadius = "10px";
+                 videoContainer.appendChild(videoElement);
+ 
+                 // Добавляем кнопку закрытия видео
+                 const closeButton = document.createElement("button");
+                 closeButton.innerText = "Закрыть видео";
+                 closeButton.style.display = "block";
+                 closeButton.style.marginTop = "10px";
+                 closeButton.style.padding = "10px 20px";
+                 closeButton.style.borderRadius = "5px";
+                 closeButton.style.backgroundColor = "#ff6666";
+                 closeButton.style.color = "#fff";
+                 closeButton.style.border = "none";
+                 closeButton.style.cursor = "pointer";
+ 
+                 closeButton.onclick = () => {
+                     videoContainer!.style.visibility = "hidden"; // Прячем контейнер
+                     videoElement.pause(); // Останавливаем видео
+                 };
+ 
+                 videoContainer.appendChild(closeButton);
+             } else {
+                 // Если контейнер уже существует, просто показываем его снова
+                 videoContainer.style.visibility = "visible";
+             }
+         }
+     );
+ 
+     // Кнопка завершения задания
+     const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
+         const routePage = this.dialogPage.createStartPage(
+             "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
+             "Перейти на основную карту",
+             () => {
+                 window.location.href = '/ВыборИнструмента';
+             }
+         );
+ 
+         this.guiManager.CreateDialogBox([routePage]);
+     });
+ 
+     // Создаем диалоговое окно с последовательностью страниц
+     this.guiManager.CreateDialogBox([
+         page1, page1_1, page1_2, videoPageButton, page2, page3, page4, endPage
+     ]);
+ }
 
-    // Добавление видео в контейнер
-    const videoElement = document.createElement("video");
-    videoElement.src = "models/Caliper_1K.mp4"; // Укажите путь к вашему видео
-    videoElement.controls = true;
-    videoElement.style.width = "100%";
-    videoElement.style.height = "80%";
-    videoElement.style.borderRadius = "10px";
-    videoContainer.appendChild(videoElement);
-
-    // Кнопка для открытия видео на весь экран
-    const fullScreenButton = document.createElement("button");
-    fullScreenButton.innerText = "На весь экран";
-    fullScreenButton.style.position = "absolute";
-    fullScreenButton.style.bottom = "10px";
-    fullScreenButton.style.right = "10px";
-    fullScreenButton.style.padding = "5px 10px";
-    fullScreenButton.style.backgroundColor = "green";
-    fullScreenButton.style.color = "white";
-    fullScreenButton.style.border = "none";
-    fullScreenButton.style.borderRadius = "5px";
-    fullScreenButton.style.cursor = "pointer";
-
-    fullScreenButton.addEventListener("click", () => {
-        if (videoElement.requestFullscreen) {
-            videoElement.requestFullscreen(); // Используем requestFullscreen
-        }
-        videoElement.play();
-    });
-
-    videoContainer.appendChild(fullScreenButton);
-
-    // Кнопка завершения задания
-    const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
-        const routePage = this.dialogPage.createStartPage(
-            "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
-            "Перейти на основную карту",
-            () => {
-                window.location.href = '/ВыборИнструмента';
-            }
-        );
-
-        this.guiManager.CreateDialogBox([routePage]);
-    });
-
-    // Создаем диалоговое окно с последовательностью страниц
-    this.guiManager.CreateDialogBox([
-        page1, page1_1, page1_2, page2, page3, page4, endPage
-    ]);
-}
 
 
 
