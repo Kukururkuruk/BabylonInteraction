@@ -10,6 +10,7 @@ export class DialogPage {
     private videoTexture: VideoTexture;
     private skipButtonGui: Button;
     private htmlVideo: HTMLVideoElement;
+    private videoContainer: HTMLDivElement | null = null;
 
     constructor() {
         this.pageContainer = new Rectangle();
@@ -346,6 +347,37 @@ export class DialogPage {
         this.pageContainer.addControl(grid);
     
         return grid;
+    }
+
+    // Метод для создания контейнера под видео
+    addVideoContainer(): HTMLDivElement {
+        if (this.videoContainer) return this.videoContainer;
+
+        // --- Создаём контейнер для видео ---
+        this.videoContainer = document.createElement("div");
+        this.videoContainer.style.position = "absolute";
+        this.videoContainer.style.width = "60%";
+        this.videoContainer.style.height = "40%";
+        this.videoContainer.style.top = "20%";
+        this.videoContainer.style.left = "20%";
+        this.videoContainer.style.backgroundColor = "black";
+        this.videoContainer.style.border = "2px solid white";
+        this.videoContainer.style.borderRadius = "10px";
+        this.videoContainer.style.overflow = "hidden";
+        this.videoContainer.style.zIndex = "10";
+
+        // --- Добавляем контейнер на экран ---
+        document.body.appendChild(this.videoContainer);
+
+        return this.videoContainer;
+    }
+
+    // Метод для удаления контейнера
+    removeVideoContainer() {
+        if (this.videoContainer) {
+            document.body.removeChild(this.videoContainer);
+            this.videoContainer = null;
+        }
     }
 
     // createStartPage(ref: string): void {
