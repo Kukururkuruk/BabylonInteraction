@@ -298,7 +298,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "UltrasonicTester.gltf",
+        "UltrasonicTester_FR_LP.gltf",
         this.scene
       );
       this.loadedMeshes["ultraC"] = result.meshes;
