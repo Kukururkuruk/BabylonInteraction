@@ -50,6 +50,7 @@ import { BabylonUtilities } from "../FunctionComponents/BabylonUtilities";
 import { VideoGui } from "../BaseComponents/VideoGui";
 import eventEmitter from "../../../EventEmitter";
 import { LabFunManager } from "./LabFunctions/LabFunManager";
+import { ScreenViewManager } from "./ScreenViewManager"; // Укажите правильный путь
 
 
 interface ZoneData {
@@ -81,6 +82,7 @@ export class DemoScene {
   private dialogPage: DialogPage;
   private utilities: BabylonUtilities;
   private labFunManager: LabFunManager;
+  private screenViewManager: ScreenViewManager;
   private currentDialogBox: Rectangle | null = null;   // GUI-контейнер внутри Babylon
   private loadingContainer: HTMLDivElement | null = null; // DOM-элемент <div> c <video>
   private zoneData: { [key: string]: ZoneData } = {};
@@ -128,7 +130,8 @@ export class DemoScene {
     this.initializeScene();
 
     this.CreateController();
-    this.utilities.combinedMethod();
+    this.screenViewManager = new ScreenViewManager(this.scene, this.camera);
+    // this.utilities.combinedMethod();
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -341,6 +344,15 @@ export class DemoScene {
           }
         }
       });
+
+      const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
+      if (screenMesh) {
+        screenMesh.checkCollisions = true;
+        this.screenViewManager.setupScreenInteraction("SM_0_Screen_1");
+        console.log("Экран SM_0_Screen_1 настроен для взаимодействия.");
+      } else {
+        console.warn("SM_0_Screen_1 не найден.");
+      }
   
       // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
@@ -631,6 +643,7 @@ wall.material = wallMaterial;
         this.guiManager.CreateDialogBox([exitDialog]);
         this.triggerManager.disableDistanceMeasurement();
         this.triggerManager.exitDisLaserMode2();
+        this.triggerManager.cleanupDistanceMeasurement(); // Добавляем очистку
         this.rangefinderMeshes.forEach(mesh => {
           mesh.position = new Vector3(0, -1, 0);
           mesh.parent = null;
