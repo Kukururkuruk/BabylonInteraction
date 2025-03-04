@@ -294,9 +294,9 @@ export class DialogPage {
     
         // Поля ввода
         const fields = [
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Кабель (мм)" }
+            { placeholder: "Арматура гор.", correctValue: "4" },
+            { placeholder: "Арматура верт.", correctValue: "4" },
+            { placeholder: "Кабель (мм)", correctValue: "10" }
         ];
     
         fields.forEach((field, index) => {
@@ -317,13 +317,18 @@ export class DialogPage {
                 clickableButton.background = "#0056b3";  // Более темный фон при наведении
             });
             clickableButton.onPointerOutObservable.add(() => {
-                clickableButton.background = "gray";  // Восстановить оригинальный фон
+                if (clickableButton.background !== "green") { // Если кнопка не зеленая, возвращаем цвет
+                    clickableButton.background = "gray";  // Восстановить оригинальный фон
+                }
             });
     
             // Логика нажатия
             clickableButton.onPointerUpObservable.add(() => {
-                console.log(`${field.placeholder} clicked`);
-                // Добавьте сюда вашу логику
+                if (inputField.text === field.correctValue) {
+                    clickableButton.background = "green"; // Оставляем кнопку зеленой
+                } else {
+                    clickableButton.background = "red"; // Кнопка красная, если значение неправильное
+                }
             });
     
             grid.addControl(clickableButton, index + 1, 0);  // Кнопка в первый столбец
@@ -339,7 +344,16 @@ export class DialogPage {
             inputField.focusedBackground = "#f0f0f0";  // Фон не меняется при фокусе
             inputField.focusedColor = "black";  // Цвет текста при фокусе остается черным
             inputField.placeholderColor = "gray";  // Цвет текста-заполнителя
-    
+            inputField.onBeforeKeyAddObservable.add(() => {
+                inputField.fontSize = "14px"; // Увеличиваем размер шрифта при вводе
+            });
+
+            inputField.onBlurObservable.add(() => {
+                if (!inputField.text) {
+                    inputField.fontSize = "9px"; // Возвращаем меньший размер, если поле пустое
+                }
+            });
+
             grid.addControl(inputField, index + 1, 1);  // Поля ввода во второй столбец
         });
     
