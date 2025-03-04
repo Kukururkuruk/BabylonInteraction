@@ -19,6 +19,8 @@ import { AdvancedDynamicTexture, Button, Control, Image, Rectangle, TextBlock, T
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
+import { CameraController } from "./BaseComponents/CameraController";
+import { ModelLoader } from "./BaseComponents/ModelLoader";
 
 interface ZoneData {
   position: Vector3,
@@ -32,15 +34,16 @@ export class TestScene {
   scene: Scene;
   engine: Engine;
   openModal?: (keyword: string) => void;
-  camera: FreeCamera;
+  private cameraController: CameraController
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private guiManager: GUIManager;
   private dialogPage: DialogPage;
+  private modelLoader: ModelLoader;
   private markMeshes: AbstractMesh[] = [];
   private zoneSigns: AbstractMesh[] = [];
   private zoneData: { [key: string]: ZoneData } = {};
-  private chosenArray: string[] = ['1','2','4','6']
+  private chosenArray: string[] = ['1','2','3','4','5','6']
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -52,19 +55,17 @@ export class TestScene {
     this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
     this.guiManager = new GUIManager(this.scene);
     this.dialogPage = new DialogPage()
+    this.modelLoader = new ModelLoader(this.scene);
   
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
-      // this.setupTriggers();
       this.createZoneObj()
       this.chosenZon()     
     });
-  
-    this.CreateController();
-    // this.AddScreenshotButton();
-    // this.AddCameraPositionButton();
 
-    const page1 = this.dialogPage.addText("Привет, на этой карте расположены восклицательные знаки. У каждого знака тебя ждет задание на измерительный прибор. Подойди к знаку и следуй инструкциям.")
+    this.cameraController = new CameraController(this.scene, this.canvas, "complex", new Vector3(50, 2.5, 0));
+
+    const page1 = this.dialogPage.addText("Задания, которые были тобой выбраны в личном кабинете, помечены специальными знаками. Подойди к знаку и следуй инструкциям.")
     this.guiManager.CreateDialogBox([page1]);
 
     this.engine.runRenderLoop(() => {
@@ -91,53 +92,13 @@ export class TestScene {
     return scene;
   }
 
-  CreateController(): void {
-    const camera = new FreeCamera("camera", new Vector3(5, 10, -25), this.scene);
-    camera.attachControl(this.canvas, true);
-    camera.applyGravity = true;
-    camera.checkCollisions = true;
-    camera.ellipsoid = new Vector3(0.5, 1, 0.5);
-    camera.minZ = 0.45;
-    camera.speed = 0.55;
-    camera.angularSensibility = 4000;
-    this.triggerManager.setupCameraKeys(camera);
-  }
-
   async CreateEnvironment(): Promise<void> {
     try {
       this.engine.displayLoadingUI();
   
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-
-        map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-          });
-
-          const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"]
-          nonCollizionMeshs.map((item) => {
-              const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
-              nonCollizionMesh.forEach((mesh) => {
-                  mesh.visibility = 0.5;
-                  mesh.checkCollisions = false
-              });
-          })
-
-              // const dialogImage = new Image("dialogImage", "/models/VignetteCircleSight_4K.png");
-              // dialogImage.width = "100%";
-              // dialogImage.height = "100%";
-              // this.guiTexture.addControl(dialogImage);
-
-      // Находим сломаные меши
-      const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
-      const WholeMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
-
-      BrokenMeshes.forEach((mesh) => {
-        mesh.visibility = 1; // Полностью видимый
-      });
-  
-      WholeMeshes.forEach((mesh) => {
-        mesh.visibility = 0; // Полностью невидимый
-      });
+      // Загрузка всех моделей
+      const hide = false
+      await this.modelLoader.loadBridge(hide);
       
       // Загрузка markMeshes
       const assetContainer = await SceneLoader.LoadAssetContainerAsync(
@@ -155,50 +116,13 @@ export class TestScene {
         mesh.scaling = new Vector3(0.5, 0.7, 0.5);
         // mesh.visibility = 0.5;
       });
+
+      this.guiManager.createBorderBox()
   
       console.log("Модели успешно загружены.");
     } catch (error) {
       console.error("Ошибка при загрузке моделей:", error);
     }
-  }
-
-  AddScreenshotButton(): void {
-    const screenshotButton = Button.CreateSimpleButton("screenshotButton", "Сделать скриншот");
-    screenshotButton.width = "150px";
-    screenshotButton.height = "40px";
-    screenshotButton.color = "white";
-    screenshotButton.cornerRadius = 20;
-    screenshotButton.background = "blue";
-    screenshotButton.top = "20px";
-    screenshotButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-
-    this.guiTexture.addControl(screenshotButton);
-
-    screenshotButton.onPointerUpObservable.add(() => {
-      Tools.CreateScreenshotUsingRenderTarget(this.engine, this.scene.activeCamera!, { width: 1920, height: 1080 });
-    });
-  }
-
-  AddCameraPositionButton(): void {
-    const cameraPositionButton = Button.CreateSimpleButton("cameraPositionButton", "Показать координаты камеры");
-    cameraPositionButton.width = "200px";
-    cameraPositionButton.height = "40px";
-    cameraPositionButton.color = "white";
-    cameraPositionButton.cornerRadius = 20;
-    cameraPositionButton.background = "green";
-    cameraPositionButton.top = "70px";
-    cameraPositionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-
-    this.guiTexture.addControl(cameraPositionButton);
-
-    cameraPositionButton.onPointerUpObservable.add(() => {
-      const cameraPosition = this.scene.activeCamera?.position;
-      if (cameraPosition) {
-        console.log(`Координаты камеры: x=${cameraPosition.x}, y=${cameraPosition.y}, z=${cameraPosition.z}`);
-      } else {
-        console.log("Камера не инициализирована.");
-      }
-    });
   }
 
   createZoneObj(): void {
