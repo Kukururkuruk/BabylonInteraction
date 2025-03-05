@@ -150,7 +150,7 @@ export class DemoScene {
     light.position = new Vector3(-20, 20, 20);
     light.intensity = 2;
 
-    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    const hdrTexture = new HDRCubeTexture("/models/NEW_HDRI_Town_8.HDR", scene, 512);
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 0.5;
@@ -278,12 +278,16 @@ export class DemoScene {
       lab.forEach((mesh) => {
         mesh.checkCollisions = true;
         const material = mesh.material;
+        console.log(mesh.name);  // Логируем все имена мешей
       
         // Применяем прозрачность и устанавливаем позиции для первой группы мешей
         if (
           mesh.name === "SM_Length_Flat_LP" ||
+          mesh.name === "SM_Length_9_86_LP" ||
           mesh.name === "SM_Height_Flat_LP" ||
-          mesh.name === "SM_Width_Flat_LP"
+          mesh.name === "SM_Length_7_15_LP" ||
+          mesh.name === "SM_Width_Flat_LP" ||
+          mesh.name === "SM_Length_11_6_LP"
         ) {
           mesh.isVisible = false;
           if (material && material instanceof PBRMaterial) {
@@ -300,6 +304,16 @@ export class DemoScene {
               case "SM_Width_Flat_LP":
                 mesh.position.y = 0.05;
                 break;
+              case "SM_Length_9_86_LP":
+                  mesh.position.y = 0.05;
+                  break;
+              case "SM_Length_7_15_LP":
+                  mesh.position.y = 0.05;
+                  break;
+              case "SM_Length_11_6_LP":
+                  mesh.position.y = 0.05;
+                  break;
+                
             }
           }
         }
@@ -345,14 +359,14 @@ export class DemoScene {
         }
       });
 
-      const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
+      /*const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
       if (screenMesh) {
         screenMesh.checkCollisions = true;
         this.screenViewManager.setupScreenInteraction("SM_0_Screen_1");
         console.log("Экран SM_0_Screen_1 настроен для взаимодействия.");
       } else {
         console.warn("SM_0_Screen_1 не найден.");
-      }
+      }*/
   
       // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
@@ -695,7 +709,7 @@ wall.material = wallMaterial;
         this.isBetonTriggered = true;
     
         const page1 = this.dialogPage.addText(
-          "Здесь вы можете увидеть как производтся замер со стороны дальномера. Наведитесь на мишень, начиная слева и запишите длину до мишени"
+          "Здесь вы можете увидеть как производтся замер со стороны дальномера. Для удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы перенесетесь ровно в центр. Замеры производятся правой кнопкой мыши. Наведитесь на мишень, начиная слева и запишите длину до мишени" 
         );
         const page2 = this.dialogPage.addInputGrid1(
           "Конструкции",
@@ -705,7 +719,18 @@ wall.material = wallMaterial;
             { min: 11.5, max: 11.7 },
             { min: 9.55, max: 9.95 }
           ],
-          
+          () => {
+            // Логика видимости мешей
+            this.mapMeshes.forEach((mesh) => {
+              if (
+                mesh.name === "SM_Length_9_86_LP" ||
+                mesh.name === "SM_Length_7_15_LP" ||
+                mesh.name === "SM_Length_11_6_LP"
+              ) {
+                mesh.isVisible = true;
+              }
+            });
+          }
         );
         this.guiManager.CreateDialogBox([page1, page2]);
     
@@ -1311,7 +1336,7 @@ eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
       await this.CreateEnvironment();
       await this.scene.whenReadyAsync();
       this.engine.hideLoadingUI();
-      const page4 = this.dialogPage.addText("Сцена загружена. Можете кликать на стену или стол.");
+      const page4 = this.dialogPage.addText("Привет! Вы находитесь в демо-версии приложения, прежде чем начать пройдите обучение по передвижению.\n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужную сторону");
       this.guiManager.CreateDialogBox([page4]);
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);

@@ -298,6 +298,8 @@ export class DialogPage {
             { placeholder: "Арматура верт.", correctValue: "4" },
             { placeholder: "Кабель (мм)", correctValue: "10" }
         ];
+
+        
     
         fields.forEach((field, index) => {
             // Кликабельная кнопка
