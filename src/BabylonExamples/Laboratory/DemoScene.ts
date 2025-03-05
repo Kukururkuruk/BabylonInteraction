@@ -288,7 +288,8 @@ export class DemoScene {
           mesh.name === "SM_Length_7_15_LP" ||
           mesh.name === "SM_Width_Flat_LP" ||
           mesh.name === "SM_Length_11_6_LP"
-        ) {
+        ) 
+        {
           mesh.isVisible = false;
           if (material && material instanceof PBRMaterial) {
             material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
