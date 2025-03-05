@@ -38,6 +38,7 @@ export class GUIManager {
   private hideButton: Button
   private clickSound: Sound;
   dialogVisible: boolean = true;
+  public nextPageButton: Button | null = null;
 
   constructor(scene: Scene, textMessages?: string[]) {
     this.scene = scene;
@@ -610,20 +611,34 @@ export class GUIManager {
 
 
       // Создаем кнопку для скрытия диалогового окна
-      this.hideButton = Button.CreateSimpleButton("hideButton", "Скрыть планшет");
-      this.hideButton.width = "150px";
-      this.hideButton.height = "50px";
+      this.hideButton = Button.CreateSimpleButton("hideButton", "Скрыть\nпланшет");
+      this.hideButton.width = "9%";
+      this.hideButton.height = "6%";
       this.hideButton.color = "white";
       this.hideButton.background = "gray";
+      this.hideButton.fontSize = "2.5%"
       this.hideButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
       this.hideButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
       this.hideButton.top = "-10px";
       this.advancedTexture.addControl(this.hideButton);
 
+      // Добавляем dummy-свойство, которое будет отражать процентное значение left
+      Object.defineProperty(this.dialogContainer, "dummyLeft", {
+        get: function() {
+          // Получаем числовое значение без знака '%'
+          return parseFloat(this.left);
+        },
+        set: function(value: number) {
+          // При установке нового значения обновляем left с добавлением знака '%'
+          this.left = value + "%";
+        },
+        configurable: true
+      });
+
       // Анимация появления и исчезновения диалогового окна
       this.dialogAnimation = new Animation(
           "dialogAnimation",
-          "left",
+          "dummyLeft",
           30,
           Animation.ANIMATIONTYPE_FLOAT,
           Animation.ANIMATIONLOOPMODE_CONSTANT
@@ -633,16 +648,24 @@ export class GUIManager {
       this.hideButton.onPointerUpObservable.add(() => {
         this.dialogVisible = !this.dialogVisible;
           this.updateDialogAnimation(this.dialogVisible, this.dialogContainer);
-          // if (this.WASDContainer) {
-          //   this.updateNonDialogAnimation(this.dialogVisible, this.WASDContainer);
-          // }
           if (target) {
             this.updateNonDialogAnimation(this.dialogVisible, target);
           }
-          
-      });
 
+          // Обновление текста кнопки
+          this.updateButtonText();
+      });
     }
+
+    // Функция для обновления текста кнопки
+    private updateButtonText() {
+      if (this.dialogVisible) {
+          this.hideButton.textBlock.text = "Скрыть\nпланшет";
+      } else {
+          this.hideButton.textBlock.text = "Показать\nпланшет";
+      }
+    }
+
     DeleteDialogBox(): void {
       if (this.currentDialogBox) {
         this.advancedTexture.removeControl(this.currentDialogBox);
@@ -652,9 +675,21 @@ export class GUIManager {
 
 
     updateNonDialogAnimation(visible: boolean, targetObject: Rectangle) {
+      Object.defineProperty(targetObject, "dumLeft", {
+        get: function() {
+          // Получаем числовое значение без знака '%'
+          return parseFloat(this.left);
+        },
+        set: function(value: number) {
+          // При установке нового значения обновляем left с добавлением знака '%'
+          this.left = value + "%";
+        },
+        configurable: true
+      });
+
       this.nondialogAnimation = new Animation(
         "nondialogAnimation",
-        "left",
+        "dumLeft",
         30,
         Animation.ANIMATIONTYPE_FLOAT,
         Animation.ANIMATIONLOOPMODE_CONSTANT
@@ -662,27 +697,27 @@ export class GUIManager {
 
       const keys = [];
       if (visible) {
-          keys.push({ frame: 0, value: 450 });
-          keys.push({ frame: 30, value: 0 });
+          keys.push({ frame: 0, value: 27 });
+          keys.push({ frame: 20, value: 0 });
       } else {
           keys.push({ frame: 0, value: 0 });
-          keys.push({ frame: 30, value: 450 });
+          keys.push({ frame: 20, value: 27 });
       }
       this.nondialogAnimation.setKeys(keys);
-      this.scene.beginDirectAnimation(targetObject, [this.nondialogAnimation], 0, 30, false);
+      this.scene.beginDirectAnimation(targetObject, [this.nondialogAnimation], 0, 20, false);
   }
 
     updateDialogAnimation(visible: boolean, targetObject: Rectangle) {
       const keys = [];
       if (visible) {
-          keys.push({ frame: 0, value: 500 });
-          keys.push({ frame: 30, value: 50 });
+          keys.push({ frame: 0, value: 30 });
+          keys.push({ frame: 20, value: 3 });
       } else {
-          keys.push({ frame: 0, value: 50 });
-          keys.push({ frame: 30, value: 500 });
+          keys.push({ frame: 0, value: 3 });
+          keys.push({ frame: 20, value: 30 });
       }
       this.dialogAnimation.setKeys(keys);
-      this.scene.beginDirectAnimation(targetObject, [this.dialogAnimation], 0, 30, false);
+      this.scene.beginDirectAnimation(targetObject, [this.dialogAnimation], 0, 20, false);
   }
   
 
@@ -808,6 +843,7 @@ export class GUIManager {
     // Устанавливаем положение куба, чтобы центр находился на уровне пола
     boundaryBox.position.y = boundaryBoxHeight / 2;
     boundaryBox.checkCollisions = true;
+    boundaryBox.isPickable = false
     
     // Делаем куб невидимым, чтобы он не отвлекал от сцены
     boundaryBox.isVisible = false;

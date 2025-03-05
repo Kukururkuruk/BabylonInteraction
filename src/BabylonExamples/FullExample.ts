@@ -51,9 +51,9 @@ private initialRotation: number; // Переменная для хранения
     this.engine.displayLoadingUI();
 
     this.scene = this.CreateScene();
-    this.highlightLayer = new HighlightLayer("hl1", this.scene);
-    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
-    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+    //this.highlightLayer = new HighlightLayer("hl1", this.scene);
+   // this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
+    //this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
     this.guiManager = new GUIManager(this.scene, this.textMessages);
     this.dialogPage = new DialogPage();
     
@@ -122,7 +122,7 @@ private initialRotation: number; // Переменная для хранения
 }
   async CreateEnvironment(): Promise<void> {
     try {
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_TapeMeasure_Caliper_MOD.gltf", this.scene);
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
@@ -185,7 +185,7 @@ private initialRotation: number; // Переменная для хранения
                 console.log("Параметры SM_Nonius установлены.");
 
                 // Включаем управление масштабированием по колесику мыши для SM_Nonius
-                this.enableNoniusScaling(noniusMesh);
+                //this.enableNoniusScaling(noniusMesh);
             }
 
             // Устанавливаем параметры для основной модели
@@ -327,13 +327,13 @@ private rotateCaliperModel(): void {
   private highlightSpecificMeshes(): void {
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R_8",  // Основной меш для клика
-        //"SM_0_SpanStructureBeam_1_Armature_R_3",  // Меш, который нужно сделать неактивным при первом клике
-        //"SM_0_SpanStructureBeam_1_Cable_R"        // Другой меш, который нужно сделать неактивным
+        "SM_0_SpanStructureBeam_1_Armature_R_3",  // Дополнительный меш для подсветки
+        "SM_0_SpanStructureBeam_1_Cable_R",      // Добавлен сюда
     ];
-
+    let isClickable = true;
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
-        .filter((mesh): mesh is Mesh => mesh instanceof Mesh);
+        .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убеждаемся, что это Mesh
 
     let isZoomed = false; // Флаг для отслеживания состояния камеры
     const initialCameraPosition = new Vector3(13.7, 6.3, 5.0);
@@ -347,29 +347,93 @@ private rotateCaliperModel(): void {
     const targetNoniusPosition = new Vector3(-0.004, 0, 0);
 
     let isFirstClick = true; // Флаг для отслеживания первого клика на "SM_0_SpanStructureBeam_1_Armature_R_8"
+    let isHighlighted = true; // Флаг для отслеживания состояния подсветки (включаем по умолчанию)
 
+    this.highlightLayer = new HighlightLayer("hl1", this.scene);
+    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
+    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
+
+
+    // Получаем меши, которые нужно скрывать/показывать
+  const obstructingMeshes = [
+ 
+    this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_4"),
+    
+];
+
+// Проверяем, все ли меши найдены
+obstructingMeshes.forEach(mesh => {
+    if (!mesh) {
+        console.warn("Один или несколько мешей для скрытия не найдены.");
+    }
+});
+
+let isObstructingMeshesVisible = true; // Флаг для отслеживания видимости мешей
+
+
+    // Включаем подсветку на "SM_0_SpanStructureBeam_1_Armature_R_8" изначально
     meshesToHighlight.forEach(mesh => {
         this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+    });
 
+    // Создаем меши для подсветки SM_0_SpanStructureBeam_1_Cable_R и SM_0_SpanStructureBeam_1_Armature_R_3
+    const cableMesh = this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Cable_R") as Mesh | null;
+    const armatureMesh = this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_3") as Mesh | null;
+
+    if (cableMesh) {
+        this.highlightLayer.removeMesh(cableMesh); // Изначально подсветка выключена
+    }
+
+    if (armatureMesh) {
+        this.highlightLayer.removeMesh(armatureMesh); // Изначально подсветка выключена
+    }
+
+    meshesToHighlight.forEach(mesh => {
         mesh.isPickable = true;
 
         mesh.actionManager = new ActionManager(this.scene);
         mesh.actionManager.registerAction(new ExecuteCodeAction(
             ActionManager.OnPickTrigger,
             () => {
+                if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
                 console.log(`${mesh.name} был кликнут!`);
 
                 // Проверка, кликнули ли на основной меш "SM_0_SpanStructureBeam_1_Armature_R_8"
                 if (mesh.name === "SM_0_SpanStructureBeam_1_Armature_R_8") {
                     if (isFirstClick) {
-                        // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - делаем другие меши неактивными
-                        this.toggleMeshPickability(false);
+                        // Первый клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - оставляем подсветку включенной
                         isFirstClick = false; // Устанавливаем флаг, что клик был совершен
+
+                        // Подсветка продолжает оставаться включенной
+                        isHighlighted = true;
                     } else {
-                        // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - возвращаем кликабельность
-                        this.toggleMeshPickability(true);
-                        isFirstClick = true; // Возвращаем флаг в исходное состояние
+                        // Повторный клик на "SM_0_SpanStructureBeam_1_Armature_R_8" - выключаем подсветку на нем
+                        if (isHighlighted) {
+                            this.highlightLayer.removeMesh(mesh); // Убираем подсветку с этого меша
+                            isHighlighted = false; // Подсветка выключена
+                        }
+
+                        // Включаем подсветку на "SM_0_SpanStructureBeam_1_Cable_R"
+                        if (cableMesh) {
+                            this.highlightLayer.addMesh(cableMesh, Color3.FromHexString("#00ffd9"));
+                        }
+
+                        // Включаем подсветку на "SM_0_SpanStructureBeam_1_Armature_R_3"
+                        if (armatureMesh) {
+                            this.highlightLayer.addMesh(armatureMesh, Color3.FromHexString("#00ffd9"));
+                        }
                     }
+
+                   
+
+
+
+
+                        
+                    setTimeout(() => {
+                        isClickable = true; // Разрешаем клик через 2 секунды
+                    }, 4000);
                 }
 
                 const camera = this.scene.activeCamera;
@@ -432,10 +496,22 @@ private rotateCaliperModel(): void {
                 this.moveCaliperWithAnimation(endCaliperPosition);
 
                 isZoomed = !isZoomed;
+
+                // Переключение видимости obstructingMeshes
+              isObstructingMeshesVisible = !isObstructingMeshesVisible;
+              obstructingMeshes.forEach(obstructingMesh => {
+                  if (obstructingMesh) {
+                      obstructingMesh.setEnabled(isObstructingMeshesVisible);
+                      console.log(`Меш ${obstructingMesh.name} теперь ${isObstructingMeshesVisible ? "видим" : "скрыт"}.`);
+                  }
+              });
+
             }
         ));
     });
 }
+
+
 
 // Функция для управления кликабельностью мешей
 private toggleMeshPickability(isPickable: boolean): void {
@@ -457,7 +533,7 @@ private highlightSpecificMeshesCable_R(): void {
   const meshNames = [
       "SM_0_SpanStructureBeam_1_Cable_R",
   ];
-
+  let isClickable = true;
   const meshesToHighlight = meshNames
       .map(name => this.scene.getMeshByName(name))
       .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
@@ -479,6 +555,9 @@ private highlightSpecificMeshesCable_R(): void {
   const obstructingMeshes = [
       this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_7"),
       this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_0"),
+      
+      this.scene.getMeshByName("SM_0_SpanStructureBeam_1_Armature_R_4"),
+      
   ];
 
   // Проверяем, все ли меши найдены
@@ -491,7 +570,7 @@ private highlightSpecificMeshesCable_R(): void {
   let isObstructingMeshesVisible = true; // Флаг для отслеживания видимости мешей
 
   meshesToHighlight.forEach(mesh => {
-      this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+      //this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
       mesh.isPickable = true;
 
@@ -499,6 +578,8 @@ private highlightSpecificMeshesCable_R(): void {
       mesh.actionManager.registerAction(new ExecuteCodeAction(
           ActionManager.OnPickTrigger,
           () => {
+            if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
               console.log(`${mesh.name} был кликнут!`);
 
 
@@ -512,6 +593,9 @@ private highlightSpecificMeshesCable_R(): void {
                     this.toggleMeshPickabilityCable_R(true);
                     isFirstClick = true; // Возвращаем флаг в исходное состояние
                 }
+                setTimeout(() => {
+                    isClickable = true; // Разрешаем клик через 2 секунды
+                }, 4000);
             }
 
               const camera = this.scene.activeCamera;
@@ -609,7 +693,7 @@ private highlightSpecificMeshesArmature_R_3(): void {
     const meshNames = [
         "SM_0_SpanStructureBeam_1_Armature_R_3",
     ];
-
+    let isClickable = true;
     const meshesToHighlight = meshNames
         .map(name => this.scene.getMeshByName(name))
         .filter((mesh): mesh is Mesh => mesh instanceof Mesh); // Убедиться, что это именно Mesh
@@ -619,16 +703,16 @@ private highlightSpecificMeshesArmature_R_3(): void {
     const targetCameraPosition = new Vector3(12.92, 6.25168, 5.04164);
 
     const initialCaliperPosition = this.handModel?.position.clone() ?? new Vector3(0, 0, 0);
-    const targetCaliperPosition = new Vector3(12.444, 6.3068, 5.06); // Новая позиция
+    const targetCaliperPosition = new Vector3(12.440, 6.3268, 5.06); // Новая позиция
 
     let isNoniusMoved = false; // Флаг для отслеживания состояния SM_Nonius
     const initialNoniusPosition = new Vector3(-0.03, 0, 0);
-    const targetNoniusPosition = new Vector3(-0.004, 0, 0);
+    const targetNoniusPosition = new Vector3(-0.0035, 0, 0);
 
 
     let isFirstClick = true; // Флаг для отслеживания первого клика
     meshesToHighlight.forEach(mesh => {
-        this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
+        //this.highlightLayer.addMesh(mesh, Color3.FromHexString("#00ffd9"));
 
         mesh.isPickable = true;
 
@@ -636,6 +720,8 @@ private highlightSpecificMeshesArmature_R_3(): void {
         mesh.actionManager.registerAction(new ExecuteCodeAction(
             ActionManager.OnPickTrigger,
             () => {
+                if (!isClickable) return; // Блокируем повторный клик
+        isClickable = false; // Запрещаем кликать на 2 секунды
                 console.log(`${mesh.name} был кликнут!`);
 
 
@@ -649,6 +735,9 @@ private highlightSpecificMeshesArmature_R_3(): void {
                       this.toggleMeshPickabilityArmature_R_3(true);
                       isFirstClick = true; // Возвращаем флаг в исходное состояние
                   }
+                  setTimeout(() => {
+                    isClickable = true; // Разрешаем клик через 2 секунды
+                }, 4000);
               }
 
                 const camera = this.scene.activeCamera;
@@ -888,33 +977,85 @@ private toggleMeshPickabilityArmature_R_3(isPickable: boolean): void {
   
 
 
-Page(): void {const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-  this.guiManager.CreateDialogBox([page1])
+Page(): void {
+    // Добавляем текстовые страницы
+    const page1 = this.dialogPage.addText("Здравствуйте, сейчас вы измерите диаметры арматуры при помощи штангенциркуля ШЦ-1-150 0,1. Для начала нажмите на подсвеченную арматуру левой кнопкой мыши.");
+    const page1_1 = this.dialogPage.addText("Порядок измерения штангенциркулем: Зажмите деталь между (нижними) губками для наружнего измерения. Для фиксации подвижной рамки необходимо закрутить винт. Вам необходимо изучить полученные показатели с основной шкалы в мм. Если показатель совпал с нулем на шкале нониуса, то это и есть точная целая цифра размера детали. Чтобы узнать размер детали с точностью до десятых или сотых мм., необходимо сперва вычислить цену деления нониуса. Она может быть 0,1 мм или 0,05 чаще. Изучите показатели на подвижной рамке на шкале, которая точно совпадает с риской на основной шкале. Вам нужно умножить получившиеся значение на цену деления шкалы нониуса (обычно 0,1 или 0,05 мм) и получить десятые или сотые значения. Сложите данные из 3 и 6 пунктов.");
+    const page2 = this.dialogPage.addText("Повторно нажмите на подсвеченную арматуру для окончания замеров. Теперь проведите измерения оставшейся арматуры и внесите данные на следующей странице");
+    const page3 = this.dialogPage.addInputFields("Конструкции");
+    const page4 = this.dialogPage.addText("Отлично! Вы справились с заданием, теперь перейдите на следующую страницу для заверешения.");
 
-          this.triggerManager1.createStartButton('Начать', () => {
-          // Показываем сообщение
-          const page2 = this.dialogPage.addText("Нажмите на подсвеченную арматуру")
-          const page3 = this.dialogPage.addText("Таким образом штангенциркуль замеряет арматуру")
-          const page4 = this.dialogPage.addText("Проведите замеры оставшейся арматуры и кабеля и введите значения на следующей странице планшета")
-          const page5 = this.dialogPage.addInputFields("Конструкции")
-          this.guiManager.CreateDialogBox([page2, page3, page4, page5])
+    // Страница с видео
+     // Страница с видео
+     const page1_2 = this.dialogPage.addText("Теперь, когда вы ознакомились с порядком измерения штангенциркулем, перейдите на следующую страницу для просмотра видео, которое демонстрирует принцип работы прибора.");
 
-            // Активируем режим лазера для второй триггер-зоны
-            //this.triggerManager2.distanceMode();
-            //this.triggerManager2.enableDistanceMeasurement()
-            this.triggerManager1.createStartButton('Завершить', () => {
-              const page6 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-              this.guiManager.CreateDialogBox([page6])
-              this.triggerManager1.disableDistanceMeasurement()
+     // Контейнер для видео (инициализируем один раз)
+     let videoContainer: HTMLElement | null = null;
+ 
+     // Кнопка для перехода на страницу с видео и добавления видео
+     const videoPageButton = this.dialogPage.createStartPage(
+         "",
+         "Посмотреть видео",
+         () => {
+             // Проверяем, есть ли уже контейнер для видео
+             if (!videoContainer) {
+                 videoContainer = this.dialogPage.addVideoContainer(); // Инициализация контейнера для видео
+                 
+                 // Добавляем видео
+                 const videoElement = document.createElement("video");
+                 videoElement.src = "models/Caliper_1K.mp4"; // Укажите путь к вашему видео
+                 videoElement.controls = true;
+                 videoElement.style.width = "100%";
+                 videoElement.style.height = "80%";
+                 videoElement.style.borderRadius = "10px";
+                 videoContainer.appendChild(videoElement);
+ 
+                 // Добавляем кнопку закрытия видео
+                 const closeButton = document.createElement("button");
+                 closeButton.innerText = "Закрыть видео";
+                 closeButton.style.display = "block";
+                 closeButton.style.marginTop = "10px";
+                 closeButton.style.padding = "10px 20px";
+                 closeButton.style.borderRadius = "5px";
+                 closeButton.style.backgroundColor = "#ff6666";
+                 closeButton.style.color = "#fff";
+                 closeButton.style.border = "none";
+                 closeButton.style.cursor = "pointer";
+ 
+                 closeButton.onclick = () => {
+                     videoContainer!.style.visibility = "hidden"; // Прячем контейнер
+                     videoElement.pause(); // Останавливаем видео
+                 };
+ 
+                 videoContainer.appendChild(closeButton);
+             } else {
+                 // Если контейнер уже существует, просто показываем его снова
+                 videoContainer.style.visibility = "visible";
+             }
+         }
+     );
+ 
+     // Кнопка завершения задания
+     const endPage = this.dialogPage.createStartPage('Для завершения измерений нажмите на кнопку', 'Завершить', () => {
+         const routePage = this.dialogPage.createStartPage(
+             "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
+             "Перейти на основную карту",
+             () => {
+                 window.location.href = '/ВыборИнструмента';
+             }
+         );
+ 
+         this.guiManager.CreateDialogBox([routePage]);
+     });
+ 
+     // Создаем диалоговое окно с последовательностью страниц
+     this.guiManager.CreateDialogBox([
+         page1, page1_1, page1_2, videoPageButton, page2, page3, page4, endPage
+     ]);
+ }
 
-              //this.triggerManager2.exitDisLaserMode2();
-              this.guiManager.createRouteButton('/test')
-          })
 
-          
-          })
 
-}
 
 
 
