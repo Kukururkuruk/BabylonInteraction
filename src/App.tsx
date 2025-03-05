@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Main from './components/MainPage';
 import Tutor from './components/Tutor';
 import BabylonTest from './components/BabylonTest';
@@ -25,19 +25,22 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Main />} />
+        {/* Редирект на /ЛабДемо при заходе на корень */}
+        <Route path="/" element={<Navigate to="/ЛабДемо" />} />
+        
+        {/* Другие маршруты */}
         <Route path="/Линейка" element={<Tutor />} />
         <Route path="/ЛинейкаЗадание" element={<BabylonRuler />} />
         <Route path="/ВыборИнструмента" element={<BabylonTest />} />
         <Route path="/тестирование" element={<BabylonQuestion />} />
         <Route path="/Штангенциркуль" element={<BabylonFull />} />
-        <Route path="/УровеньПузырька" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
+        <Route path="/УровеньПузырька" element={<BasicLevel />} />
         <Route path='/терминология' element={<BabylonBook />} />
         <Route path='/ДальнометрОбучение' element={<BabylonDistance />} />
         <Route path='/Бетонометр' element={<BabylonBeton />} />
         <Route path="/Тахеометр" element={<BabylonTotal />} />
         <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
-        <Route path='/ТахеометрЗадание' element={<BabylonTotalWork/>} />
+        <Route path='/ТахеометрЗадание' element={<BabylonTotalWork />} />
         <Route path='/КрашТест' element={<BabylonBook2 />} />
         <Route path='/Производительность' element={<BabylonTest2 />} />
         <Route path='/texture' element={<BabylonTexture />} />
