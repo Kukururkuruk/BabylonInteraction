@@ -89,7 +89,6 @@ export class DemoScene {
 
   private tools: { [key: string]: ToolData } = {};
 
-  // Значения по умолчанию для позиции и ротации перед камерой
   private defaultFrontPosition: Vector3 = new Vector3(0, -0.1, 0.9);
   private defaultFrontRotation: Vector3 = new Vector3(0, Math.PI / 2, 0);
 
@@ -99,8 +98,9 @@ export class DemoScene {
   private lastPointerY: number = 0;
 
   // Флаги, чтобы не запускать одно и то же повторно
-  private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
-  private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
+  private isSceneInitialized: boolean = false;  // Флаг для отслеживания инициализации сцены
+  private isBetonTriggered: boolean = false;
+  private isToolDeskClicked: boolean = false;
 
   private rangefinderMeshes: AbstractMesh[] = [];
   private mapMeshes: AbstractMesh[] = [];
@@ -112,7 +112,6 @@ export class DemoScene {
   private updateTextCallback: ((newText: string) => void) | null = null;
   public updateTextPlaneHandler: ((newText: string) => void) | null = null;
   public updateAngleTextHandler: ((newText: string) => void) | null = null;
-
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -127,11 +126,14 @@ export class DemoScene {
     this.utilities = new BabylonUtilities(this.scene, this.engine, this.guiTexture);
     this.labFunManager = new LabFunManager(this.guiTexture);
 
-    this.initializeScene();
+    // Если сцена еще не инициализирована, вызываем инициализацию
+    if (!this.isSceneInitialized) {
+      this.initializeScene();
+      this.isSceneInitialized = true;  // Устанавливаем флаг, чтобы не повторять инициализацию
+    }
 
     this.CreateController();
     this.screenViewManager = new ScreenViewManager(this.scene, this.camera);
-    // this.utilities.combinedMethod();
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -250,6 +252,7 @@ export class DemoScene {
    * Переносим сюда ВСЮ логику загрузки моделей: и "lab", и "dist".
    */
   public async CreateEnvironment(): Promise<void> {
+    console.log("Вызов CreateEnvironment");
     try {
       this.engine.displayLoadingUI();
   
@@ -1333,12 +1336,15 @@ eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
 
 
   public async initializeScene(): Promise<void> {
+    console.log("Вызов initializeScene");
     try {
-      await this.CreateEnvironment();
-      await this.scene.whenReadyAsync();
-      this.engine.hideLoadingUI();
-      const page4 = this.dialogPage.addText("Привет! Вы находитесь в демо-версии приложения, прежде чем начать пройдите обучение по передвижению.\n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужную сторону \nДля продолжения провзаимодействуйте со столом слева");
-      this.guiManager.CreateDialogBox([page4]);
+      if (!this.isSceneInitialized) { // Еще раз проверяем флаг
+        await this.CreateEnvironment();
+        await this.scene.whenReadyAsync();
+        this.engine.hideLoadingUI();
+        const page4 = this.dialogPage.addText("Привет! Вы находитесь в демо-версии приложения, прежде чем начать пройдите обучение по передвижению.\n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужном направлении.");
+        this.guiManager.CreateDialogBox([page4]);
+      }
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
       this.engine.hideLoadingUI();
