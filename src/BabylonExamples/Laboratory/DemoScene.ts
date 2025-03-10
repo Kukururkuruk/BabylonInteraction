@@ -1349,7 +1349,7 @@ eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
         await this.CreateEnvironment();
         await this.scene.whenReadyAsync();
         this.engine.hideLoadingUI();
-        const page4 = this.dialogPage.addText("Приветствуем Вас в демоверсии приложения! \n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужном направлении. \n\nДля продолжения взаимодействуйте со столом слева.");
+        const page4 = this.dialogPage.addText("Приветствуем Вас в демоверсии приложения! \n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \n\nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужном направлении. \n\nДля продолжения взаимодействуйте со столом слева.");
         this.guiManager.CreateDialogBox([page4]);
       }
     } catch (error) {
