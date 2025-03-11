@@ -11,6 +11,12 @@ import {
     MeshBuilder,
     DynamicTexture,
     AbstractMesh,
+    PointerEventTypes,
+    Plane,
+    KeyboardEventTypes,
+    Axis,
+    Space,
+    Quaternion,
 } from "@babylonjs/core";
 import { 
     AdvancedDynamicTexture, 
@@ -44,6 +50,13 @@ export class TextureScene {
     redRay: Mesh | null = null;
     intersectionPoint: Mesh | null = null;
 
+    private fixedPoint: Vector3 | null = null;         // Первая зафиксированная точка
+    private secondFixedPoint: Vector3 | null = null;     // Вторая зафиксированная точка
+    private measurementStage: 0 | 1 | 2 = 0;             // 0 – нет кликов, 1 – первый клик, 2 – второй клик (измерение зафиксировано)
+    private rulerMesh: Mesh | null = null;               // Меш линейки (фиксированная часть)
+    private tapeRollMesh: Mesh | null = null;            // Меш рулетки (следует за курсором)
+    private lastPointerPoint: Vector3 | null = null;
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.engine = new Engine(this.canvas, true);
@@ -56,7 +69,6 @@ export class TextureScene {
         this.initializeScene();
         this.CreateController();
         
-
         this.engine.runRenderLoop(() => {
             this.scene.render();
         });
@@ -76,18 +88,12 @@ export class TextureScene {
         scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
         scene.collisionsEnabled = true;
 
-        // Можно раскомментировать, если нужен skybox
-        // const hdrTexture = new HDRCubeTexture("/models/cape_hill_4k.hdr", scene, 512);
-        // scene.environmentTexture = hdrTexture;
-        // scene.createDefaultSkybox(hdrTexture, true);
-        // scene.environmentIntensity = 0.5;
-
         return scene;
     }
 
     CreateController(): void {
         // Установка начальной позиции камеры для лучшей видимости
-        this.camera = new FreeCamera("camera", new Vector3(0, 5.5, -7), this.scene);
+        this.camera = new FreeCamera("camera", new Vector3(0, 2, -2), this.scene);
         this.camera.attachControl(this.canvas, true);
 
         this.camera.applyGravity = false;
@@ -95,55 +101,55 @@ export class TextureScene {
         this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
         this.camera.minZ = 0.45;
         this.camera.speed = 0.55;
-        // this.camera.rotation.y = Math.PI
         this.camera.angularSensibility = 4000;
-        this.camera.keysUp.push(87); // W
+        this.camera.keysUp.push(87);   // W
         this.camera.keysLeft.push(65); // A
         this.camera.keysDown.push(83); // S
         this.camera.keysRight.push(68); // D
+
+        // Переменные для Q-зума
+        const originalFov = this.camera.fov;
+        let isZoomedIn = false;
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+                const key = kbInfo.event.key.toLowerCase();
+                if (/q|й/.test(key)) {
+                    // Зумируем только если измерение зафиксировано (состояние 2) и есть вторая точка
+                    if (this.measurementStage === 2 && this.secondFixedPoint) {
+                        if (!isZoomedIn) {
+                            // Приближение: уменьшаем FOV и устанавливаем цель на вторую точку
+                            this.camera.fov /= 4;
+                            this.camera.setTarget(this.secondFixedPoint);
+                        } else {
+                            // Отдаление: восстанавливаем FOV и цель (например, на первую точку или исходное направление)
+                            this.camera.fov = originalFov;
+                            this.camera.setTarget(this.fixedPoint || new Vector3(0, 0, 0));
+                        }
+                        isZoomedIn = !isZoomedIn;
+                    }
+                }
+            }
+        });
+    }
+
+    private makeRootFromMeshes(meshes: AbstractMesh[]): AbstractMesh | null {
+        if (meshes.length === 0) return null;
+        const root = meshes[0];
+        root.scaling = new Vector3(-1, 1, -1);
+        for (let i = 1; i < meshes.length; i++) {
+            meshes[i].setParent(root);
+        }
+        return root;
     }
 
     async CreateEnvironment(): Promise<void> {
         try {
             this.engine.displayLoadingUI();
 
-            // await this.modelLoader.loadRangeModel()
-            // const rangefinderMeshes = this.modelLoader.getMeshes('range') || [];
-            // console.log(rangefinderMeshes);
-            
-
-            // await this.modelLoader.addGUIRange(this.camera, rangefinderMeshes)
-
-            // Загрузка инструментов
-            const { meshes: tools } = await SceneLoader.ImportMeshAsync("", "./models/", "UltrasonicTester_FR_LP.glb", this.scene);
-
-            // Проверка количества мешей
-            console.log(`Загружено инструментов: ${tools.length}`);
-            if (tools.length < 3) {
-                console.warn("Недостаточно мешей в tools. Ожидается минимум 3.");
-            }
-
-            // Позиционирование и масштабирование инструментов
-            tools.forEach((mesh, index) => {
-                mesh.position = new Vector3(0, 2.5, -4);
-                mesh.scaling = new Vector3(0.5, 0.5, 0.5);
-
-                // Инвертирование масштаба по оси X для tools[1] и tools[2]
-                if (index === 1) {
-                    mesh.scaling.x = -0.5;
-                }
-            });
+            await this.modelLoader.loadMLabModel();
+            await this.modelLoader.loadTapeMeasureModel();
 
             console.log("Модели успешно загружены.");
-
-            // Добавление GUI к tools[2], если он существует
-            if (tools.length >= 3) {
-                const texts = ["1234"];
-                this.addGUIToTool(tools[2], texts);
-            } else {
-                console.warn("tools[2] не существует. GUI не добавлен.");
-            }
-
             this.engine.hideLoadingUI();
         } catch (error) {
             console.error("Ошибка при загрузке моделей:", error);
@@ -151,300 +157,148 @@ export class TextureScene {
         }
     }
 
-    addGUIToTool(mesh, texts): void {
-        // Проверяем, что mesh существует и является действительным
-        if (!mesh) {
-            console.error("Меш не существует. GUI не может быть добавлен.");
-            return;
-        }
-
-        try {
-
-            const guiPlane = mesh.clone("guiPlane");
-            guiPlane.scaling.x = -0.5;
-
-            // Создаём AdvancedDynamicTexture для меша
-            // mesh.position.z = 0
-            const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
-
-            guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
-
-            // Создаём Grid для размещения 4 прямоугольников
-            const grid = new Grid();
-            grid.width = "40%";   // Делаем больше, чтобы все 4 влезли
-            grid.height = "25px";
-            grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-            grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-            grid.top = "-40px";   // Сдвинет весь грид вниз на 50px
-            grid.left = "-85px"; // Сдвинет весь грид влево на 80px
-            
-            // Одна строка и четыре колонки
-            grid.addRowDefinition(1);
-            grid.addColumnDefinition(0.25);
-            grid.addColumnDefinition(0.25);
-            grid.addColumnDefinition(0.25);
-            grid.addColumnDefinition(0.25);
-            guiTexture.addControl(grid);
-
-            for (let i = 0; i < 4; i++) {
-
-                // Создаём прямоугольник
-                const rect = new Rectangle();
-          rect.width = "100%";
-          rect.height = "100%";
-          rect.color = "white";
-          rect.background = "rgba(0, 0, 0, 0.5)";
-          rect.thickness = 0;
-          rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-          // Создаём текстовый блок
-          const textBlock = new TextBlock();
-          textBlock.text = texts[i] || ``;
-          textBlock.color = "white";
-          textBlock.fontSize = 18;
-          textBlock.textWrapping = true;
-          textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-                // Добавляем текст в прямоугольник
-                rect.addControl(textBlock);
-
-                // Добавляем прямоугольник в Grid
-                grid.addControl(rect, 0, i);
-
+    private addTapeMode(): void {
+        const tapeMeshes = this.modelLoader.getMeshes('tape') || [];
+        if (tapeMeshes.length === 0) return;
+        
+        const tapeRoot = this.makeRootFromMeshes(tapeMeshes);
+        if (tapeRoot) {
+            const mergeArr: Mesh[] = [];
+            tapeRoot.getChildMeshes().forEach((m, index) => {
+                if (index !== 0 && index !== 12) {
+                    mergeArr.push(m as Mesh);
+                }
+            });
+            const combined = Mesh.MergeMeshes(mergeArr);
+            if (combined) {
+                combined.scaling = new Vector3(1, 1, -1);
+                // Предполагаем: combined – это линейка, а tapeMeshes[12] – рулетка.
+                this.rulerMesh = combined;
+                this.tapeRollMesh = tapeMeshes[12] as Mesh;
+                if (this.rulerMesh) {
+                    this.rulerMesh.isVisible = false;
+                }
             }
-        } catch (error) {
-            console.error("Ошибка при добавлении GUI к мешу:", error);
         }
     }
 
-    addGUIRange(camera: FreeCamera, rangefinderMeshes: AbstractMesh[]): void {
-
-        rangefinderMeshes.forEach((mesh) => {
-          // Отзеркаливание по оси Z и масштабирование
-          mesh.scaling = new Vector3(2, 2, -2); // Масштабируем в 3 раза и отражаем по Z
-          mesh.rotation.y = Math.PI / 2;
-          mesh.rotation.z = 0.4;
-  
-          // Закрепление модели за камерой
-          mesh.parent = camera;
-  
-          // Установка позиции относительно камеры
-          const offset = new Vector3(0, -0.4, 0.6); // Настройте значения по необходимости
-          mesh.position = offset;
-      });
-  
-      const thirdMesh = rangefinderMeshes[2];
-  
-      // Получение размеров меша
-      const boundingInfo = thirdMesh.getBoundingInfo();
-      const boundingBox = boundingInfo.boundingBox;
-      const size = boundingBox.maximum.subtract(boundingBox.minimum);
-      const width = size.z;
-      const height = size.y;
-  
-      // Определение размеров плоскости
-      const planeWidth = width; // Ширина плоскости равна ширине меша
-      const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
-  
-      // Создание DynamicTexture с достаточным разрешением
-      const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
-      dynamicTexture.hasAlpha = true;
-  
-      // Установка шрифта перед измерением текста
-      const font = "bold 90px Arial";
-      const ctx = dynamicTexture.getContext();
-      ctx.font = font;
-  
-      // Определение максимальной ширины текста с учётом отступов
-      const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
-  
-      // Функция для разбиения текста на строки с учётом символов \n и ширины
-      function wrapText(context, text, maxWidth) {
-          const lines = [];
-          const paragraphs = text.split('\n');
-  
-          paragraphs.forEach(paragraph => {
-              const words = paragraph.split(' ');
-              let currentLine = '';
-  
-              words.forEach(word => {
-                  const testLine = currentLine + word + ' ';
-                  const metrics = context.measureText(testLine);
-                  const testWidth = metrics.width;
-  
-                  if (testWidth > maxWidth && currentLine !== '') {
-                      lines.push(currentLine.trim());
-                      currentLine = word + ' ';
-                  } else {
-                      currentLine = testLine;
-                  }
-              });
-  
-              lines.push(currentLine.trim());
-          });
-  
-          return lines;
-      }
-  
-      // Функция для обновления текста с переносом
-      function updateDynamicText(newText) {
-          ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
-  
-          // Устанавливаем шрифт
-          ctx.font = font;
-  
-          // Разбиваем текст на строки с учетом \n и ширины
-          const lines = wrapText(ctx, newText, maxTextWidth);
-  
-          // Рисуем каждую строку с увеличивающимся смещением по Y
-          const lineHeight = 90; // Можно настроить в зависимости от шрифта
-          lines.forEach((line, index) => {
-              ctx.fillStyle = "white"; // Цвет текста
-              ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
-          });
-  
-          // Обновляем текстуру
-          dynamicTexture.update();
-      }
-
-      updateDynamicText("жопа")
-  
-      // Создание материала для текста
-      const textMaterial = new StandardMaterial("TextMaterial", this.scene);
-      textMaterial.diffuseTexture = dynamicTexture;
-      textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
-      textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
-  
-      // Создание плоскости для текста
-      const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
-      textPlane.material = textMaterial;
-  
-      // Позиционируем плоскость относительно меша
-      textPlane.parent = thirdMesh;
-      textPlane.rotation.y = -Math.PI / 2;
-  
-      // Компенсируем отражение родителя по оси Z
-      textPlane.scaling = new Vector3(-1, 1, 1);
-  
-      // Устанавливаем позицию
-      textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
-  }
-
-    private createFileBox(): void {
-  
-      // ------------------------
-      // Создаём контейнер
-      // ------------------------
-      const dialogContainer = new Rectangle("dialogContainer");
-      dialogContainer.width = "50%";
-      dialogContainer.height = "100%";
-      dialogContainer.thickness = 0;
-      dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      dialogContainer.top = "0%";
-      dialogContainer.left = "3%";
-      dialogContainer.zIndex = 1;
-      this.guiTexture.addControl(dialogContainer);
-  
-      this.currentDialogBox = dialogContainer;
-  
-      // ------------------------
-      // Фоновое изображение (папка)
-      // ------------------------
-      const dialogImage = new Image("dialogImage", "/models/filefolder.png");
-      dialogImage.width = "100%";
-      dialogImage.height = "100%";
-      dialogImage.zIndex = 1;
-      dialogContainer.addControl(dialogImage);
-  
-      // ------------------------
-      // Скролл с текстом
-      // ------------------------
-      const scrollViewer = new ScrollViewer("dialogScroll");
-      scrollViewer.width = "60%";
-      scrollViewer.height = "40%";
-      scrollViewer.barSize = 7;
-      scrollViewer.background = "red";
-      scrollViewer.thickness = 0;
-      scrollViewer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      scrollViewer.left = "2%";
-      scrollViewer.top = "5%";
-      scrollViewer.zIndex = 2; 
-  
-      const dialogText = new TextBlock("dialogText");
-      dialogText.text = "sdf";
-      dialogText.color = "#212529";
-      dialogText.fontSize = "4.5%";
-      dialogText.fontFamily = "Segoe UI";
-      dialogText.resizeToFit = true;
-      dialogText.textWrapping = TextWrapping.WordWrap;
-      dialogText.width = "100%";
-      dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-  
-      scrollViewer.addControl(dialogText);
-      dialogContainer.addControl(scrollViewer);
-  
-      // ------------------------
-      // Прямоугольник, где будет видео
-      // ------------------------
-      const videoRect = new Rectangle("videoRect");
-      videoRect.width = "60%";
-      videoRect.height = "40%";
-      videoRect.thickness = 0;
-      videoRect.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-      videoRect.left = "2%";
-      videoRect.paddingBottom = "5%";
-      videoRect.zIndex = 3;
-      dialogContainer.addControl(videoRect);
-  
-      // ------------------------
-      // Используем наш класс VideoGui
-      // ------------------------
-      const videoGUI = new VideoGui("videoGUI", "/models/film_1var_1_2K.mp4");
-      // Заполним весь родительский Rectangle
-      videoGUI.width = "100%";
-      videoGUI.height = "100%";
-  
-      // Можно выбрать режим растяжения:
-      //  - VideoGui.STRETCH_FILL     (заполняет целиком, может искажаться)
-      //  - VideoGui.STRETCH_UNIFORM  (сохраняет пропорции, может быть "пустое" поле по сторонам)
-      //  - VideoGui.STRETCH_EXTEND   (если надо растянуть родителя и т.д.)
-      // Выбираем "FILL" или "UNIFORM"
-      videoGUI.stretch = VideoGui.STRETCH_FILL;
-  
-      // Добавляем в контейнер
-      videoRect.addControl(videoGUI);
-  
-      // ------------------------
-      // Обновляем GUI каждый кадр, чтобы видео было "живым"
-      // ------------------------
-      this.scene.onBeforeRenderObservable.add(() => {
-        const vid = videoGUI.domVideo;
-        if (videoGUI.isLoaded && !vid.paused && vid.readyState >= vid.HAVE_CURRENT_DATA) {
-            this.guiTexture.markAsDirty();
-        }
-    });
-  
-    // Создаем GUI-кнопку
-  const playButton = Button.CreateSimpleButton("playBtn", "Play video");
-  playButton.width = "100px";
-  playButton.height = "40px";
-  playButton.color = "white";
-  playButton.background = "green";
-  playButton.onPointerUpObservable.add(() => {
-    videoGUI.domVideo.play().then(() => {
-      console.log("Video playing after user gesture");
-  }).catch(err => console.log("Play error:", err));
-  });
-  this.guiTexture.addControl(playButton);
+    private setupPointerEvents(): void {
+        // Создаём клип-плоскость
+        const clipPlane = new Plane(1, 0, 0, 0);
     
-  }
+        // Применяем клип-плоскость только к линейке (если она существует)
+        if (this.rulerMesh) {
+            this.rulerMesh.onBeforeRenderObservable.add(() => {
+                this.scene.clipPlane = clipPlane;
+            });
+            this.rulerMesh.onAfterRenderObservable.add(() => {
+                this.scene.clipPlane = null;
+            });
+        }
+    
+        // Функция для обновления позиций и ориентаций
+        const updateMeasurement = (currentPoint: Vector3) => {
+            if (this.fixedPoint) {
+                // Ограничиваем расстояние до 1 метра от фиксированной точки
+                const dir = currentPoint.subtract(this.fixedPoint);
+                const dist = dir.length();
+                if (dist > 1) {
+                    dir.normalize();
+                    currentPoint = this.fixedPoint.add(dir.scale(1));
+                }
+    
+                // Обновляем положение и ориентацию рулетки (вторая точка)
+                this.tapeRollMesh.position.copyFrom(currentPoint);
+                this.tapeRollMesh.lookAt(this.fixedPoint);
+                this.tapeRollMesh.rotation.set(0, 0, 0);
+                this.tapeRollMesh.rotate(Axis.Y, -Math.PI / 2, Space.LOCAL);
+                // this.tapeRollMesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
+    
+                // Обновляем положение и ориентацию линейки (начиная от фиксированной точки)
+                this.rulerMesh.position.copyFrom(this.fixedPoint);
+                this.rulerMesh.lookAt(currentPoint);
+                this.rulerMesh.rotation.set(0, 0, 0);
+                this.rulerMesh.rotate(Axis.Y, Math.PI / 2, Space.LOCAL);
+                // this.rulerMesh.rotate(Axis.X, Math.PI / 2, Space.LOCAL);
+    
+                // Обновляем клип-плоскость
+                const direction = this.tapeRollMesh.position.subtract(this.rulerMesh.position).normalize();
+                const newPlane = Plane.FromPositionAndNormal(this.tapeRollMesh.position, direction);
+                clipPlane.normal.copyFrom(newPlane.normal);
+                clipPlane.d = newPlane.d;
+            }
+        };
+    
+        // Обработка событий указателя
+        this.scene.onPointerObservable.add((pointerInfo) => {
+            switch (pointerInfo.type) {
+                case PointerEventTypes.POINTERMOVE: {
+                    const pickResult = this.scene.pick(
+                        this.scene.pointerX,
+                        this.scene.pointerY,
+                        (mesh) => mesh !== this.rulerMesh && mesh !== this.tapeRollMesh
+                    );
+                    if (pickResult?.hit && pickResult.pickedPoint) {
+                        const currentPoint = pickResult.pickedPoint.clone();
+    
+                        if (this.measurementStage === 1 && this.fixedPoint) {
+                            // Если это первое движение после фиксации, делаем линейку видимой
+                            if (!this.rulerMesh.isVisible) {
+                                this.rulerMesh.isVisible = true;
+                            }
+                            updateMeasurement(currentPoint);
+                        } else if (this.measurementStage === 0) {
+                            // В состоянии 0 обновляем только положение рулетки
+                            this.tapeRollMesh.position.copyFrom(currentPoint);
+                        }
+                        // В состоянии 2 обновление не производится
+                    }
+                    break;
+                }
+    
+                case PointerEventTypes.POINTERPICK: {
+                    const pickResult = this.scene.pick(
+                        this.scene.pointerX,
+                        this.scene.pointerY,
+                        (mesh) => mesh !== this.rulerMesh && mesh !== this.tapeRollMesh
+                    );
+                    if (pickResult?.hit && pickResult.pickedPoint) {
+                        if (this.measurementStage === 0) {
+                            // Первый клик: фиксируем первую точку, но не показываем линейку сразу
+                            this.fixedPoint = pickResult.pickedPoint.clone();
+                            this.measurementStage = 1;
+                            // Оставляем линейку скрытой до первого движения мыши
+                        } else if (this.measurementStage === 1) {
+                            // Второй клик: фиксируем положение рулетки (как вторую точку)
+                            this.secondFixedPoint = this.tapeRollMesh.position.clone();
+                            // Обновляем клип-плоскость
+                            const direction = this.tapeRollMesh.position.subtract(this.fixedPoint).normalize();
+                            const newPlane = Plane.FromPositionAndNormal(this.tapeRollMesh.position, direction);
+                            clipPlane.normal.copyFrom(newPlane.normal);
+                            clipPlane.d = newPlane.d;
+                            this.measurementStage = 2;
+                        } else if (this.measurementStage === 2) {
+                            // Третий клик: сбрасываем измерение
+                            this.fixedPoint = null;
+                            this.secondFixedPoint = null;
+                            this.measurementStage = 0;
+                            this.rulerMesh.isVisible = false;
+                        }
+                    }
+                    break;
+                }
+            }
+        });
+    }
+    
+    
+    
 
     async initializeScene(): Promise<void> {
         try {
             await this.CreateEnvironment();
-            this.createFileBox()
+            this.addTapeMode();
+            this.setupPointerEvents();
         } catch (error) {
             console.error("Ошибка при инициализации сцены:", error);
         } finally {
@@ -452,4 +306,5 @@ export class TextureScene {
         }
     }
 }
+
 

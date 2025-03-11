@@ -156,6 +156,114 @@ export class DialogPage {
         return grid
     }
 
+    addInputGrid1(
+        header: string,
+        items: string[],
+        ranges: { min: number; max: number }[],
+        onCheckCallback?: () => void, // Новый параметр - коллбэк
+        totalRows: number = 8
+      ): Grid {
+        const innerContainer = new Rectangle();
+        innerContainer.width = "100%";
+        innerContainer.height = "100%";
+        innerContainer.thickness = 0
+        const grid = new Grid();
+        grid.width = "60%";
+        grid.height = "50%";
+        grid.top = "-15%";
+      
+        grid.addColumnDefinition(1);
+        grid.addColumnDefinition(0.5);
+        grid.addColumnDefinition(0.5);
+      
+        for (let i = 0; i < totalRows; i++) {
+          grid.addRowDefinition(0.2);
+        }
+      
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = header;
+        headerTextBlock.color = "black";
+        headerTextBlock.fontSize = "20px";
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        headerTextBlock.columnSpan = 3;
+        grid.addControl(headerTextBlock, 0, 0);
+      
+        const statusIcons: TextBlock[] = [];
+        const inputFields: InputText[] = [];
+      
+        items.forEach((item, i) => {
+          if (i + 1 >= totalRows) {
+            console.warn(`Количество элементов превышает доступные строки (${totalRows - 1})`);
+            return;
+          }
+      
+          const currentRow = i + 1;
+      
+          const textBlock = new TextBlock();
+          textBlock.text = item;
+          textBlock.color = "black";
+          textBlock.fontSize = "18px";
+          grid.addControl(textBlock, currentRow, 0);
+      
+          const inputField = new InputText();
+          inputField.width = "90%";
+          inputField.height = "70%";
+          inputField.color = "white";
+          inputField.background = "grey";
+          grid.addControl(inputField, currentRow, 1);
+          inputFields.push(inputField);
+      
+          const statusIcon = new TextBlock();
+          statusIcon.text = "";
+          statusIcon.color = "transparent";
+          statusIcon.fontSize = "18px";
+          statusIcon.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          statusIcon.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          statusIcon.isVisible = false;
+          grid.addControl(statusIcon, currentRow, 2);
+          statusIcons.push(statusIcon);
+        });
+      
+        const checkButton = Button.CreateSimpleButton("CheckBtn", "Проверка");
+        checkButton.width = "150px";
+        checkButton.height = "40px";
+        checkButton.color = "white";
+        checkButton.background = "green";
+        checkButton.thickness = 2;
+        checkButton.top = "20%"
+        innerContainer.addControl(checkButton);
+      
+        checkButton.onPointerClickObservable.add(() => {
+          statusIcons.forEach((statusIcon, index) => {
+            statusIcon.isVisible = true;
+            const inputField = inputFields[index];
+            const value = parseFloat(inputField.text);
+            const range = ranges[index];
+            if (isNaN(value)) {
+              statusIcon.text = "";
+              statusIcon.color = "transparent";
+            } else if (value >= range.min && value <= range.max) {
+              statusIcon.text = "✔";
+              statusIcon.color = "green";
+            } else {
+              statusIcon.text = "✖";
+              statusIcon.color = "red";
+            }
+          });
+      
+          // Вызываем коллбэк для управления видимостью мешей
+          if (onCheckCallback) {
+            onCheckCallback();
+          }
+          
+        });
+      
+        innerContainer.addControl(grid);
+        this.pageContainer.addControl(innerContainer);
+        return innerContainer;
+      }
+      
     addInputFields(header: string): void {
         const grid = new Grid();
         grid.width = "60%";  // Ограничим ширину сетки
@@ -239,12 +347,6 @@ export class DialogPage {
     
         return grid;
     }
-    
-    
-    
-    
-    
-
 
     // createStartPage(ref: string): void {
     //     // Создаем отдельный контейнер для этой страницы
@@ -882,6 +984,7 @@ export class DialogPage {
         const grid = new Grid();
         grid.width = "100%";
         grid.height = "10%";
+        grid.top = "20%"
         // grid.background = "red"
         grid.addColumnDefinition(0.7);
         grid.addColumnDefinition(0.3);
@@ -917,7 +1020,7 @@ export class DialogPage {
         actionButton.background = "gray";
         actionButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         actionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        actionButton.top = "-20%";
+        actionButton.top = "-5%";
     
         // Обработчик нажатия на кнопку
         actionButton.onPointerUpObservable.add(() => {
