@@ -122,7 +122,7 @@ private initialRotation: number; // Переменная для хранения
 }
   async CreateEnvironment(): Promise<void> {
     try {
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_TapeMeasure_Caliper_MOD.gltf", this.scene);
       map.forEach((mesh) => {
         mesh.checkCollisions = true;
       });
