@@ -23,12 +23,23 @@ export class CameraController {
   private wantToJump: boolean = false;   // true, когда нажали пробел
   private isJumping: boolean = false;    // true, когда камера не касается земли
 
-  constructor(scene: Scene, canvas: HTMLCanvasElement, cameraType: CameraType = 'simple') {
+  /**
+   * @param scene Сцена BabylonJS
+   * @param canvas Канвас
+   * @param cameraType Тип камеры ('simple' или 'complex')
+   * @param initialPosition Позиция камеры. Если не указана, используется значение по умолчанию new Vector3(35, 3, 0)
+   */
+  constructor(
+    scene: Scene, 
+    canvas: HTMLCanvasElement, 
+    cameraType: CameraType = 'simple',
+    initialPosition: Vector3 = new Vector3(35, 3, 0)
+  ) {
     this.scene = scene;
     this.canvas = canvas;
     this.cameraType = cameraType;
 
-    this.createCamera();
+    this.createCamera(initialPosition);
 
     // Если нужна "сложная" камера — добавляем прицел, pointer lock и обработку мыши
     if (this.cameraType === 'complex') {
@@ -41,8 +52,9 @@ export class CameraController {
     this.setupMovementEvents();
   }
 
-  private createCamera(): void {
-    this.camera = new FreeCamera("camera", new Vector3(35, 3, 0), this.scene);
+  private createCamera(initialPosition: Vector3): void {
+    // Используем переданную позицию или значение по умолчанию
+    this.camera = new FreeCamera("camera", initialPosition, this.scene);
     this.camera.attachControl(this.canvas, true);
 
     // Общие настройки камеры

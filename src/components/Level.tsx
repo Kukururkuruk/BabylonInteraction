@@ -3,10 +3,11 @@ import { Level as LevelScene } from '../BabylonExamples/BasicLevel'; // Импо
 
 const Level: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const sceneRef = useRef<LevelScene | null>(null); // Ссылка для хранения экземпляра сцены
 
   useEffect(() => {
-    if (canvasRef.current) {
-      new LevelScene(canvasRef.current); // Просто создаем сцену без присваивания
+    if (canvasRef.current && !sceneRef.current) { // Инициализация сцены только если она еще не создана
+      sceneRef.current = new LevelScene(canvasRef.current);
     }
   }, []);
 

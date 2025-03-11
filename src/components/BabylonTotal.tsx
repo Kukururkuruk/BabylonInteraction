@@ -3,10 +3,11 @@ import { TotalStation } from '../BabylonExamples/TotalStation';
 
 const BabylonTotal: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sceneRef = useRef<TotalStation | null>(null); // Ссылка для хранения экземпляра сцены
 
   useEffect(() => {
-    if (canvasRef.current) {
-      new TotalStation(canvasRef.current); // Передаем функцию открытия модального окна
+    if (canvasRef.current && !sceneRef.current) { // Инициализация сцены только если она еще не создана
+      sceneRef.current = new TotalStation(canvasRef.current);
     }
   }, []);
 

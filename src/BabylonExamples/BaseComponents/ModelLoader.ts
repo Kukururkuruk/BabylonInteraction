@@ -208,6 +208,11 @@ export class ModelLoader {
     this.setupMeshes();
   }
 
+  public async loadBridge(hide = true): Promise<void> {
+    await this.loadMapModel();
+    this.setupMeshes(hide);
+  }
+
   private async loadMapModel(): Promise<void> {
     try {
       const result = await SceneLoader.ImportMeshAsync(
@@ -225,37 +230,34 @@ export class ModelLoader {
 
   public async loadMLabModel(): Promise<void> {
     try {
-        const result = await SceneLoader.ImportMeshAsync(
-            "",
-            "./models/",
-            "Laboratory_MOD_1.gltf",
-            this.scene
-        );
+      console.log("Загрузка модели лаборатории...");
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Laboratory_MOD_4.gltf",
+        this.scene
+      );
 
-        // Сохраняем загруженные меши
-        this.loadedMeshes["lab"] = result.meshes;
+      // Сохраняем загруженные меши
+      this.loadedMeshes["lab"] = result.meshes;
 
-        // Включаем столкновения для каждого меша
-        result.meshes.forEach(mesh => {
-            if (mesh instanceof Mesh) { // Проверяем, что это Mesh
-                mesh.checkCollisions = true;
+      // Включаем столкновения для каждого меша
+      result.meshes.forEach(mesh => {
+        if (mesh instanceof Mesh) {
+          mesh.checkCollisions = true;
+        }
 
-                // Логируем меши для отладки
-                // console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
-            }
-
-            // Переопределение точки вращения (pivot) для модели SM_Door
-            if (mesh.name === "SM_Door") {
-                mesh.position.y = 0; // Установить модель на плоскость
-                mesh.rotationQuaternion = null; // Очистить кватернион поворота, чтобы ручное управление работало нормально
-                // console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
-            }
-        });
+        // Переопределение точки вращения (pivot) для модели SM_Door
+        if (mesh.name === "SM_Door") {
+          mesh.position.y = 0; // Установить модель на плоскость
+          mesh.rotationQuaternion = null; // Очистить кватернион поворота
+        }
+      });
     } catch (error) {
-        console.error("Ошибка при загрузке модели карты:", error);
-        throw error;
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
     }
-}
+  }
 
   private async loadSignModel(): Promise<void> {
     try {
@@ -711,7 +713,7 @@ public async loadTapeMeasureModel(): Promise<void> {
 
 
   // Метод для настройки мешей после загрузки
-  private setupMeshes(): void {
+  private setupMeshes(hide: boolean): void {
     const mapMeshes = this.loadedMeshes["map"];
     if (mapMeshes) {
       // Включаем коллизии для всех мешей
@@ -741,13 +743,21 @@ public async loadTapeMeasureModel(): Promise<void> {
         }
       });
 
-      // Скрываем "сломанные" меши
-      const brokenMeshes = mapMeshes.filter((mesh) =>
-        mesh.name.toLowerCase().includes(this.brokenMeshSubstring)
-      );
-      brokenMeshes.forEach((mesh) => {
-        mesh.visibility = 0;
+      // Находим сломаные меши
+      const BrokenMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
+      const WholeMeshes = mapMeshes.filter((mesh) => mesh.name.toLowerCase().includes("whole"));
+
+      if (hide) {
+      BrokenMeshes.forEach((mesh) => {
+        mesh.visibility = 0; // Полностью видимый
       });
+      } else {
+        WholeMeshes.forEach((mesh) => {
+          mesh.visibility = 0; // Полностью невидимый
+        });
+      }
+
+
     } else {
       console.warn("Меши карты не найдены для настройки.");
     }

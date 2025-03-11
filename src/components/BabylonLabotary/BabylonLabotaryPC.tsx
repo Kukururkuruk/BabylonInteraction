@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { ToolScenePC } from '../../BabylonExamples/Laboratory/ToolScenePC'
+import { ToolScenePC } from '../../BabylonExamples/Laboratory/ToolScenePC';
 
 const BabylonLabotaryPC: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sceneRef = useRef<ToolScenePC | null>(null); // Ссылка для хранения экземпляра сцены
 
   useEffect(() => {
-    if (canvasRef.current) {
-      new ToolScenePC(canvasRef.current); // Передаем функцию открытия модального окна
+    if (canvasRef.current && !sceneRef.current) { // Инициализация сцены только если она еще не создана
+      sceneRef.current = new ToolScenePC(canvasRef.current);
     }
   }, []);
 
