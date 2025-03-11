@@ -234,7 +234,7 @@ export class ModelLoader {
       const result = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
-        "Laboratory_MOD_3.gltf",
+        "Laboratory_MOD_4.gltf",
         this.scene
       );
 

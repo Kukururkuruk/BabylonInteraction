@@ -133,7 +133,8 @@ export class DemoScene {
     }
 
     this.CreateController();
-    this.screenViewManager = new ScreenViewManager(this.scene, this.camera);
+    this.screenViewManager = new ScreenViewManager(this.scene, this.camera)
+
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -652,12 +653,6 @@ wall.material = wallMaterial;
     
         this.BetonTrigger();
     
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
@@ -670,26 +665,6 @@ wall.material = wallMaterial;
           mesh.position = new Vector3(0, -1, 0);
           mesh.parent = null;
         });
-    
-        const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-        this.guiManager.CreateDialogBox([page4]);
-    
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = true;
-          meshDesk.actionManager = new ActionManager(this.scene);
-          meshDesk.actionManager.hoverCursor = "default";
-    
-          meshDesk.actionManager.registerAction(
-            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-              if (!this.isToolDeskClicked) {
-                this.isToolDeskClicked = true;
-                this.initToolHandling();
-              }
-            })
-          );
-        }
     
         // Очистка текстуры и плоскости
         const textPlane = this.scene.getMeshByName("TextPlaneZone1");
@@ -828,12 +803,6 @@ wall.material = wallMaterial;
             this.rangefinderMesh = this.rangefinderMeshes[1];
             this.activateLaserMode1();
     
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
@@ -850,6 +819,8 @@ wall.material = wallMaterial;
                 }
     
         this.exitLaserMode1();
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
       }
     };
     this.zoneData['3'] = {
@@ -858,20 +829,39 @@ wall.material = wallMaterial;
       onEnter: () => {
         if (this.isBetonTriggered) return;
         this.isBetonTriggered = true;
-        const enterDialog = this.dialogPage.addText("Измерение начато");
+        const enterDialog = this.dialogPage.addText("Здесь вы можете потренироваться самостоятельно");
         this.guiManager.CreateDialogBox([enterDialog]);
         this.BetonTrigger();
   
-        // Отключаем стол
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
+        this.triggerManager.disableDistanceMeasurement();
+        this.triggerManager.exitDisLaserMode2();
+        this.triggerManager.cleanupDistanceMeasurement(); // Добавляем очистку
+        this.rangefinderMeshes.forEach(mesh => {
+          mesh.position = new Vector3(0, -1, 0);
+          mesh.parent = null;
+        });
+    
+        // Очистка текстуры и плоскости
+        const textPlane = this.scene.getMeshByName("TextPlaneZone1");
+        if (textPlane) {
+          textPlane.material?.dispose();
+          textPlane.dispose();
+        }
+    
+        // Очистка слушателей eventEmitter
+        if (this.updateTextPlaneHandler) {
+          eventEmitter.off("updateTextPlane", this.updateTextPlaneHandler);
+          this.updateTextPlaneHandler = null;
+        }
+        if (this.updateAngleTextHandler) {
+          eventEmitter.off("updateAngleText", this.updateAngleTextHandler);
+          this.updateAngleTextHandler = null;
+        }
       }
     }
 
@@ -942,8 +932,16 @@ wall.material = wallMaterial;
   
         const distance = Vector3.Distance(rangefinderPosition, this.intersectionPoint.position);
         const euler = camera.rotation;
+
+        const normalizeAngle = (angle: number): number => {
+          let normalized = angle % 360;
+          if (normalized > 180) normalized -= 360;
+          if (normalized < -180) normalized += 360;
+          return normalized;
+        };
+
         const angleX = Tools.ToDegrees(euler.x);
-        const angleY = Tools.ToDegrees(euler.y);
+        const angleY = normalizeAngle(Tools.ToDegrees(euler.y));
         const displayedAngleX = -angleX + 3;
   
         if (this.updateTextCallback) {
@@ -1356,6 +1354,12 @@ eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
       console.error("Ошибка при инициализации сцены:", error);
       this.engine.hideLoadingUI();
     }
+  }
+
+  public dispose() {
+    this.engine.stopRenderLoop();
+    this.scene.dispose();
+    this.engine.dispose();
   }
 
   // Заглушка, чтобы не было ошибок со ссылкой this.textMessages
