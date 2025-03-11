@@ -112,4 +112,21 @@ export class BabylonUtilities {
     };
 
   }
+
+  logClickedMesh(): void {
+    this.scene.onPointerDown = (evt) => {
+      // Проверяем, что нажата левая кнопка мыши (button === 0)
+      if (evt.button === 0) {
+        const camera = this.scene.activeCamera as FreeCamera;
+        const origin = camera.globalPosition.clone();
+        const forward = camera.getDirection(Vector3.Forward());
+        const ray = new Ray(origin, forward, 200);
+  
+        const hit = this.scene.pickWithRay(ray, (mesh) => mesh.isPickable);
+        if (hit?.pickedMesh) {
+          console.log("Клик по мешу:", hit.pickedMesh.name);
+        }
+      }
+    };
+  }
 }

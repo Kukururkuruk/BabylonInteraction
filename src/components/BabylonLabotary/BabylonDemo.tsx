@@ -6,9 +6,18 @@ const BabylonDemo: React.FC = () => {
   const sceneRef = useRef<DemoScene | null>(null); // Используем ref для хранения экземпляра сцены
 
   useEffect(() => {
-    if (canvasRef.current && !sceneRef.current) {  // Создаем сцену только если её еще нет
+    if (canvasRef.current && !sceneRef.current) {
       sceneRef.current = new DemoScene(canvasRef.current);
     }
+    // Функция очистки
+    return () => {
+      if (sceneRef.current) {
+        sceneRef.current.dispose(); // Предполагается, что ToolScenePC имеет метод dispose
+        sceneRef.current = null;
+        console.log("Размонтирование");
+        
+      }
+    };
   }, []);
 
   return (

@@ -52,7 +52,7 @@ export class DialogPage {
         scrollViewer.thickness = 0;
 
         const dialogText = new TextBlock();
-        dialogText.text = "";
+        dialogText.text = content;
         dialogText.color = "#212529";
         dialogText.fontSize = "4.5%";
         dialogText.fontFamily = "Segoe UI";
@@ -70,19 +70,19 @@ export class DialogPage {
         scrollViewer.addControl(dialogText);
         this.pageContainer.addControl(scrollViewer);
 
-        let currentIndex = 0;
+        // let currentIndex = 0;
 
-        // Функция для анимации печатания текста
-        const typingInterval = setInterval(() => {
-            dialogText.text += content[currentIndex];
-            currentIndex++;
-            if (currentIndex >= content.length) {
-                clearInterval(typingInterval);
-                if (onComplete) {
-                    onComplete();
-                }
-            }
-        }, 20);
+        // // Функция для анимации печатания текста
+        // const typingInterval = setInterval(() => {
+        //     dialogText.text += content[currentIndex];
+        //     currentIndex++;
+        //     if (currentIndex >= content.length) {
+        //         clearInterval(typingInterval);
+        //         if (onComplete) {
+        //             onComplete();
+        //         }
+        //     }
+        // }, 20);
 
         return scrollViewer;
     }
