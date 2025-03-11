@@ -1141,9 +1141,30 @@ exitLaserMode1(): void {
       // Удаляем обработчик кликов
       this.scene.onPointerDown = undefined;
 
+      this.sendCompletionStatus(1);  // Здесь 1 означает "истина", т.к. завершено
+
     });
     this.guiManager.CreateDialogBox([startPage, endPage]);
   }
+
+  private async sendCompletionStatus(status: number): Promise<void> {
+    try {
+        const response = await fetch("http://localhost:5000/api/user/points", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                pointsPressedCount: status
+            }),
+        });
+
+        const data = await response.json();
+        console.log("Ответ от сервера:", data);
+    } catch (error) {
+        console.error("Ошибка при отправке данных:", error);
+    }
+}
 
   public BetonTrigger(): void {
   
