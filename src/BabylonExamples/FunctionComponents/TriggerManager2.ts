@@ -234,10 +234,10 @@ export class TriggerManager2 {
       // Задаем список позиций, где мы хотим разместить модели
       // Замените данные координаты на нужные
       const positions = [
-        { x: 12.32, y: 8.77, z: -3.60 },
-        { x: 12.32, y: 8.24, z: -3.60 },
+        { x: 12.32, y: 8.81, z: -3.60 },
+        { x: 12.37, y: 8.24, z: -3.60 },
         { x: 12.12, y: 7.88, z: -3.60 },
-        { x: 12.12, y: 7.45, z: -3.60 }
+        { x: 12.37, y: 7.43, z: -3.60 }
       ];
     
       // Предположим, что третья позиция (индекс 2) – правильная
@@ -255,14 +255,18 @@ export class TriggerManager2 {
     
         // Устанавливаем позицию
         meshClone.position.set(pos.x, pos.y, pos.z);
+        
+        if(i === 0) {
+          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
+        }
+        if(i === 1) {
+          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
+        }
         if(i === 2) {
           meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
         }
-        if(i === 0) {
-          meshClone.rotation = new Vector3 (0, Math.PI / 2, 0 )
-        }
-        if(i === 1) {
-          meshClone.rotation = new Vector3 (0.3, 0.1, 0.6)
+        if(i === 3) {
+          meshClone.rotation = new Vector3 (0, 0, 1.2)
         }
     
         // Изначально полупрозрачный
@@ -297,8 +301,7 @@ export class TriggerManager2 {
               placedMeshes.forEach(m => m.setEnabled(false));
               // Вызываем onHide()
               onHide();
-              // Запускаем режим лазера
-              this.activateLaserMode();
+
             } else {
               // Неправильная позиция
               this.showMessage("Неправильная позиция");
@@ -443,17 +446,7 @@ export class TriggerManager2 {
         }
     });
 
-        const page3 = this.dialogPage.createNumericInputPage("Для управления камерой используйте мышь. Зажмите левую кнопку мыши и двигайте в нужном направлении. Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже. Чтобы приблизить или отдалить камеру нажмите Q/Й", "Штрина проезжей части", 11,11.20,() => {
-        this.removeAdditionalSpheres();
-        this.disableCameraMovement();
 
-        this.scene.render();
-      const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
-        window.location.href = '/ВыборИнструмента';
-      })
-      this.guiManager.CreateDialogBox([page4])
-    })
-    this.guiManager.CreateDialogBox([page3])
 }
 
 activateLaserMode1(): void {
@@ -540,7 +533,7 @@ activateLaserMode1(): void {
         // Координаты сфер
         const sphereCoordinates = [
             new Vector3(-1.00, 8.32, -3.58),
-            new Vector3(-0.98, 8.09, -3.58),
+            new Vector3(-0.9, 7.95, -3.58),
             new Vector3(-0.81, 9.08, -3.58)
         ];
 
@@ -566,10 +559,13 @@ activateLaserMode1(): void {
         // Опционально: сделать сферы невидимыми и отображать их только для отладки
         this.sphere1.visibility = 0.5;
         this.sphere1.checkCollisions = false
+        this.sphere1.isPickable = false
         this.sphere2.visibility = 0.5;
         this.sphere2.checkCollisions = false
+        this.sphere2.isPickable = false
         this.sphere3.visibility = 0.5;
         this.sphere3.checkCollisions = false
+        this.sphere3.isPickable = false
     }
 
 // Метод для проверки пересечения основной сферы с дополнительными сферами

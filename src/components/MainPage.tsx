@@ -16,8 +16,8 @@ const Main: React.FC = () => {
           <button><Link to="/Линейка">Линейка</Link></button>
           <button><Link to="/Штангенциркуль">Штангенциркуль</Link></button>
           <button><Link to="/УровеньПузырька">Уровень пузырька</Link></button>
-          <button><Link to="/ДальнометрОбучение">Дальнометр обучение</Link></button>
-          <button><Link to="/ДальнометрТест">Дальнометр тест</Link></button>
+          <button><Link to="/ДальномерОбучение">Дальномер обучение</Link></button>
+          <button><Link to="/ДальномерТест">Дальномер тест</Link></button>
           <button><Link to="/Бетонометр">Бетонометр</Link></button>
           <button><Link to="/Тахеометр">Тахеометр</Link></button>
           <button><Link to="/ТахеометрЗадание">Тахеометр Задание</Link></button>

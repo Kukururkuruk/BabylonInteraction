@@ -52,7 +52,7 @@ export class DialogPage {
         scrollViewer.thickness = 0;
 
         const dialogText = new TextBlock();
-        dialogText.text = content;
+        dialogText.text = "";
         dialogText.color = "#212529";
         dialogText.fontSize = "4.5%";
         dialogText.fontFamily = "Segoe UI";
@@ -70,19 +70,19 @@ export class DialogPage {
         scrollViewer.addControl(dialogText);
         this.pageContainer.addControl(scrollViewer);
 
-        // let currentIndex = 0;
+        let currentIndex = 0;
 
-        // // Функция для анимации печатания текста
-        // const typingInterval = setInterval(() => {
-        //     dialogText.text += content[currentIndex];
-        //     currentIndex++;
-        //     if (currentIndex >= content.length) {
-        //         clearInterval(typingInterval);
-        //         if (onComplete) {
-        //             onComplete();
-        //         }
-        //     }
-        // }, 20);
+        // Функция для анимации печатания текста
+        const typingInterval = setInterval(() => {
+            dialogText.text += content[currentIndex];
+            currentIndex++;
+            if (currentIndex >= content.length) {
+                clearInterval(typingInterval);
+                if (onComplete) {
+                    onComplete();
+                }
+            }
+        }, 20);
 
         return scrollViewer;
     }
@@ -545,27 +545,34 @@ export class DialogPage {
      */
     addClickableWordsPage(
         content: string, 
-        clickableWords: { word: string; imageUrl: string; top?: string; left?: string; width?: string }[], 
-        advancedTexture: AdvancedDynamicTexture
+        clickableWords: { 
+            word: string; 
+            imageUrl?: string;  // Сделал опциональным
+            videoUrl?: string;  // Добавил опциональное поле для видео
+            top?: string; 
+            left?: string; 
+            width?: string 
+        }[], 
+        advancedTexture: AdvancedDynamicTexture,
+        camera?: FreeCamera // Добавил опциональный параметр камеры для видео
     ): void {
         this.pageContainer.clearControls();
-
-
     
         let modifiedText = content;
     
-        // Заменяем указанные слова на подчёркивания (или любой маркер)
+        // Заменяем указанные слова на подчёркивания
         clickableWords.forEach((obj) => {
             const w = obj.word;
             const underscores = "..".repeat(w.length);
             modifiedText = modifiedText.replace(w, underscores);
         });
-
+    
         const innerContainer = new Rectangle();
         innerContainer.width = "60%";
         innerContainer.height = "75%";
         innerContainer.thickness = 0;
-        innerContainer.paddingBottom = "5%"
+        innerContainer.left = "2%"
+        innerContainer.top = "-7%"
         // innerContainer.background = 'red'
     
         const dialogText = new TextBlock();
@@ -577,7 +584,9 @@ export class DialogPage {
         dialogText.textWrapping = true;
         dialogText.width = "100%";
         dialogText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        dialogText.top = "-25%"
+        dialogText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        dialogText.textWrapping = TextWrapping.WordWrap;
+        // dialogText.top = "-15%";
     
         innerContainer.addControl(dialogText);
     
@@ -588,8 +597,8 @@ export class DialogPage {
         clickableWords.forEach((obj, index) => {
             const btn = Button.CreateSimpleButton("wordBtn" + index, obj.word);
             btn.fontSize = "4%";
-            btn.width = obj.width ?? "90px";
-            btn.height = "19px";
+            btn.width = obj.width ?? "25%";
+            btn.height = "5%";
             btn.color = "#212529";
             btn.background = "#B9BFBF";
             btn.thickness = 1;
@@ -601,14 +610,20 @@ export class DialogPage {
             btn.top = obj.top ?? "190px";
             btn.left = obj.left ?? "10px";
     
-            // При клике на кнопку показываем картинку в оверлее
+            // При клике на кнопку проверяем, что показывать
             btn.onPointerUpObservable.add(() => {
-                this.showImageInOverlay(overlay, obj.imageUrl);
+                if (obj.videoUrl && camera) {
+                    // Если есть videoUrl и передана камера, показываем видео
+                    this.showVideo(obj.videoUrl, advancedTexture, camera);
+                } else if (obj.imageUrl) {
+                    // Если есть imageUrl, показываем картинку
+                    this.showImageInOverlay(overlay, obj.imageUrl);
+                }
             });
     
             innerContainer.addControl(btn);
         });
-
+    
         this.pageContainer.addControl(innerContainer);
     
         return innerContainer;
@@ -622,7 +637,11 @@ export class DialogPage {
      * @param images - массив объектов: { thumbnailUrl: string, fullImageUrl: string, name: string }
      * @param advancedTexture - ссылка на AdvancedDynamicTexture
      */
-    addZoomableImagePage(images: { thumbnailUrl: string; fullImageUrl: string; name?: string; }[], advancedTexture: AdvancedDynamicTexture): void {
+    addZoomableImagePage(
+        images: { thumbnailUrl: string; fullImageUrl: string; name?: string; }[],
+        advancedTexture: AdvancedDynamicTexture,
+        text?: string // Добавляем опциональный параметр для текста
+    ): void {
         // Очищаем контейнер
         this.pageContainer.clearControls();
     
@@ -632,27 +651,65 @@ export class DialogPage {
         // Количество колонок
         const cols = 2;
         const rows = Math.ceil(images.length / cols);
-
+    
         const innerContainer = new Rectangle();
         innerContainer.width = "55%";
         innerContainer.height = "85%";
         innerContainer.thickness = 0;
-        // innerContainer.background = 'red'
     
-        // Создаём основной Grid для картинок
-        const grid = new Grid();
-        grid.width = "100%";
-        grid.height = "100%";
+        // Создаем Grid для размещения текста и картинок
+        const mainGrid = new Grid();
+        mainGrid.width = "100%";
+        mainGrid.height = "100%";
+    
+        // Определяем строки: текст (если есть) и картинки
+        if (text) {
+            mainGrid.addRowDefinition(0.5); // 30% высоты для текста
+            mainGrid.addRowDefinition(0.5); // 70% высоты для картинок
+        } else {
+            mainGrid.addRowDefinition(1); // 100% высоты для картинок
+        }
+        mainGrid.addColumnDefinition(1);
+    
+        // Если есть текст, добавляем TextBlock
+// Если есть текст, добавляем TextBlock с прокруткой
+if (text) {
+    const scrollViewer = new ScrollViewer();
+    scrollViewer.width = "100%"; // Устанавливаем ширину, чтобы соответствовать контейнеру
+    scrollViewer.height = "90%"; // Оставляем высоту как есть
+    scrollViewer.thickness = 0;
+    scrollViewer.barSize = 7; // Размер полосы прокрутки
+    scrollViewer.color = "#212529"; // Цвет полосы прокрутки (опционально)
+    scrollViewer.background = "transparent"; // Фон прозрачный, чтобы не перекрывать
 
+    const textBlock = new TextBlock();
+    textBlock.text = text;
+    textBlock.color = "#212529";
+    textBlock.fontSize = "8%";
+    textBlock.fontFamily = "Segoe UI";
+    textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    textBlock.height = "100%"; // Задаем высоту, чтобы текст растягивался
+    textBlock.resizeToFit = true; // Отключаем подгонку размера, чтобы включить прокрутку
+    textBlock.textWrapping = TextWrapping.WordWrap;
+
+    scrollViewer.addControl(textBlock);
+    mainGrid.addControl(scrollViewer, 0, 0);
+}
+    
+        // Создаём Grid для картинок
+        const imageGrid = new Grid();
+        imageGrid.width = "100%";
+        imageGrid.height = "100%";
     
         // Определяем колонки по 50% ширины
         for (let c = 0; c < cols; c++) {
-            grid.addColumnDefinition(0.5);
+            imageGrid.addColumnDefinition(0.5);
         }
     
         // Определяем строки
         for (let r = 0; r < rows; r++) {
-            grid.addRowDefinition(1 / rows);
+            imageGrid.addRowDefinition(1 / rows);
         }
     
         images.forEach((imgData, index) => {
@@ -670,7 +727,6 @@ export class DialogPage {
             // Внутренний Grid для картинки и подписи
             const innerGrid = new Grid();
             innerGrid.width = "100%";
-
     
             // Если есть подпись, две строки: одна под картинку, одна под текст
             if (imgData.name) {
@@ -680,7 +736,6 @@ export class DialogPage {
                 // Без подписи одна строка
                 innerGrid.addRowDefinition(150, true);
             }
-            // Одна колонка
             innerGrid.addColumnDefinition(1);
     
             // Создаём миниатюру картинки
@@ -710,11 +765,14 @@ export class DialogPage {
             }
     
             imgContainer.addControl(innerGrid);
-            grid.addControl(imgContainer, row, col);
+            imageGrid.addControl(imgContainer, row, col);
         });
     
-        innerContainer.addControl(grid)
-        this.pageContainer.addControl(grid);
+        // Добавляем imageGrid в основную сетку
+        mainGrid.addControl(imageGrid, text ? 1 : 0, 0); // Если есть текст, картинки во второй строке
+        innerContainer.addControl(mainGrid);
+        this.pageContainer.addControl(innerContainer);
+    
         return innerContainer;
     }
 
@@ -763,6 +821,7 @@ export class DialogPage {
         innerContainer.thickness = 0;
         innerContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         innerContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
     
         // Создаем основную сетку
         const grid = new Grid();
@@ -898,15 +957,15 @@ export class DialogPage {
         }
     
         // Создаём кнопку "Пропустить" в Babylon GUI
-        this.skipButtonGui = Button.CreateSimpleButton("skipButton", "Пропустить");
-        this.skipButtonGui.width = "150px";
-        this.skipButtonGui.height = "50px";
+        this.skipButtonGui = Button.CreateSimpleButton("skipButton", "Закрыть");
+        this.skipButtonGui.width = "7%";
+        this.skipButtonGui.height = "5%";
         this.skipButtonGui.color = "white";
         this.skipButtonGui.background = "gray";
         this.skipButtonGui.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.skipButtonGui.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        this.skipButtonGui.top = "26.8%";
-        this.skipButtonGui.left = "19.5%";
+        this.skipButtonGui.top = "27%";
+        this.skipButtonGui.left = "20.3%";
     
         this.skipButtonGui.onPointerUpObservable.add(() => {
             this.hideVideo();
@@ -961,16 +1020,16 @@ export class DialogPage {
         overlay.zIndex = 999; // Чтобы было поверх всех
 
         const fullImage = new Image("fullImage", "");
-        fullImage.width = "80%";
-        fullImage.height = "80%";
+        fullImage.width = "70%";
+        fullImage.height = "70%";
         fullImage.stretch = Image.STRETCH_UNIFORM;
         fullImage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         fullImage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
 
         // Добавляем кнопку закрытия
         const closeButton = Button.CreateSimpleButton("closeOverlay", "Закрыть");
-        closeButton.width = "100px";
-        closeButton.height = "50px";
+        closeButton.width = "7%";
+        closeButton.height = "5%";
         closeButton.color = "white";
         closeButton.background = "gray";
         closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;

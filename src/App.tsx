@@ -33,10 +33,10 @@ const App: React.FC = () => {
         <Route path="/Штангенциркуль" element={<BabylonFull />} />
         <Route path="/УровеньПузырька" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
         <Route path='/терминология' element={<BabylonBook />} />
-        <Route path='/ДальнометрОбучение' element={<BabylonDistance />} />
+        <Route path='/ДальномерОбучение' element={<BabylonDistance />} />
         <Route path='/Бетонометр' element={<BabylonBeton />} />
         <Route path="/Тахеометр" element={<BabylonTotal />} />
-        <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
+        <Route path='/ДальномерТест' element={<BabylonNewDistanceScene />} />
         <Route path='/ТахеометрЗадание' element={<BabylonTotalWork/>} />
         <Route path='/КрашТест' element={<BabylonBook2 />} />
         <Route path='/Производительность' element={<BabylonTest2 />} />
