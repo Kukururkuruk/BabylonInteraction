@@ -1,6 +1,6 @@
 import { Rectangle, TextBlock, Control, Grid, InputText, TextWrapping, ScrollViewer, Button, StackPanel, AdvancedDynamicTexture, Image } from "@babylonjs/gui";
 import eventEmitter from "../../../EventEmitter"
-import { Color3, FreeCamera, Mesh, MeshBuilder, Scene, StandardMaterial, Vector3, VideoTexture } from "@babylonjs/core";
+import { Color3, FreeCamera, Mesh, MeshBuilder, Observable, Scene, StandardMaterial, Vector3, VideoTexture } from "@babylonjs/core";
 
 export class DialogPage {
     private scene: Scene;
@@ -264,6 +264,132 @@ export class DialogPage {
         this.pageContainer.addControl(innerContainer);
         return innerContainer;
       }
+
+      addInputGridDistance(
+        header: string,
+        items: string[],
+        imageUrls: string[],
+        ranges: { min: number; max: number }[],
+        advancedTexture: AdvancedDynamicTexture,
+        totalRows: number = 7,
+        onCheckResult?: Observable<{ correctCount: number; total: number }>
+      ): Rectangle {
+        const rectangle = new Rectangle();
+        rectangle.width = "60%";
+        rectangle.height = "75%";
+        rectangle.top = "-5%";
+        rectangle.thickness = 0;
+      
+        const innerContainer = new ScrollViewer();
+        innerContainer.width = "100%";
+        innerContainer.height = "90%";
+        innerContainer.top = "-4%";
+        innerContainer.barSize = 7;
+        innerContainer.thickness = 0;
+      
+        const grid = new Grid();
+        grid.width = "100%";
+      
+        grid.addColumnDefinition(1);
+        grid.addColumnDefinition(0.5);
+        grid.addColumnDefinition(0.2);
+      
+        const rowHeight = 1 / totalRows;
+        for (let i = 0; i < totalRows; i++) {
+          grid.addRowDefinition(rowHeight, false);
+        }
+      
+        const headerTextBlock = new TextBlock();
+        headerTextBlock.text = header;
+        headerTextBlock.color = "black";
+        headerTextBlock.fontSize = "20px";
+        headerTextBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        headerTextBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+        headerTextBlock.columnSpan = 3;
+        grid.addControl(headerTextBlock, 0, 0);
+      
+        const inputFields: InputText[] = [];
+        const imageButtons: Button[] = [];
+      
+        const overlay = this.createImageOverlay(advancedTexture);
+      
+        items.forEach((item, i) => {
+          if (i + 1 >= totalRows) {
+            console.warn(`Количество элементов превышает доступные строки (${totalRows - 1})`);
+            return;
+          }
+      
+          const currentRow = i + 1;
+      
+          const textBlock = new TextBlock();
+          textBlock.text = item;
+          textBlock.color = "black";
+          textBlock.fontSize = "18px";
+          textBlock.textWrapping = TextWrapping.WordWrap;
+          grid.addControl(textBlock, currentRow, 0);
+      
+          const inputField = new InputText();
+          inputField.width = "90%";
+          inputField.height = "70%";
+          inputField.color = "white";
+          inputField.background = "grey";
+          grid.addControl(inputField, currentRow, 1);
+          inputFields.push(inputField);
+      
+          const imageButton = Button.CreateSimpleButton(`imageBtn${i}`, "📷");
+          imageButton.width = "90%";
+          imageButton.height = "70%";
+          imageButton.color = "white";
+          imageButton.background = "green";
+          imageButton.thickness = 1;
+          imageButton.isVisible = true;
+          grid.addControl(imageButton, currentRow, 2);
+          imageButtons.push(imageButton);
+      
+          imageButton.onPointerUpObservable.add(() => {
+            if (imageUrls[i]) {
+              this.showImageInOverlay(overlay, imageUrls[i]);
+            } else {
+              console.warn(`Изображение для элемента ${item} не найдено`);
+            }
+          });
+        });
+      
+        const checkButton = Button.CreateSimpleButton("checkBtn", "Проверка");
+        checkButton.width = "30%";
+        checkButton.height = "8%";
+        checkButton.color = "white";
+        checkButton.background = "gray";
+        checkButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        checkButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      
+        checkButton.onPointerClickObservable.add(() => {
+          let correctCount = 0;
+          inputFields.forEach((inputField, index) => {
+            const value = parseFloat(inputField.text);
+            const range = ranges[index];
+            if (!isNaN(value) && value >= range.min && value <= range.max) {
+              correctCount++;
+              inputField.background = "green";
+            } else {
+              inputField.background = "red";
+            }
+          });
+          console.log(`Правильных ответов: ${correctCount} из ${items.length}`);
+      
+          if (onCheckResult) {
+            onCheckResult.notifyObservers({ correctCount, total: items.length });
+          }
+        });
+      
+        grid.height = `${totalRows * 10}%`;
+        innerContainer.addControl(grid);
+        rectangle.addControl(innerContainer);
+        rectangle.addControl(checkButton);
+        this.pageContainer.addControl(rectangle);
+      
+        return rectangle;
+      }
       
     addInputFields(header: string): void {
         const grid = new Grid();
@@ -440,15 +566,17 @@ export class DialogPage {
     //     return innerContainer
     // }
 
-    createStartPage(message: string, buttonLabel: string, onButtonClick: () => void): void {
-        // Создаем отдельный контейнер для этой страницы
+    createStartPage(
+        message: string,
+        buttonLabel: string,
+        onButtonClick: () => void,
+        isButtonVisible: boolean = true // По умолчанию кнопка видима
+      ): { rectangle: Rectangle; actionButton: Button; messageText: TextBlock } {
         const innerContainer = new Rectangle();
         innerContainer.width = "55%";
         innerContainer.height = "85%";
         innerContainer.thickness = 0;
-        // innerContainer.background = 'red'
-    
-        // Создаем текстовое сообщение
+      
         const messageText = new TextBlock();
         messageText.text = message;
         messageText.color = "#212529";
@@ -456,12 +584,9 @@ export class DialogPage {
         messageText.fontFamily = "Segoe UI";
         messageText.textWrapping = TextWrapping.WordWrap;
         messageText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        messageText.paddingTop = "-50%"
-    
-        // Добавляем текст в контейнер
+        messageText.paddingTop = "-50%";
         innerContainer.addControl(messageText);
-    
-        // Создаем кнопку с переданным текстом
+      
         const button = Button.CreateSimpleButton("actionBtn", buttonLabel);
         button.width = "150px";
         button.height = "50px";
@@ -470,18 +595,14 @@ export class DialogPage {
         button.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         button.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
         button.top = "-75px";
-    
-        // Добавляем обработчик нажатия на кнопку
+        button.isVisible = isButtonVisible; // Устанавливаем начальную видимость
         button.onPointerUpObservable.add(onButtonClick);
-    
-        // Добавляем кнопку в контейнер
         innerContainer.addControl(button);
-    
-        // Добавляем контейнер со всеми элементами в ScrollViewer или другой родительский контейнер
+      
         this.pageContainer.addControl(innerContainer);
-    
-        return innerContainer;
-    }
+      
+        return { rectangle: innerContainer, actionButton: button, messageText: messageText }; // Добавляем messageText в результат
+      }
     
     createTextGridPage(header: string, items: string[]): void {
         // Создаем новый Grid
