@@ -486,127 +486,125 @@ export class GUIManager {
 
 
 
-    CreateDialogBox( pages: Rectangle[], target?: TextBlock | undefined): void {
+CreateDialogBox(pages: Rectangle[], target?: TextBlock | undefined): void {
+  if (this.currentDialogBox) {
+      this.advancedTexture.removeControl(this.currentDialogBox);
+      this.advancedTexture.removeControl(this.hideButton);
+  }
 
-      if (this.currentDialogBox) {
-        this.advancedTexture.removeControl(this.currentDialogBox);
-        this.advancedTexture.removeControl(this.hideButton)
-      }
-      // Флаг для видимости окна диалога
-      this.dialogVisible = true;
+  // Флаг для видимости окна диалога
+  this.dialogVisible = true;
 
-      // Создаем контейнер для диалогового окна
-      this.dialogContainer = new Rectangle();
-      this.dialogContainer.width = "30%";
-      this.dialogContainer.height = "67%";
-      this.dialogContainer.thickness = 0;
-      this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-      this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-      this.dialogContainer.top = "0%";
-      this.dialogContainer.left = "3%";
-      this.advancedTexture.addControl(this.dialogContainer);
+  // Создаем контейнер для диалогового окна
+  this.dialogContainer = new Rectangle();
+  this.dialogContainer.width = "30%";
+  this.dialogContainer.height = "67%";
+  this.dialogContainer.thickness = 0;
+  this.dialogContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+  this.dialogContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+  this.dialogContainer.top = "0%";
+  this.dialogContainer.left = "3%";
+  this.advancedTexture.addControl(this.dialogContainer);
 
-      this.currentDialogBox = this.dialogContainer;
+  this.currentDialogBox = this.dialogContainer;
 
-      const backgroundRect = new Rectangle();
-      backgroundRect.width = "70%";
-      backgroundRect.height = "90%";
-      backgroundRect.thickness = 0;
-      backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
-      
-      // Добавляем фон внутрь контейнера диалогового окна
-      this.dialogContainer.addControl(backgroundRect);
-      
-      // Добавляем изображение рамки поверх фона
-      const dialogImage = new Image("dialogImage", "/models/frame4.png");
-      dialogImage.width = "100%";
-      dialogImage.height = "100%";
-      this.dialogContainer.addControl(dialogImage);
+  const backgroundRect = new Rectangle();
+  backgroundRect.width = "70%";
+  backgroundRect.height = "90%";
+  backgroundRect.thickness = 0;
+  backgroundRect.background = "#B9BFBF"; // Цвет фона с прозрачностью
 
-      
+  // Добавляем фон внутрь контейнера диалогового окна
+  this.dialogContainer.addControl(backgroundRect);
 
-      pages.forEach((page) => {
-        page.isVisible = false;  // Все страницы скрыты изначально
-        this.dialogContainer.addControl(page);
-    });
+  // Добавляем изображение рамки поверх фона
+  const dialogImage = new Image("dialogImage", "/models/frame4.png");
+  dialogImage.width = "100%";
+  dialogImage.height = "100%";
+  this.dialogContainer.addControl(dialogImage);
 
+  pages.forEach((page) => {
+      page.isVisible = false;  // Все страницы скрыты изначально
+      this.dialogContainer.addControl(page);
+  });
 
+  let currentPageIndex = 0;
 
-      let currentPageIndex = 0;
+  const updatePageVisibility = () => {
+      pages.forEach((page, index) => page.isVisible = index === currentPageIndex);
+  };
+  updatePageVisibility();
 
-      const updatePageVisibility = () => {
-          pages.forEach((page, index) => page.isVisible = index === currentPageIndex);
+  if (pages.length > 1) {  
+      const navigationGrid = new Grid();
+      navigationGrid.width = "40%";
+      navigationGrid.height = "7%";
+      navigationGrid.top = "-10%";
+      navigationGrid.left = "6%"
+      navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+
+      // Определяем 3 колонки для кнопок
+      navigationGrid.addColumnDefinition(1);
+      navigationGrid.addColumnDefinition(1);
+      navigationGrid.addColumnDefinition(1);
+
+      const initializeSound = () => {
+          if (!this.clickSound) {
+              this.clickSound = new Sound("clickSound", "/models/Dust_3.wav", this.scene, null, { autoplay: false });
+              this.clickSound.setVolume(0.05);
+          }
       };
-      updatePageVisibility();
 
+      const numberPage = new TextBlock();
+      numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
+      numberPage.color = "#212529";
+      numberPage.fontSize = "35%";
+      numberPage.fontFamily = "Segoe UI";
+      numberPage.resizeToFit = true;
 
-
-      if (pages.length > 1) {  
-        const navigationGrid = new Grid();
-        navigationGrid.width = "40%";
-        navigationGrid.height = "7%";
-        navigationGrid.top = "-10%";
-        navigationGrid.left = "6%"
-        navigationGrid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        navigationGrid.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        
-
-        // Определяем 3 колонки для кнопок
-        navigationGrid.addColumnDefinition(1);
-        navigationGrid.addColumnDefinition(1);
-        navigationGrid.addColumnDefinition(1);
-
-        const initializeSound = () => {
-        if (!this.clickSound) {
-            this.clickSound = new Sound("clickSound", "/models/Dust_3.wav", this.scene, null, { autoplay: false });
-            this.clickSound.setVolume(0.05);
-        }
-        };
-
-        const numberPage = new TextBlock();
-        numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
-        numberPage.color = "#212529";
-        numberPage.fontSize = "35%";
-        numberPage.fontFamily = "Segoe UI";
-        numberPage.resizeToFit = true;
-
-        // Создаем кнопки "Previous" и "Next"
-        const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
-        prevPageButton.width = "90%";
-        prevPageButton.height = "90%";
-        prevPageButton.color = "white";
-        prevPageButton.background = "gray";
-        prevPageButton.fontSize = "40%"
-        prevPageButton.onPointerUpObservable.add(() => {
-        initializeSound();
+      // Создаем кнопки "Previous" и "Next"
+      const prevPageButton = Button.CreateSimpleButton("prevPageButton", "Назад");
+      prevPageButton.width = "90%";
+      prevPageButton.height = "90%";
+      prevPageButton.color = "white";
+      prevPageButton.background = "gray";
+      prevPageButton.fontSize = "40%";
+      prevPageButton.isVisible = currentPageIndex > 0;  // Скрыть кнопку "Назад", если на первой странице
+      prevPageButton.onPointerUpObservable.add(() => {
+          initializeSound();
           currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
           updatePageVisibility();
-          this.clickSound.play()
-          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
-        });
+          this.clickSound.play();
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
+          prevPageButton.isVisible = currentPageIndex > 0;  // Обновляем видимость кнопки "Назад"
+      });
 
-        const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
-        nextPageButton.width = "90%";
-        nextPageButton.height = "90%";
-        nextPageButton.color = "white";
-        nextPageButton.background = "gray";
-        nextPageButton.fontSize = "40%"
-        nextPageButton.onPointerUpObservable.add(() => {
-        initializeSound();
+      const nextPageButton = Button.CreateSimpleButton("nextPageButton", "Вперед");
+      nextPageButton.width = "90%";
+      nextPageButton.height = "90%";
+      nextPageButton.color = "white";
+      nextPageButton.background = "gray";
+      nextPageButton.fontSize = "40%";
+      nextPageButton.onPointerUpObservable.add(() => {
+          initializeSound();
           currentPageIndex = (currentPageIndex + 1) % pages.length;
           updatePageVisibility();
-          this.clickSound.play()
-          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`
-        });
+          this.clickSound.play();
+          numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
+          prevPageButton.isVisible = currentPageIndex > 0;  // Обновляем видимость кнопки "Назад"
+      });
 
-        // Добавляем кнопки в соответствующие колонки Grid
-        navigationGrid.addControl(prevPageButton, 0, 0);
-        navigationGrid.addControl(nextPageButton, 0, 1);
-        navigationGrid.addControl(numberPage, 0, 2);
+      // Добавляем кнопки в соответствующие колонки Grid
+      navigationGrid.addControl(prevPageButton, 0, 0);
+      navigationGrid.addControl(nextPageButton, 0, 1);
+      navigationGrid.addControl(numberPage, 0, 2);
 
-        // Добавляем Grid с кнопками в контейнер диалога
-        this.dialogContainer.addControl(navigationGrid);
-      }
+      // Добавляем Grid с кнопками в контейнер диалога
+      this.dialogContainer.addControl(navigationGrid);
+  }
+
+
 
 
 
