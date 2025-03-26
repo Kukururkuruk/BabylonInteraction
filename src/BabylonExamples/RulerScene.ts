@@ -136,7 +136,7 @@ export class RulerScene {
 private async CreateEnvironment(): Promise<void> {
   try {
       // Загрузка карты
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
+      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_TapeMeasure_Caliper_MOD.gltf", this.scene);
       map.forEach((mesh) => {
           mesh.checkCollisions = true;
       });

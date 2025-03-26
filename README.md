@@ -4634,6 +4634,884 @@ export class Planshet {
 }
 
 
+import {
+  Scene,
+  Engine,
+  Vector3,
+  HemisphericLight,
+  HDRCubeTexture,
+  Tools,
+  FreeCamera,
+  AbstractMesh,
+  Mesh,
+  ActionManager, 
+  ExecuteCodeAction
+} from "@babylonjs/core";
+import "@babylonjs/loaders";
+import { AdvancedDynamicTexture, Button, Control } from "@babylonjs/gui";
+import { ModelLoader } from "../BaseComponents/ModelLoader";
+import * as BABYLON from "@babylonjs/core";
+
+
+export class ToolScenePC {
+  scene: Scene;
+  engine: Engine;
+  openModal?: (keyword: string) => void;
+  camera!: FreeCamera;
+  private guiTexture: AdvancedDynamicTexture;
+  private modelLoader: ModelLoader;
+  private originalCameraSettings?: { position: Vector3; target: Vector3 };
+  private isScreenMode = false;
+  private isDoorOpen: boolean = false; // Флаг состояния двери (открыта/закрыта)
+
+  constructor(private canvas: HTMLCanvasElement) {
+    this.engine = new Engine(this.canvas, true);
+    this.engine.displayLoadingUI();
+
+    this.scene = this.CreateScene();
+
+    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
+    this.modelLoader = new ModelLoader(this.scene);
+
+    this.CreateEnvironment().then(() => {
+      this.engine.hideLoadingUI();
+    });
+
+    this.CreateController();
+    this.AddScreenshotButton();
+    this.AddCameraPositionButton();
+    this.AddScreenClickHandler();
+    this.AddDoorClickHandler();
+
+    this.engine.runRenderLoop(() => {
+      this.scene.render();
+    });
+
+    this.AddEscapeKeyHandler();
+  }
+
+  CreateScene(): Scene {
+    const scene = new Scene(this.engine);
+    const hemiLight = new HemisphericLight("hemi", new Vector3(0, 1, 0), scene);
+
+    const framesPerSecond = 60;
+    const gravity = -9.81;
+    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
+    scene.collisionsEnabled = true;
+
+    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    scene.environmentTexture = hdrTexture;
+    scene.createDefaultSkybox(hdrTexture, true);
+    scene.environmentIntensity = 0.5;
+
+    return scene;
+  }
+
+  CreateController(): void {
+    this.camera = new FreeCamera("camera", new Vector3(0, 1.5, 0), this.scene);
+    this.camera.attachControl(this.canvas, true);
+    this.camera.applyGravity = true;
+    this.camera.checkCollisions = true;
+    this.camera.ellipsoid = new Vector3(0.5, 0.75, 0.5);
+    this.camera.minZ = 0.45;
+    this.camera.speed = 0.55;
+    this.camera.angularSensibility = 6000;
+    this.camera.inertia = 0.8;
+    this.camera.keysUp.push(87); // W
+    this.camera.keysLeft.push(65); // A
+    this.camera.keysDown.push(83); // S
+    this.camera.keysRight.push(68); // D
+  }
+
+  async CreateEnvironment(): Promise<void> {
+    try {
+        this.engine.displayLoadingUI();
+
+        // Загрузка моделей
+        await this.modelLoader.loadMLabModel();
+
+        // Обработка экрана
+        const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
+        if (screenMesh) {
+            screenMesh.checkCollisions = true;
+            screenMesh.actionManager = new ActionManager(this.scene);
+            screenMesh.actionManager.registerAction(
+                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    this.activateScreenView(screenMesh);
+                })
+            );
+            console.log("SM_0_Screen_1 настроен.");
+        } else {
+            console.warn("SM_0_Screen_1 не найден.");
+        }
+
+        // Обработка двери
+        const doorMesh = this.scene.getMeshByName("SM_Door");
+        if (doorMesh) {
+            doorMesh.checkCollisions = true;
+            doorMesh.actionManager = new ActionManager(this.scene);
+            doorMesh.actionManager.registerAction(
+                new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                    console.log("Дверь была нажата!");
+                    // Ваш дополнительный код для работы с дверью
+
+                     // Проверяем текущее состояние двери и переключаем
+            if (this.isDoorOpen) {
+              this.closeDoor(doorMesh);
+          } else {
+              this.openDoor(doorMesh);
+          }
+                })
+            );
+            console.log("SM_Door настроен.");
+        } else {
+            console.warn("SM_Door не найден.");
+        }
+
+        console.log("Модели успешно загружены.");
+    } catch (error) {
+        console.error("Ошибка при загрузке моделей:", error);
+    } finally {
+        this.engine.hideLoadingUI();
+    }
+}
+
+  AddScreenClickHandler(): void {
+    const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
+    if (!screenMesh) {
+        console.error("Меш SM_0_Screen_1 не найден.");
+        return;
+    }
+
+    screenMesh.actionManager = new BABYLON.ActionManager(this.scene);
+    screenMesh.actionManager.registerAction(
+        new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            () => {
+                if (!this.isScreenMode) {
+                    this.activateScreenView(screenMesh as BABYLON.AbstractMesh);
+                } else {
+                    console.log("Вы уже находитесь в режиме просмотра экрана.");
+                }
+            }
+        )
+    );
+}
+
+AddDoorClickHandler(): void {
+    const doorMesh = this.scene.getMeshByName("SM_Door");
+    if (!doorMesh) {
+        console.error("Меш SM_Door не найден.");
+        return;
+    }
+
+    doorMesh.actionManager = new BABYLON.ActionManager(this.scene);
+    doorMesh.actionManager.registerAction(
+        new BABYLON.ExecuteCodeAction(
+            BABYLON.ActionManager.OnPickTrigger,
+            () => {
+                this.toggleDoorState(doorMesh as BABYLON.AbstractMesh);
+            }
+        )
+    );
+}
+
+
+
+  activateScreenView(screenMesh: AbstractMesh): void {
+    if (this.isScreenMode) {
+        console.log("Режим просмотра уже активирован.");
+        return; // Если режим экрана уже активен, не делаем ничего
+    }
+
+    this.isScreenMode = true; // Устанавливаем флаг режима экрана
+
+    // Устанавливаем точные координаты камеры
+    this.camera.position.set(-0.03605546142586176, 1.5076749996840952, 2.7365113870411744);
+
+    // Вычисляем направление камеры на 180 градусов от текущей цели
+    const target = screenMesh.getAbsolutePosition();
+    const direction = this.camera.position.subtract(target).normalize(); // Направление от камеры к цели
+    const oppositeTarget = this.camera.position.add(direction.scale(2)); // Точка в противоположную сторону
+
+    // Устанавливаем развернутую цель
+    this.camera.setTarget(oppositeTarget);
+
+    // Добавляем наклон камеры вниз на 20 градусов
+    const downTiltAngle = BABYLON.Angle.FromDegrees(20).radians(); // Преобразование градусов в радианы
+    this.camera.rotation.x = downTiltAngle; // Установка угла поворота по оси X
+
+    // Отключаем управление камерой
+    this.camera.detachControl();
+
+    // Отключаем взаимодействие с экраном
+    screenMesh.isPickable = false;
+
+    console.log("Режим просмотра активирован. Нажмите Esc, чтобы выйти.");
+
+    // Обработка клавиши Escape для выхода из режима
+    this.scene.onKeyboardObservable.add((keyboardInfo) => {
+        if (keyboardInfo.type === BABYLON.KeyboardEventTypes.KEYUP && keyboardInfo.event.key === "Escape") {
+            this.exitScreenView(screenMesh);
+        }
+    });
+}
+
+
+exitScreenView(screenMesh: AbstractMesh): void {
+  if (!this.isScreenMode) {
+      console.log("Режим просмотра уже отключен.");
+      return; // Если режим экрана не активен, не делаем ничего
+  }
+
+  this.isScreenMode = false; // Сбрасываем флаг режима экрана
+
+  // Восстанавливаем управление камерой
+  this.camera.attachControl();
+
+  // Включаем взаимодействие с экраном
+  screenMesh.isPickable = true;
+
+  console.log("Режим просмотра отключен. Теперь вы можете снова взаимодействовать с экраном.");
+}
+
+
+SwitchToScreenMode(screenMesh: Mesh): void {
+  if (this.isScreenMode) return;
+
+  // Сохраняем текущее положение камеры
+  this.originalCameraSettings = {
+      position: this.camera.position.clone(),
+      target: this.camera.getTarget(),
+  };
+
+  // Отключаем свободное перемещение
+  this.camera.detachControl();
+
+  // Устанавливаем конкретные координаты камеры
+  this.camera.position.set(-0.03605546142586176, 1.5076749996840952, 2.7365113870411744);
+
+  // Устанавливаем камере цель — центр меша экрана
+  this.camera.setTarget(screenMesh.getAbsolutePosition());
+
+  this.isScreenMode = true;
+}
+
+  AddEscapeKeyHandler(): void {
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && this.isScreenMode) {
+        this.ExitScreenMode();
+      }
+    });
+  }
+
+  ExitScreenMode(): void {
+    if (!this.originalCameraSettings) return;
+
+    // Восстанавливаем исходное положение камеры
+    this.camera.position = this.originalCameraSettings.position;
+    this.camera.setTarget(this.originalCameraSettings.target);
+
+    // Включаем свободное перемещение
+    this.camera.attachControl(this.canvas, true);
+
+    this.isScreenMode = false;
+  }
+
+  toggleDoorState(doorMesh: BABYLON.AbstractMesh): void {
+    if (this.isDoorOpen) {
+        this.closeDoor(doorMesh);
+    } else {
+        this.openDoor(doorMesh);
+    }
+}
+
+// Вызов анимации при нажатии на дверь
+openDoor(doorMesh: BABYLON.AbstractMesh): void {
+  this.isDoorOpen = true;
+
+  // Проверка точки вращения
+  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
+
+  const animation = new BABYLON.Animation(
+      "OpenDoor",
+      "rotation.y",
+      30, // 30 кадров анимации
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const keys = [
+      { frame: 0, value: doorMesh.rotation.y },
+      { frame: 30, value: doorMesh.rotation.y + Math.PI / 2 }, // Поворот на 90 градусов
+  ];
+
+  animation.setKeys(keys);
+
+  doorMesh.animations = [];
+  doorMesh.animations.push(animation);
+
+  // Запуск анимации
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      console.log("Анимация открытия двери завершена.");
+  });
+
+  console.log("Дверь открывается.");
+}
+
+closeDoor(doorMesh: BABYLON.AbstractMesh): void {
+  this.isDoorOpen = false;
+
+  console.log("Текущее значение rotation.y перед анимацией:", doorMesh.rotation.y);
+
+  const animation = new BABYLON.Animation(
+      "CloseDoor",
+      "rotation.y",
+      30, // 30 кадров анимации
+      BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+      BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+  );
+
+  const keys = [
+      { frame: 0, value: doorMesh.rotation.y },
+      { frame: 30, value: doorMesh.rotation.y - Math.PI / 2 }, // Возврат в исходное положение
+  ];
+
+  animation.setKeys(keys);
+
+  doorMesh.animations = [];
+  doorMesh.animations.push(animation);
+
+  // Запуск анимации
+  this.scene.beginAnimation(doorMesh, 0, 30, false, 1, () => {
+      console.log("Анимация закрытия двери завершена.");
+  });
+
+  console.log("Дверь закрывается.");
+}
+
+
+  AddScreenshotButton(): void {
+    const screenshotButton = Button.CreateSimpleButton("screenshotButton", "Сделать скриншот");
+    screenshotButton.width = "150px";
+    screenshotButton.height = "40px";
+    screenshotButton.color = "white";
+    screenshotButton.cornerRadius = 20;
+    screenshotButton.background = "blue";
+    screenshotButton.top = "20px";
+    screenshotButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+    this.guiTexture.addControl(screenshotButton);
+
+    screenshotButton.onPointerUpObservable.add(() => {
+      Tools.CreateScreenshotUsingRenderTarget(this.engine, this.scene.activeCamera!, {
+        width: 1920,
+        height: 1080,
+      });
+    });
+  }
+
+  AddCameraPositionButton(): void {
+    const cameraPositionButton = Button.CreateSimpleButton("cameraPositionButton", "Показать координаты камеры");
+    cameraPositionButton.width = "200px";
+    cameraPositionButton.height = "40px";
+    cameraPositionButton.color = "white";
+    cameraPositionButton.cornerRadius = 20;
+    cameraPositionButton.background = "green";
+    cameraPositionButton.top = "70px";
+    cameraPositionButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+
+    this.guiTexture.addControl(cameraPositionButton);
+
+    cameraPositionButton.onPointerUpObservable.add(() => {
+      const cameraPosition = this.scene.activeCamera?.position;
+      if (cameraPosition) {
+        console.log(`Координаты камеры: x=${cameraPosition.x}, y=${cameraPosition.y}, z=${cameraPosition.z}`);
+      } else {
+        console.log("Камера не инициализирована.");
+      }
+    });
+  }
+}
+
+
+
+// ModelLoader.ts
+import { Scene, AbstractMesh, SceneLoader, Mesh, Vector3, FreeCamera, ISceneLoaderAsyncResult, DynamicTexture, StandardMaterial, Color3, MeshBuilder } from "@babylonjs/core";
+import { AdvancedDynamicTexture, Control, Grid, Rectangle, TextBlock } from "@babylonjs/gui";
+import eventEmitter from "../../../EventEmitter";
+
+export class ModelLoader {
+  private scene: Scene;
+  private loadedMeshes: { [key: string]: AbstractMesh[] } = {};
+  private textBlocks: TextBlock[] = [];
+
+  // Массивы с определёнными мешами
+  private nonCollisionMeshNames: string[] = [
+    "SM_ConcreteFence_LP.015",
+    "SM_ConcreteFence_LP.030",
+    "SM_0_FencePost_Road.087",
+    "SM_0_FencePost_Road.088",
+  ];
+
+  private brokenMeshSubstring: string = "broken";
+
+  public meshGroups = [
+    { groupName: "SpanStructureBeam_L_7", baseName: "SM_0_SpanStructureBeam_L_7" },
+    { groupName: "SpanStructureBeam_L_4", baseName: "SM_0_SpanStructureBeam_L_4" },
+    // Добавьте дополнительные группы по необходимости
+  ];
+
+  public singleMeshNames = [
+    "SM_0_Retaining_wall_Block_LP_L",   // Стена
+    "SM_0_MonolithicRack_R",            // Колонна монолит
+    "SM_0_MonolithicRack_L_Column",     // Колонна
+    "SM_0_MonolithicRack_L_Rostverc",   // Колонна ростверк основание
+    "SM_0_MonolithicRack_L_Support",    // Колонна ригель вверх
+    "SM_0_Stairs",                      // Лестница
+    "SM_0_FencePost_Road.002",          // Барьерное ограждение (тип 1)
+    "SM_0_FencePostBridge_base_.004",   // Барьерное ограждение (тип 2)
+    "SM_0_connectingShaft_1",           // Шов
+    "SM_0_Road_Down.001",               // Дорожное полотно
+    "SM_0_BridgeAsfalt",                // Асфальт на мосту
+    "SM_0_Stand_R",                     // Подферменник
+    "SM_0_Road_1_R",                    // Дорога сверху
+    "SM_ConcreteFence_LP.002",          // Бетонное ограждение по центру (Нью-Джерси)
+    "SM_0_TransitionPlate8M_LP_L_primitive0", // Плита переходная
+    "SM_0_PlotMonolithic",              // Плита над балками
+    "SM_0_SupportLight_LP_Down_L",      // Фонари
+    "SM_0_Landscape_Gravel_LP",         // Водосточный монолит
+    "SM_HalfPipe_LP",                   // Подвесной лоток
+    "SM_ConcreteTray_UP",               // Лоток верхняя часть
+    "SM_ConcreteTelescopicTray",        // Откосной лоток
+    "SM_PipeWater_LP",                  // Водосточная система
+    "SM_GridDrainageSmall_LP",          // Дождеприемник
+    // Добавьте дополнительные одиночные меши по необходимости
+  ];
+
+  constructor(scene: Scene) {
+    this.scene = scene;
+  }
+
+  // Метод для загрузки всех моделей
+  public async loadAllModels(): Promise<void> {
+    await this.loadMapModel();
+    await this.loadSignModel();
+    this.setupMeshes();
+  }
+
+  private async loadMapModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Map_1_MOD.gltf",
+        this.scene
+      );
+      this.loadedMeshes["map"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }
+
+  public async loadMLabModel(): Promise<void> {
+    try {
+        const result = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "Laboratory_01.glb",
+            this.scene
+        );
+
+        // Сохраняем загруженные меши
+        this.loadedMeshes["lab"] = result.meshes;
+
+        // Включаем столкновения для каждого меша
+        result.meshes.forEach(mesh => {
+            if (mesh instanceof Mesh) { // Проверяем, что это Mesh
+                mesh.checkCollisions = true;
+
+                // Логируем меши для отладки
+                console.log(`Меш "${mesh.name}" загружен с включёнными столкновениями.`);
+            }
+
+            // Переопределение точки вращения (pivot) для модели SM_Door
+            if (mesh.name === "SM_Door") {
+                mesh.position.y = 0; // Установить модель на плоскость
+                mesh.rotationQuaternion = null; // Очистить кватернион поворота, чтобы ручное управление работало нормально
+                console.log(`Модель "${mesh.name}" с переопределённой точкой вращения.`);
+            }
+        });
+    } catch (error) {
+        console.error("Ошибка при загрузке модели карты:", error);
+        throw error;
+    }
+}
+
+  private async loadSignModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "MapPointerSimplev001.glb",
+        this.scene
+      );
+      this.loadedMeshes["sign"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели указателя:", error);
+      throw error;
+    }
+  }
+
+
+
+  public async loadRangeModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "Rangefinder_LP.glb",
+        this.scene
+      );
+      this.loadedMeshes["range"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }
+
+  public async addGUIRange(camera: FreeCamera, rangefinderMeshes: AbstractMesh[]): Promise<void> {
+
+    rangefinderMeshes.forEach((mesh) => {
+      // Отзеркаливание по оси Z и масштабирование
+      mesh.scaling = new Vector3(2, 2, -2); // Масштабируем в 3 раза и отражаем по Z
+      mesh.rotation.y = Math.PI / 2;
+      mesh.rotation.z = 0.4;
+
+      // Закрепление модели за камерой
+      mesh.parent = camera;
+
+      // Установка позиции относительно камеры
+      const offset = new Vector3(0, -0.4, 0.6); // Настройте значения по необходимости
+      mesh.position = offset;
+  });
+
+  const thirdMesh = rangefinderMeshes[2];
+
+  // Получение размеров меша
+  const boundingInfo = thirdMesh.getBoundingInfo();
+  const boundingBox = boundingInfo.boundingBox;
+  const size = boundingBox.maximum.subtract(boundingBox.minimum);
+  const width = size.z;
+  const height = size.y;
+
+  // Определение размеров плоскости
+  const planeWidth = width; // Ширина плоскости равна ширине меша
+  const planeHeight = height; // Высота плоскости — 20% от высоты меша (можно настроить по необходимости)
+
+  // Создание DynamicTexture с достаточным разрешением
+  const dynamicTexture = new DynamicTexture("DynamicTexture", { width: 1024, height: 512 }, this.scene, false);
+  dynamicTexture.hasAlpha = true;
+
+  // Установка шрифта перед измерением текста
+  const font = "bold 90px Arial";
+  const ctx = dynamicTexture.getContext();
+  ctx.font = font;
+
+  // Определение максимальной ширины текста с учётом отступов
+  const maxTextWidth = dynamicTexture.getSize().width - 100; // 50 пикселей отступа с каждой стороны
+
+  // Функция для разбиения текста на строки с учётом символов \n и ширины
+  function wrapText(context, text, maxWidth) {
+      const lines = [];
+      const paragraphs = text.split('\n');
+
+      paragraphs.forEach(paragraph => {
+          const words = paragraph.split(' ');
+          let currentLine = '';
+
+          words.forEach(word => {
+              const testLine = currentLine + word + ' ';
+              const metrics = context.measureText(testLine);
+              const testWidth = metrics.width;
+
+              if (testWidth > maxWidth && currentLine !== '') {
+                  lines.push(currentLine.trim());
+                  currentLine = word + ' ';
+              } else {
+                  currentLine = testLine;
+              }
+          });
+
+          lines.push(currentLine.trim());
+      });
+
+      return lines;
+  }
+
+  // Функция для обновления текста с переносом
+  function updateDynamicText(newText) {
+      ctx.clearRect(0, 0, dynamicTexture.getSize().width, dynamicTexture.getSize().height);
+
+      // Устанавливаем шрифт
+      ctx.font = font;
+
+      // Разбиваем текст на строки с учетом \n и ширины
+      const lines = wrapText(ctx, newText, maxTextWidth);
+
+      // Рисуем каждую строку с увеличивающимся смещением по Y
+      const lineHeight = 90; // Можно настроить в зависимости от шрифта
+      lines.forEach((line, index) => {
+          ctx.fillStyle = "white"; // Цвет текста
+          ctx.fillText(line, 50, 100 + index * lineHeight); // 50 и 100 - отступы от левого и верхнего края
+      });
+
+      // Обновляем текстуру
+      dynamicTexture.update();
+  }
+
+  eventEmitter.on("updateDistanceAngleText", (newText) => {
+    if (dynamicTexture) {
+        updateDynamicText(newText);
+    }
+});
+
+  // Создание материала для текста
+  const textMaterial = new StandardMaterial("TextMaterial", this.scene);
+  textMaterial.diffuseTexture = dynamicTexture;
+  textMaterial.emissiveColor = new Color3(1, 1, 1); // Делает текст ярким
+  textMaterial.backFaceCulling = false; // Текст виден с обеих сторон
+
+  // Создание плоскости для текста
+  const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
+  textPlane.material = textMaterial;
+
+  // Позиционируем плоскость относительно меша
+  textPlane.parent = thirdMesh;
+  textPlane.rotation.y = -Math.PI / 2;
+
+  // Компенсируем отражение родителя по оси Z
+  textPlane.scaling = new Vector3(-1, 1, 1);
+
+  // Устанавливаем позицию
+  textPlane.position = new Vector3(0.015, height / 2 + planeHeight / 2 + 0.05, 0); //
+  }
+
+
+
+  public async loadUltranModel(camera: FreeCamera): Promise<void> {
+    try {
+        // Загрузка первой модели
+        const result = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "UltrasonicTester_FR_LP.glb",
+            this.scene
+        );
+
+        result.meshes.forEach((mesh) => {
+            mesh.scaling = new Vector3(0.04, 0.04, 0.04);
+            mesh.parent = camera;
+            mesh.rotation = new Vector3(Math.PI / 2, Math.PI, Math.PI / 6);
+            const offset = new Vector3(-0.55, -0.5, 0.86);
+            mesh.position = offset;
+        });
+
+        // Инверсия масштабирования для некоторых мешей
+        if (result.meshes.length > 1) {
+            result.meshes[1].scaling.x = -0.04;
+        }
+
+        // Добавление GUI к tools[2], если он существует
+        if (result.meshes.length >= 3) {
+            const texts = ["", "", "", ""];
+            this.addGUIToTool(result.meshes[2], texts);
+        } else {
+            console.warn("tools[2] не существует. GUI не добавлен.");
+        }
+
+        console.log("UltrasonicTester_FR_LP.glb meshes:", result.meshes);
+
+        // Сохранение мешей первой модели
+        this.loadedMeshes["ultra"] = result.meshes;
+
+        // Загрузка второй модели
+        const image = await SceneLoader.ImportMeshAsync(
+            "",
+            "./models/",
+            "SM_Tilt_sign_LP.glb",
+            this.scene
+        );
+
+        console.log("SM_Tilt_sign_LP.glb meshes:", image.meshes);
+
+        // Настройка второй модели
+        image.meshes.forEach((mesh) => {
+            mesh.scaling = new Vector3(0.5, 0.5, 0.5);
+            mesh.parent = result.meshes[2];
+            mesh.position = new Vector3(0, 6.5, -10.22);
+            mesh.rotation = new Vector3(0, Math.PI, 0); // Начальное вращение
+        });
+        image.meshes[1].isVisible = false
+
+        // Сохранение мешей второй модели под отдельным ключом
+        this.loadedMeshes["image"] = image.meshes;
+    } catch (error) {
+        console.error("Ошибка при загрузке моделей:", error);
+        throw error;
+    }
+  }
+
+  addGUIToTool(mesh, texts): void {
+      if (!mesh) {
+          console.error("Меш не существует. GUI не может быть добавлен.");
+          return;
+      }
+
+      try {
+          const guiPlane = mesh.clone("guiPlane");
+          guiPlane.scaling.x = -0.04;
+
+          // Создаём AdvancedDynamicTexture для меша
+          const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
+          guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
+          mesh.position.z -= 0.001; // Смещаем меш вперед на 1 единицу
+
+          // Создаём Grid для размещения 4 прямоугольников
+          const grid = new Grid();
+          grid.width = "40%";
+          grid.height = "25px";
+          grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+          grid.top = "-40px";
+          grid.left = "-85px";
+
+          // Одна строка и четыре колонки
+          grid.addRowDefinition(1);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
+          grid.addColumnDefinition(0.25);
+
+          guiTexture.addControl(grid);
+
+          this.textBlocks = []; // Очищаем/инициализируем массив
+
+          for (let i = 0; i < 4; i++) {
+              const rect = new Rectangle();
+              rect.width = "100%";
+              rect.height = "100%";
+              rect.color = "white";
+              rect.background = "rgba(0, 0, 0, 0.5)";
+              rect.thickness = 0;
+              rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+              rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+              const textBlock = new TextBlock();
+              textBlock.text = texts[i] || ``;
+              textBlock.fontFamily = 'MyCustomFont';
+              textBlock.color = "white";
+              textBlock.fontSize = 18;
+              textBlock.textWrapping = true;
+              textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+              textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+              rect.addControl(textBlock);
+              grid.addControl(rect, 0, i);
+
+              // Сохраняем ссылки на textBlock
+              this.textBlocks.push(textBlock);
+          }
+
+      } catch (error) {
+          console.error("Ошибка при добавлении GUI к мешу:", error);
+      }
+  }
+// Метод для обновления текста в нужной ячейке (0 - первая ячейка, 1 - вторая и т.д.)
+  public updateCellText(index: number, newValue: string): void {
+      if (this.textBlocks[index]) {
+          this.textBlocks[index].text = newValue;
+      } else {
+          console.warn(`Ячейка с индексом ${index} не найдена.`);
+      }
+  }
+// Метод для сброса всех значений
+  public resetAllCells(): void {
+      for (let tb of this.textBlocks) {
+          tb.text = "";
+      }
+  }
+
+
+
+  /*public async loadGeoModel(): Promise<void> {
+    try {
+      const result = await SceneLoader.ImportMeshAsync(
+        "",
+        "./models/",
+        "lowpoly_workplace.glb",
+        this.scene
+      );
+      this.loadedMeshes["geo"] = result.meshes;
+    } catch (error) {
+      console.error("Ошибка при загрузке модели карты:", error);
+      throw error;
+    }
+  }*/
+
+
+
+  // Метод для настройки мешей после загрузки
+  private setupMeshes(): void {
+    const mapMeshes = this.loadedMeshes["map"];
+    if (mapMeshes) {
+      // Включаем коллизии для всех мешей
+      mapMeshes.forEach((mesh) => {
+        mesh.checkCollisions = true;
+      });
+
+      // Отключаем коллизии и уменьшаем видимость для определённых мешей
+      this.nonCollisionMeshNames.forEach((name) => {
+        const mesh = this.scene.getMeshByName(name);
+        if (mesh) {
+          mesh.checkCollisions = false;
+          mesh.visibility = 0.5;
+        } else {
+          console.warn(`Меш с именем "${name}" не найден для отключения коллизий.`);
+        }
+      });
+
+      // Скрываем "сломанные" меши
+      const brokenMeshes = mapMeshes.filter((mesh) =>
+        mesh.name.toLowerCase().includes(this.brokenMeshSubstring)
+      );
+      brokenMeshes.forEach((mesh) => {
+        mesh.visibility = 0;
+      });
+    } else {
+      console.warn("Меши карты не найдены для настройки.");
+    }
+
+    // Дополнительная настройка указателя (если необходимо)
+    const signMeshes = this.loadedMeshes["sign"];
+    if (signMeshes) {
+      // Настройка мешей указателя (если требуется)
+    } else {
+      console.warn("Меши указателя не найдены для настройки.");
+    }
+  }
+
+  // Метод для получения загруженных мешей по имени модели
+  public getMeshes(modelName: string): AbstractMesh[] | undefined {
+    return this.loadedMeshes[modelName];
+  }
+}
+
+
+
+
+
 
 
 
@@ -4971,553 +5849,4 @@ export class Planshet {
         container.thickness = 0;
         return container;
     }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-import {  
-  Scene,
-  Engine,
-  Vector3,
-  HemisphericLight,
-  FreeCamera,
-  HDRCubeTexture,
-  HighlightLayer,
-  SceneLoader,
-  AbstractMesh,
-  Mesh,
-  Color3,
-  ActionManager,
-  ExecuteCodeAction,
-  PointerEventTypes,
-  Animation,
-  Tools,
-  Quaternion,
-  PointerDragBehavior
-} from "@babylonjs/core";
-import "@babylonjs/loaders";
-import { AdvancedDynamicTexture,   } from "@babylonjs/gui";
-import { TriggersManager } from "./FunctionComponents/TriggerManager3";
-import { ModelLoader } from "./BaseComponents/ModelLoader";
-import * as BABYLON from "@babylonjs/core";
-import { GUIManager } from "./FunctionComponents/GUIManager";
-import { DialogPage } from "./FunctionComponents/DialogPage";
-//import { TabletManager } from "./FunctionComponents/TabletManagerСalipers"; // Укажите правильный путь до TabletManager
-import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
-
-export class RulerScene {
-  private scene: Scene;
-  private engine: Engine;
-  private camera!: FreeCamera;
-  private triggerManager: TriggersManager;
-  private guiTexture: AdvancedDynamicTexture;
-  private highlightLayer: HighlightLayer;
-  private modelLoader: ModelLoader;
-  private handModel: Mesh | null = null;  // Используем Mesh вместо AbstractMesh
-  private tools: { [key: string]: any } = {};
-  private guiManager: GUIManager;
-  private dialogPage: DialogPage;
-  //tabletManager: TabletManager;
-  private triggerManager1: TriggerManager2;
-  private lastLogTime = 0; // Время последнего логирования
-  private logInterval = 100; // Интервал логирования в миллисекундах
-  private isMeasuring: boolean = false;
-  private firstClickPosition: BABYLON.Vector3 | null = null;
-  private secondClickPosition: BABYLON.Vector3 | null = null;
-
-
-
-  
-  constructor(private canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
-    this.engine = new Engine(this.canvas, true);
-    this.engine.displayLoadingUI();
-
-    this.scene = this.CreateScene();
-    this.highlightLayer = new HighlightLayer("hl1", this.scene);
-    this.highlightLayer.innerGlow = true; // Включаем внутреннее свечение
-    this.highlightLayer.outerGlow = true; // Включаем внешнее свечение
-    this.guiManager = new GUIManager(this.scene, this.textMessages);
-    this.dialogPage = new DialogPage();
-    
-    this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
-    this.triggerManager1 = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
-    this.triggerManager = new TriggersManager(
-      this.scene,
-      this.canvas,
-      this.guiTexture
-    );
-    // Инициализация загрузчика моделей
-    this.modelLoader = new ModelLoader(this.scene);
-    this.CreateHandModel(); // Загружаем модель
-    this.CreateEnvironment().then(() => {
-      this.engine.hideLoadingUI();
-    });
-    this.CreateController();
-    this.Page();
-    // Инициализация TabletManager
-    //this.tabletManager = new TabletManager();
-    //this.tabletManager.createAlwaysVisibleTablet();
-    //this.setupZoomEffect(); // Инициализация зума
-
-    this.engine.runRenderLoop(() => {
-      this.scene.render();
-    });
-  }
-
-  private CreateScene(): Scene {
-    const scene = new Scene(this.engine);
-    new HemisphericLight("hemi", new Vector3(0, 1, 0), this.scene);
-
-    const framesPerSecond = 60;
-    const gravity = -9.81;
-    scene.gravity = new Vector3(0, gravity / framesPerSecond, 0);
-    scene.collisionsEnabled = true;
-
-    const hdrTexture = new HDRCubeTexture(
-      "/models/cape_hill_4k.hdr",
-      scene,
-      512
-    );
-
-    scene.environmentTexture = hdrTexture;
-    scene.createDefaultSkybox(hdrTexture, true);
-    scene.environmentIntensity = 0.5;
-
-    return scene;
-  }
-
-
-  private CreateController(): void { 
-    this.camera = new FreeCamera("camera", new Vector3(14.3, 6.3, 5.0), this.scene);
-    
-    // Отключаем управление
-    this.camera.detachControl();
-    // Поворачиваем камеру влево на 90 градусов (поворот вокруг оси Y)
-    this.camera.rotation.y -= Math.PI / 2; // -90 градусов
-    // Дополнительные параметры камеры
-    this.camera.applyGravity = true;
-    this.camera.checkCollisions = true;
-    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
-    this.camera.minZ = 0.45;
-    this.camera.speed = 0.55;
-    this.camera.angularSensibility = 4000;
-    this.camera.inertia = 0.8;
-
-    // Увеличиваем поле зрения (FOV) в 2 раза
-    this.camera.fov /= 2;
-}
-
-private async CreateEnvironment(): Promise<void> {
-  try {
-    const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1_MOD_V_5.gltf", this.scene);
-    map.forEach((mesh) => {
-      mesh.checkCollisions = true;
-    });
-
-    this.setupWholeMeshes(map);
-
-    const boundaryMeshes = map.filter(mesh => mesh.name.startsWith("SM_0_SpanStructureBeam"));
-    if (boundaryMeshes.length === 0) {
-      console.error("Ошибка: ограничивающие меши не найдены.");
-      return;
-    }
-    console.log("Найдены ограничивающие меши:", boundaryMeshes.map(mesh => mesh.name));
-
-    const minBoundary = new BABYLON.Vector3(
-      Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.x)),
-      Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.y)),
-      Math.min(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.minimumWorld.z))
-    );
-
-    const maxBoundary = new BABYLON.Vector3(
-      Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.x)),
-      Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.y)),
-      Math.max(...boundaryMeshes.map(mesh => mesh.getBoundingInfo().boundingBox.maximumWorld.z))
-    );
-
-    console.log("Границы движения:", { minBoundary, maxBoundary });
-
-    let targetPosition: BABYLON.Vector3 | null = null;
-    const smoothingFactor = 0.1;
-    let currentPosition = this.handModel ? this.handModel.position.clone() : BABYLON.Vector3.Zero();
-
-    // Инициализация обработчиков событий с нужными аргументами
-    this.initializeEventHandlers(minBoundary, maxBoundary, currentPosition, targetPosition, smoothingFactor);
-
-  } catch (error) {
-    console.error("Ошибка при загрузке окружения:", error);
-  }
-}
-
-private async CreateHandModel(): Promise<void> {
-  console.log("Загрузка модели штангенциркуля начата...");
-  try {
-      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "SM_TapeMeasure_LP_MOD_3.gltf", this.scene);
-      if (meshes.length > 0) {
-          this.handModel = meshes[0] as Mesh;
-          this.tools['originalHandModelPosition'] = this.handModel.position.clone();
-          this.tools['originalHandModelRotation'] = this.handModel.rotation.clone();
-
-          const childMeshesNames = [
-              "SM_10cm", "SM_20cm", "SM_30cm", "SM_40cm", "SM_50cm",
-              "SM_60cm", "SM_70cm", "SM_80cm", "SM_90cm", "SM_100cm", "SM_110cm"
-          ];
-          const childMeshes: Mesh[] = [];
-
-          childMeshesNames.forEach(childName => {
-              const childMesh = meshes.find(mesh => mesh.name === childName) as Mesh;
-              if (childMesh) {
-                  this.tools[`${childName}Model`] = {
-                      mesh: childMesh,
-                      originalPosition: childMesh.position.clone(),
-                      originalRotation: childMesh.rotation.clone(),
-                  };
-                  childMeshes.push(childMesh);
-              }
-          });
-
-          this.enableChildScaling(childMeshes, this.handModel);
-
-          this.handModel.position = new Vector3(13, 6.41004, 4.95);
-          this.handModel.scaling = new Vector3(-1.5, -1.5, -1.5);
-          this.handModel.rotation = new Vector3(Math.PI / 2, -Math.PI / 2, 0);
-          this.handModel.isVisible = true;
-
-          
-
-          // Инициализация обработчиков для модели штангенциркуля
-          this.initializeHandModelEventHandlers();
-
-      } else {
-          console.error("Ошибка: модель штангенциркуля не найдена в файле.");
-      }
-
-  } catch (error) {
-      console.error("Ошибка при загрузке модели штангенциркуля:", error);
-  }
-}
-
-private initializeEventHandlers(
-  minBoundary: BABYLON.Vector3, 
-  maxBoundary: BABYLON.Vector3, 
-  currentPosition: BABYLON.Vector3 | null, 
-  targetPosition: BABYLON.Vector3 | null, 
-  smoothingFactor: number
-): void {
-  let isHandModelSet = false; // Флаг, чтобы отслеживать установку модели
-  let handModelPositionAtClick: BABYLON.Vector3 | null = null; // Запоминаем начальную позицию модели при клике
-
-  this.scene.onPointerObservable.add((event) => {
-    // Событие клика для установки модели в точку
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN && !isHandModelSet) {
-      const pickInfo = this.scene.pick(event.event.clientX, event.event.clientY);
-      if (pickInfo.hit && pickInfo.pickedPoint) {
-        // Ограничаем движение модели по осям
-        let newPosition = pickInfo.pickedPoint.clone();
-        newPosition.x = Math.max(minBoundary.x, Math.min(maxBoundary.x, newPosition.x));
-        newPosition.y = Math.max(minBoundary.y, Math.min(maxBoundary.y, newPosition.y));
-        newPosition.z = Math.max(minBoundary.z, Math.min(maxBoundary.z, newPosition.z));
-
-        if (this.handModel) {
-          this.handModel.position = newPosition;
-          handModelPositionAtClick = newPosition.clone(); // Запоминаем позицию при клике
-        }
-        isHandModelSet = true; // Модель установлена
-        console.log('Рулетка установлена в точке:', newPosition);
-      }
-    }
-
-    // Событие перемещения для обновления позиции модели
-    if (event.type === BABYLON.PointerEventTypes.POINTERMOVE) {
-      // Если модель установлена, не сбрасываем её на курсор
-      if (isHandModelSet && handModelPositionAtClick && this.handModel) {
-        this.handModel.position = handModelPositionAtClick.clone(); // Оставляем модель на том месте, где была установлена
-      }
-    }
-
-    // Событие колесика мыши для изменения оси Z
-    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL && isHandModelSet) {
-      const wheelEvent = event.event as WheelEvent;
-      const delta = wheelEvent.deltaY > 0 ? 0.02 : -0.02;
-
-      if (this.handModel) {
-        // Обновляем только ось Z модели
-        this.handModel.position.z = BABYLON.Scalar.Clamp(this.handModel.position.z + delta, 4.0, 5.5);
-        console.log('Новое значение handModel по оси Z:', this.handModel.position.z);
-      }
-    }
-  });
-
-  // Добавим плавное перемещение, если нужно
-  this.scene.onBeforeRenderObservable.add(() => {
-    if (this.handModel && handModelPositionAtClick) {
-      // Если нужно плавно перемещать модель, используем интерполяцию
-      // Например, для позиции x, y, z
-      const targetPosition = this.handModel.position;
-      this.handModel.position = BABYLON.Vector3.Lerp(this.handModel.position, targetPosition, smoothingFactor);
-    }
-  });
-}
-
-private initializeHandModelEventHandlers(): void {
-  let isHandModelSetLocally = false; // Локальный флаг для первого клика
-
-  this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN && !isHandModelSetLocally) { // Установка при первом клике
-        const pointerRay = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-        
-        if (pointerRay.hit && pointerRay.pickedPoint && this.handModel) {
-            this.handModel.position = pointerRay.pickedPoint.clone();
-            isHandModelSetLocally = true;  // Модель установлена, флаг активирован
-            console.log('Рулетка установлена в точке:', this.handModel.position);
-        }
-    }
-
-    if (event.type === BABYLON.PointerEventTypes.POINTERMOVE && isHandModelSetLocally) {
-      return; // Игнорируем движения мыши после установки
-    }
-
-    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL && isHandModelSetLocally) {
-        const wheelEvent = event.event as WheelEvent;
-        const delta = wheelEvent.deltaY > 0 ? 0.02 : -0.02;
-        
-        if (this.handModel) {
-          this.handModel.position.z = BABYLON.Scalar.Clamp(this.handModel.position.z + delta, 4.0, 5.5);
-        }
-    }
-  });
-}
-
-private enableChildScaling(childMeshes: BABYLON.Mesh[], handModel: BABYLON.Mesh): void {
-  let isRulerSet = false;
-  const minZ = 4.0;
-  const maxZ = 5.5;
-
-  this.scene.onPointerObservable.add((event) => {
-    if (event.type === BABYLON.PointerEventTypes.POINTERDOWN) {
-      if (!isRulerSet) {
-        const pointerRay = this.scene.pick(this.scene.pointerX, this.scene.pointerY);
-        
-        if (pointerRay.hit && pointerRay.pickedPoint) {
-          handModel.position = pointerRay.pickedPoint.clone();
-          isRulerSet = true;
-          console.log('Рулетка установлена в точке:', handModel.position);
-        } else {
-          console.log("Объект не был выбран. Попробуйте кликнуть на другой участок сцены.");
-        }
-      }
-    }
-
-    if (event.type === BABYLON.PointerEventTypes.POINTERWHEEL && isRulerSet) {
-      const wheelEvent = event.event as WheelEvent;
-      const delta = wheelEvent.deltaY > 0 ? 0.02 : -0.02;
-      
-      if (handModel && handModel.isPickable) {
-        handModel.position.z = BABYLON.Scalar.Clamp(handModel.position.z + delta, minZ, maxZ);
-      }
-
-      console.log(`Новое значение handModel по оси Z: ${handModel.position.z}`);
-
-      const firstMesh = childMeshes[0];
-      firstMesh.isVisible = true;
-
-      for (let i = 1; i < childMeshes.length; i++) {
-        const childMesh = childMeshes[i];
-
-        let threshold = 0;
-        if (i === 1) threshold = 0.0485;
-        else if (i === 2) threshold = 0.144;
-        else if (i === 3) threshold = 0.240;
-        else if (i === 4) threshold = 0.336;
-        else if (i === 5) threshold = 0.432;
-        else if (i === 6) threshold = 0.530;
-        else if (i === 7) threshold = 0.638;
-        else if (i === 8) threshold = 0.738;
-        else if (i === 9) threshold = 0.838;
-        else if (i === 10) threshold = 0.938;
-
-        if (handModel.position.z >= firstMesh.position.z + threshold) {
-          childMesh.isVisible = true;
-        } else {
-          childMesh.isVisible = false;
-        }
-      }
-    }
-  });
-}
-
-private rotateModelOnKeyPress(): void {
-  this.scene.onKeyboardObservable.add((kbInfo) => {
-    if (this.handModel) {
-      const rotationSpeed = 0.05;
-
-      if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
-        switch (kbInfo.event.key.toLowerCase()) {
-          case 'q': 
-          case 'й': 
-              this.handModel.rotate(BABYLON.Axis.Y, -rotationSpeed, BABYLON.Space.LOCAL);
-              console.log('Rotate around Y-axis counter-clockwise');
-              break;
-
-          case 'e': 
-          case 'у': 
-              this.handModel.rotate(BABYLON.Axis.Y, rotationSpeed, BABYLON.Space.LOCAL);
-              console.log('Rotate around Y-axis clockwise');
-              break;
-
-          default:
-              console.log(`Key pressed: ${kbInfo.event.key}`);
-              break;
-        }
-      }
-    } else {
-      console.warn('Hand model is not initialized!');
-    }
-  });
-}
-
-
-
-
-// Функция для сброса модели штангенциркуля в исходное положение и включения видимости
-private resetModelPosition(): void {
-  // Заданные координаты
-  const forcedPosition = new BABYLON.Vector3(13.2, 6.41004, 4.85);
-  
-  if (this.handModel) {
-      // Принудительно устанавливаем позицию основной модели
-      this.handModel.position = forcedPosition.clone();
-      console.log("Модель установлена в принудительную  позицию:", this.handModel.position);
-
-      // Восстанавливаем видимость модели
-      this.handModel.isVisible = true;
-      console.log("Модель сделана видимой.");
-
-      // Восстанавливаем дочернюю модель SM_Nonius, если она существует
-      const noniusMesh = this.tools['noniusModel']?.mesh;
-      if (noniusMesh) {
-          // Устанавливаем начальные параметры для SM_Nonius
-          noniusMesh.position = new Vector3(-0.03, 0, 0); // Смещение по оси X
-          noniusMesh.rotation = new Vector3(0, 0, 0);
-          noniusMesh.scaling = new Vector3(1, 1, 1);
-          noniusMesh.isVisible = true;
-          console.log("Дочерний элемент SM_Nonius возвращен в принудительное положение:", noniusMesh.position);
-      } else {
-          console.warn("Дочерний элемент SM_Nonius не найден.");
-      }
-
-      // Отключаем взаимодействие с моделью, если необходимо
-      this.handModel.getBehaviorByName('dragBehavior')?.detach();
-      console.log("Взаимодействие с моделью отключено.");
-  } else {
-      console.warn("Модель не найдена.");
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Метод для настройки мешей типа "whole"
-private setupWholeMeshes(mapMeshes: AbstractMesh[]): void {
-  const wholeMeshes = mapMeshes.filter(mesh => mesh.name.toLowerCase().includes("whole"));
-  wholeMeshes.forEach(mesh => {
-      mesh.checkCollisions = true;
-      mesh.isPickable = false; // "whole" остаются кликабельными
-      mesh.visibility = 0;
-      mesh.setEnabled(true);
-      mesh.actionManager = new ActionManager(this.scene);
-      mesh.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-              console.log("Whole меш кликнут:", mesh.name, "Координаты:", mesh.position);
-              this.scene.activeCamera = this.camera;
-          })
-      );
-  });
-}
-
-
- private  Page(): void {const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-    this.guiManager.CreateDialogBox([page1])
-  
-            this.triggerManager1.createStartButton('Начать', () => {
-            // Показываем сообщение
-            const page2 = this.dialogPage.addText("Нажмите на подсвеченную арматуру")
-            const page3 = this.dialogPage.addText("Таким образом штангенциркуль замеряет арматуру")
-            const page4 = this.dialogPage.addText("Проведите замеры оставшейся арматуры и кабеля и введите значения на следующей странице планшета")
-            const page5 = this.dialogPage.addInputFields("Конструкции")
-            this.guiManager.CreateDialogBox([page2, page3, page4, page5])
-  
-              // Активируем режим лазера для второй триггер-зоны
-              //this.triggerManager2.distanceMode();
-              //this.triggerManager2.enableDistanceMeasurement()
-              this.triggerManager1.createStartButton('Завершить', () => {
-                const page6 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для премещение на основную карту")
-                this.guiManager.CreateDialogBox([page6])
-                this.triggerManager1.disableDistanceMeasurement()
-  
-                //this.triggerManager2.exitDisLaserMode2();
-                this.guiManager.createRouteButton('/test')
-            })
-  
-            
-            })
-  
-  }
-
 }
