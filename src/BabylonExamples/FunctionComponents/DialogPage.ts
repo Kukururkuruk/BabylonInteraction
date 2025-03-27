@@ -10,6 +10,7 @@ export class DialogPage {
     private videoTexture: VideoTexture;
     private skipButtonGui: Button;
     private htmlVideo: HTMLVideoElement;
+    private videoContainer: HTMLDivElement | null = null;
 
     constructor() {
         this.pageContainer = new Rectangle();
@@ -51,7 +52,7 @@ export class DialogPage {
         scrollViewer.thickness = 0;
 
         const dialogText = new TextBlock();
-        dialogText.text = "";
+        dialogText.text = content;
         dialogText.color = "#212529";
         dialogText.fontSize = "4.5%";
         dialogText.fontFamily = "Segoe UI";
@@ -69,19 +70,19 @@ export class DialogPage {
         scrollViewer.addControl(dialogText);
         this.pageContainer.addControl(scrollViewer);
 
-        let currentIndex = 0;
+        // let currentIndex = 0;
 
-        // Функция для анимации печатания текста
-        const typingInterval = setInterval(() => {
-            dialogText.text += content[currentIndex];
-            currentIndex++;
-            if (currentIndex >= content.length) {
-                clearInterval(typingInterval);
-                if (onComplete) {
-                    onComplete();
-                }
-            }
-        }, 20);
+        // // Функция для анимации печатания текста
+        // const typingInterval = setInterval(() => {
+        //     dialogText.text += content[currentIndex];
+        //     currentIndex++;
+        //     if (currentIndex >= content.length) {
+        //         clearInterval(typingInterval);
+        //         if (onComplete) {
+        //             onComplete();
+        //         }
+        //     }
+        // }, 20);
 
         return scrollViewer;
     }
@@ -293,10 +294,12 @@ export class DialogPage {
     
         // Поля ввода
         const fields = [
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Арматура (мм)" },
-            { placeholder: "Кабель (мм)" }
+            { placeholder: "Арматура гор.", correctValue: "4" },
+            { placeholder: "Арматура верт.", correctValue: "4" },
+            { placeholder: "Кабель (мм)", correctValue: "10" }
         ];
+
+        
     
         fields.forEach((field, index) => {
             // Кликабельная кнопка
@@ -316,13 +319,18 @@ export class DialogPage {
                 clickableButton.background = "#0056b3";  // Более темный фон при наведении
             });
             clickableButton.onPointerOutObservable.add(() => {
-                clickableButton.background = "gray";  // Восстановить оригинальный фон
+                if (clickableButton.background !== "green") { // Если кнопка не зеленая, возвращаем цвет
+                    clickableButton.background = "gray";  // Восстановить оригинальный фон
+                }
             });
     
             // Логика нажатия
             clickableButton.onPointerUpObservable.add(() => {
-                console.log(`${field.placeholder} clicked`);
-                // Добавьте сюда вашу логику
+                if (inputField.text === field.correctValue) {
+                    clickableButton.background = "green"; // Оставляем кнопку зеленой
+                } else {
+                    clickableButton.background = "red"; // Кнопка красная, если значение неправильное
+                }
             });
     
             grid.addControl(clickableButton, index + 1, 0);  // Кнопка в первый столбец
@@ -338,7 +346,16 @@ export class DialogPage {
             inputField.focusedBackground = "#f0f0f0";  // Фон не меняется при фокусе
             inputField.focusedColor = "black";  // Цвет текста при фокусе остается черным
             inputField.placeholderColor = "gray";  // Цвет текста-заполнителя
-    
+            inputField.onBeforeKeyAddObservable.add(() => {
+                inputField.fontSize = "14px"; // Увеличиваем размер шрифта при вводе
+            });
+
+            inputField.onBlurObservable.add(() => {
+                if (!inputField.text) {
+                    inputField.fontSize = "9px"; // Возвращаем меньший размер, если поле пустое
+                }
+            });
+
             grid.addControl(inputField, index + 1, 1);  // Поля ввода во второй столбец
         });
     
@@ -346,6 +363,37 @@ export class DialogPage {
         this.pageContainer.addControl(grid);
     
         return grid;
+    }
+
+    // Метод для создания контейнера под видео
+    addVideoContainer(): HTMLDivElement {
+        if (this.videoContainer) return this.videoContainer;
+
+        // --- Создаём контейнер для видео ---
+        this.videoContainer = document.createElement("div");
+        this.videoContainer.style.position = "absolute";
+        this.videoContainer.style.width = "60%";
+        this.videoContainer.style.height = "40%";
+        this.videoContainer.style.top = "20%";
+        this.videoContainer.style.left = "20%";
+        this.videoContainer.style.backgroundColor = "black";
+        this.videoContainer.style.border = "2px solid white";
+        this.videoContainer.style.borderRadius = "10px";
+        this.videoContainer.style.overflow = "hidden";
+        this.videoContainer.style.zIndex = "10";
+
+        // --- Добавляем контейнер на экран ---
+        document.body.appendChild(this.videoContainer);
+
+        return this.videoContainer;
+    }
+
+    // Метод для удаления контейнера
+    removeVideoContainer() {
+        if (this.videoContainer) {
+            document.body.removeChild(this.videoContainer);
+            this.videoContainer = null;
+        }
     }
 
     // createStartPage(ref: string): void {

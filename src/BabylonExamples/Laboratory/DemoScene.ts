@@ -89,7 +89,6 @@ export class DemoScene {
 
   private tools: { [key: string]: ToolData } = {};
 
-  // Значения по умолчанию для позиции и ротации перед камерой
   private defaultFrontPosition: Vector3 = new Vector3(0, -0.1, 0.9);
   private defaultFrontRotation: Vector3 = new Vector3(0, Math.PI / 2, 0);
 
@@ -99,8 +98,9 @@ export class DemoScene {
   private lastPointerY: number = 0;
 
   // Флаги, чтобы не запускать одно и то же повторно
-  private isBetonTriggered: boolean = false;       // для SM_0_Wall_R
-  private isToolDeskClicked: boolean = false;      // для SM_0_Tools_Desk
+  private isSceneInitialized: boolean = false;  // Флаг для отслеживания инициализации сцены
+  private isBetonTriggered: boolean = false;
+  private isToolDeskClicked: boolean = false;
 
   private rangefinderMeshes: AbstractMesh[] = [];
   private mapMeshes: AbstractMesh[] = [];
@@ -112,7 +112,6 @@ export class DemoScene {
   private updateTextCallback: ((newText: string) => void) | null = null;
   public updateTextPlaneHandler: ((newText: string) => void) | null = null;
   public updateAngleTextHandler: ((newText: string) => void) | null = null;
-
 
   constructor(private canvas: HTMLCanvasElement) {
     this.engine = new Engine(this.canvas, true);
@@ -127,11 +126,15 @@ export class DemoScene {
     this.utilities = new BabylonUtilities(this.scene, this.engine, this.guiTexture);
     this.labFunManager = new LabFunManager(this.guiTexture);
 
-    this.initializeScene();
+    // Если сцена еще не инициализирована, вызываем инициализацию
+    if (!this.isSceneInitialized) {
+      this.initializeScene();
+      this.isSceneInitialized = true;  // Устанавливаем флаг, чтобы не повторять инициализацию
+    }
 
     this.CreateController();
-    this.screenViewManager = new ScreenViewManager(this.scene, this.camera);
-    // this.utilities.combinedMethod();
+    this.screenViewManager = new ScreenViewManager(this.scene, this.camera)
+
 
     // Запуск рендера
     this.engine.runRenderLoop(() => {
@@ -150,7 +153,7 @@ export class DemoScene {
     light.position = new Vector3(-20, 20, 20);
     light.intensity = 2;
 
-    const hdrTexture = new HDRCubeTexture("/models/railway_bridges_4k.hdr", scene, 512);
+    const hdrTexture = new HDRCubeTexture("/models/NEW_HDRI_Town_8.HDR", scene, 512);
     scene.environmentTexture = hdrTexture;
     scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 0.5;
@@ -250,6 +253,7 @@ export class DemoScene {
    * Переносим сюда ВСЮ логику загрузки моделей: и "lab", и "dist".
    */
   public async CreateEnvironment(): Promise<void> {
+    console.log("Вызов CreateEnvironment");
     try {
       this.engine.displayLoadingUI();
   
@@ -278,13 +282,18 @@ export class DemoScene {
       lab.forEach((mesh) => {
         mesh.checkCollisions = true;
         const material = mesh.material;
+        console.log(mesh.name);  // Логируем все имена мешей
       
         // Применяем прозрачность и устанавливаем позиции для первой группы мешей
         if (
           mesh.name === "SM_Length_Flat_LP" ||
+          mesh.name === "SM_Length_9_86_LP" ||
           mesh.name === "SM_Height_Flat_LP" ||
-          mesh.name === "SM_Width_Flat_LP"
-        ) {
+          mesh.name === "SM_Length_7_15_LP" ||
+          mesh.name === "SM_Width_Flat_LP" ||
+          mesh.name === "SM_Length_11_6_LP"
+        ) 
+        {
           mesh.isVisible = false;
           if (material && material instanceof PBRMaterial) {
             material.transparencyMode = Material.MATERIAL_ALPHATESTANDBLEND;
@@ -300,6 +309,16 @@ export class DemoScene {
               case "SM_Width_Flat_LP":
                 mesh.position.y = 0.05;
                 break;
+              case "SM_Length_9_86_LP":
+                  mesh.position.y = 0.05;
+                  break;
+              case "SM_Length_7_15_LP":
+                  mesh.position.y = 0.05;
+                  break;
+              case "SM_Length_11_6_LP":
+                  mesh.position.y = 0.05;
+                  break;
+                
             }
           }
         }
@@ -345,14 +364,14 @@ export class DemoScene {
         }
       });
 
-      const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
+      /*const screenMesh = this.scene.getMeshByName("SM_0_Screen_1");
       if (screenMesh) {
         screenMesh.checkCollisions = true;
         this.screenViewManager.setupScreenInteraction("SM_0_Screen_1");
         console.log("Экран SM_0_Screen_1 настроен для взаимодействия.");
       } else {
         console.warn("SM_0_Screen_1 не найден.");
-      }
+      }*/
   
       // --- 3) Логика кликов по SM_0_Wall_R и SM_0_Tools_Desk ---
       const meshDesk = lab.find((m) => m.name === "SM_0_Tools_Desk");
@@ -451,7 +470,7 @@ wall.material = wallMaterial;
           originalWorldRotationQuaternions: distQuats,
           isFront: false,
           onFrontCallback: () => {
-            const text = "Дальномер — измерительный инструмент, предназначенный для определения расстояния до объекта с помощью различных методов измерения, включая лазерные, ультразвуковые или оптические технологии. Широко используется в строительстве, геодезии, военном деле и других сферах.";
+            const text = "Дальномер — измерительный инструмент, предназначенный для определения расстояния до объекта с помощью различных методов измерения, включая лазерные, ультразвуковые или оптические технологии. Широко используется в строительстве, геодезии, военном деле и других сферах. \n\nПовторно нажмите на дальномер правой кнопкой мыши чтобы вернуться к рабочему столу.";
             const videoName = "Rangefinder_Preview_1K.mp4";
             this.guiManager.DeleteDialogBox();
             this.labFunManager.createFileBox(text, videoName);
@@ -603,7 +622,7 @@ wall.material = wallMaterial;
         this.isBetonTriggered = true;
     
         const page1 = this.dialogPage.addText(
-          "Здесь вы можете измерить длину, ширину и высоту этой комнаты (в метрах). Для удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы перенесетесь ровно в центр. Замеры производятся правой кнопкой мыши"
+          "Здесь вы можете измерить длину, ширину и высоту этой комнаты (в метрах). Для удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы переместитесь ровно в центр. Замеры производятся правой кнопкой мыши \n\nНажмите кнопку 'Вперед' и введите полученные значения в соответствующие ячейки, после ввода нажмите кнопку 'Проверка' "
         );
         const page2 = this.dialogPage.addInputGrid1(
           "Конструкции",
@@ -626,16 +645,14 @@ wall.material = wallMaterial;
             });
           }
         );
-        this.guiManager.CreateDialogBox([page1, page2]);
+        const page2_1 = this.dialogPage.addText(
+          "Спасибо за измерения! \n\nВ этой комнате Вы можете увидеть правильные значения. \n\nДля дальнейшей работы, перейдите пожалуйста в другую комнату."
+        );
+        
+        this.guiManager.CreateDialogBox([page1, page2, page2_1]);
     
         this.BetonTrigger();
     
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
@@ -648,26 +665,6 @@ wall.material = wallMaterial;
           mesh.position = new Vector3(0, -1, 0);
           mesh.parent = null;
         });
-    
-        const page4 = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
-        this.guiManager.CreateDialogBox([page4]);
-    
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = true;
-          meshDesk.actionManager = new ActionManager(this.scene);
-          meshDesk.actionManager.hoverCursor = "default";
-    
-          meshDesk.actionManager.registerAction(
-            new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-              if (!this.isToolDeskClicked) {
-                this.isToolDeskClicked = true;
-                this.initToolHandling();
-              }
-            })
-          );
-        }
     
         // Очистка текстуры и плоскости
         const textPlane = this.scene.getMeshByName("TextPlaneZone1");
@@ -695,7 +692,7 @@ wall.material = wallMaterial;
         this.isBetonTriggered = true;
     
         const page1 = this.dialogPage.addText(
-          "Здесь вы можете увидеть как производтся замер со стороны дальномера. Наведитесь на мишень, начиная слева и запишите длину до мишени"
+          "Здесь вы можете увидеть как производтся замер со стороны дальномера. \n\nДля удобства здесь расположен круг, нажав на который левой кнопкой мыши, вы перенесетесь ровно в центр. Замеры производятся правой кнопкой мыши. Наведитесь на фигуры, начиная с левой и запишите длину до фигуры. \n\nНажмите кнопку 'Вперед' и введите полученные значения в соответствующие ячейки, после ввода нажмите кнопку 'Проверка'" 
         );
         const page2 = this.dialogPage.addInputGrid1(
           "Конструкции",
@@ -705,9 +702,23 @@ wall.material = wallMaterial;
             { min: 11.5, max: 11.7 },
             { min: 9.55, max: 9.95 }
           ],
-          
+          () => {
+            // Логика видимости мешей
+            this.mapMeshes.forEach((mesh) => {
+              if (
+                mesh.name === "SM_Length_9_86_LP" ||
+                mesh.name === "SM_Length_7_15_LP" ||
+                mesh.name === "SM_Length_11_6_LP"
+              ) {
+                mesh.isVisible = true;
+              }
+            });
+          }
         );
-        this.guiManager.CreateDialogBox([page1, page2]);
+        const page2_1 = this.dialogPage.addText(
+          "Спасибо за измерения! \n\nВ этой комнате Вы можете увидеть правильные значения. \n\nБлагодарим за внимание, ждем Вас на наших программах!"
+        );
+        this.guiManager.CreateDialogBox([page1, page2, page2_1]);
     
             this.rangefinderMeshes.forEach((mesh) => {
               mesh.scaling = new Vector3(2, 2, -2);
@@ -792,12 +803,6 @@ wall.material = wallMaterial;
             this.rangefinderMesh = this.rangefinderMeshes[1];
             this.activateLaserMode1();
     
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
@@ -814,6 +819,8 @@ wall.material = wallMaterial;
                 }
     
         this.exitLaserMode1();
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
       }
     };
     this.zoneData['3'] = {
@@ -822,20 +829,39 @@ wall.material = wallMaterial;
       onEnter: () => {
         if (this.isBetonTriggered) return;
         this.isBetonTriggered = true;
-        const enterDialog = this.dialogPage.addText("Измерение начато");
+        const enterDialog = this.dialogPage.addText("Здесь вы можете потренироваться самостоятельно");
         this.guiManager.CreateDialogBox([enterDialog]);
         this.BetonTrigger();
   
-        // Отключаем стол
-        const labMeshes = this.modelLoader.getMeshes("lab") || [];
-        const meshDesk = labMeshes.find(m => m.name === "SM_0_Tools_Desk");
-        if (meshDesk) {
-          meshDesk.isPickable = false;
-          meshDesk.actionManager = null;
-        }
       },
       onExit: () => {
         this.isBetonTriggered = false;
+        const exitDialog = this.dialogPage.addText("Продолжай осмотр, для приближения нажмите на клавиатуре Q/Й");
+        this.guiManager.CreateDialogBox([exitDialog]);
+        this.triggerManager.disableDistanceMeasurement();
+        this.triggerManager.exitDisLaserMode2();
+        this.triggerManager.cleanupDistanceMeasurement(); // Добавляем очистку
+        this.rangefinderMeshes.forEach(mesh => {
+          mesh.position = new Vector3(0, -1, 0);
+          mesh.parent = null;
+        });
+    
+        // Очистка текстуры и плоскости
+        const textPlane = this.scene.getMeshByName("TextPlaneZone1");
+        if (textPlane) {
+          textPlane.material?.dispose();
+          textPlane.dispose();
+        }
+    
+        // Очистка слушателей eventEmitter
+        if (this.updateTextPlaneHandler) {
+          eventEmitter.off("updateTextPlane", this.updateTextPlaneHandler);
+          this.updateTextPlaneHandler = null;
+        }
+        if (this.updateAngleTextHandler) {
+          eventEmitter.off("updateAngleText", this.updateAngleTextHandler);
+          this.updateAngleTextHandler = null;
+        }
       }
     }
 
@@ -906,8 +932,16 @@ wall.material = wallMaterial;
   
         const distance = Vector3.Distance(rangefinderPosition, this.intersectionPoint.position);
         const euler = camera.rotation;
+
+        const normalizeAngle = (angle: number): number => {
+          let normalized = angle % 360;
+          if (normalized > 180) normalized -= 360;
+          if (normalized < -180) normalized += 360;
+          return normalized;
+        };
+
         const angleX = Tools.ToDegrees(euler.x);
-        const angleY = Tools.ToDegrees(euler.y);
+        const angleY = normalizeAngle(Tools.ToDegrees(euler.y));
         const displayedAngleX = -angleX + 3;
   
         if (this.updateTextCallback) {
@@ -1096,7 +1130,7 @@ exitLaserMode1(): void {
 
   private showToolSelectionDialog(): void {
     this.labFunManager.removeFileBox();
-    const startPage = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
+    const startPage = this.dialogPage.addText("Выбирите инструмент нажав правую кнопку мыши, для приближения нажмите на клавиатуре Q/Й \n\nДля продолжения и практического использования дальномера пройдите в соседние комнаты через дверь.");
     const endPage = this.dialogPage.createStartPage("Для завершения нажмите на кнопку", "Завершить", () => {
       const page4 = this.dialogPage.addText("Выбирай инструмент, для приближения нажмите на клавиатуре Q/Й");
       this.guiManager.CreateDialogBox([page4]);
@@ -1307,16 +1341,25 @@ eventEmitter.on("updateAngleText", this.updateAngleTextHandler);
 
 
   public async initializeScene(): Promise<void> {
+    console.log("Вызов initializeScene");
     try {
-      await this.CreateEnvironment();
-      await this.scene.whenReadyAsync();
-      this.engine.hideLoadingUI();
-      const page4 = this.dialogPage.addText("Сцена загружена. Можете кликать на стену или стол.");
-      this.guiManager.CreateDialogBox([page4]);
+      if (!this.isSceneInitialized) { // Еще раз проверяем флаг
+        await this.CreateEnvironment();
+        await this.scene.whenReadyAsync();
+        this.engine.hideLoadingUI();
+        const page4 = this.dialogPage.addText("Приветствуем Вас в демоверсии приложения! \n\nУправление: \nW - движение вперед \nA - движение влево \nS - движение назад \nD - движение вправо \n\nДля обзора и взаимодействия с предметами нажмите левую кнопку мыши и двигайте в нужном направлении. \n\nДля продолжения взаимодействуйте со столом слева.");
+        this.guiManager.CreateDialogBox([page4]);
+      }
     } catch (error) {
       console.error("Ошибка при инициализации сцены:", error);
       this.engine.hideLoadingUI();
     }
+  }
+
+  public dispose() {
+    this.engine.stopRenderLoop();
+    this.scene.dispose();
+    this.engine.dispose();
   }
 
   // Заглушка, чтобы не было ошибок со ссылкой this.textMessages

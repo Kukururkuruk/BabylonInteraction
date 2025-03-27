@@ -5,11 +5,12 @@ import DesktopModal from './DesktopModal';
 const BabylonExamples: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDesktopModalOpen, setIsDesktopModalOpen] = useState(false);
+  const sceneRef = useRef<FullExample | null>(null); // Ссылка для хранения экземпляра сцены
 
   useEffect(() => {
-    if (canvasRef.current) {
-      const example = new FullExample(canvasRef.current);
-      example.onOpenModal = () => setIsDesktopModalOpen(true);
+    if (canvasRef.current && !sceneRef.current) { // Инициализация сцены только если она еще не создана
+      sceneRef.current = new FullExample(canvasRef.current);
+      sceneRef.current.onOpenModal = () => setIsDesktopModalOpen(true);
     }
   }, []);
 
