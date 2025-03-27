@@ -158,8 +158,11 @@ export class DemoScene {
     scene.createDefaultSkybox(hdrTexture, true);
     scene.environmentIntensity = 0.5;
 
+
     return scene;
   }
+
+
 
 //   CreateController(): void {
 //     // Основная камера
