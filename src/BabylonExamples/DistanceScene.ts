@@ -170,19 +170,20 @@ export class DistanceScene {
       {
         thumbnailUrl: "../models/image2.png",
         fullImageUrl: "../models/image2.png",
-        name: "Изображение",
-      },
-      {
-        thumbnailUrl: "../models/image1.png",
-        fullImageUrl: "../models/image1.png",
         name: "Схема",
       },
+      {
+        thumbnailUrl: "../models/rangeFixStydy.jpg",
+        fullImageUrl: "../models/rangeFixStydy.jpg",
+        name: "Способ измерения",
+      },
+
     ];
 
     const clickablVideo = [
       {
         thumbnailUrl: "../models/image2.png",
-        videoUrl: "../models/film_1var_1_2K.mp4",
+        videoUrl: "../models/Rangefinder_Preview_1K.mp4",
         name: "Принцип работы",
       },
     ];
@@ -195,18 +196,21 @@ export class DistanceScene {
           this.zoneTriggered = true;
           this.triggerManager.disableCameraMovement();
 
-          const page1 = this.dialogPage.addText(
-            "Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование». Принцип работы показан в видеоролике на второй странице. Для начала воспроизведения кликните по картинке"
+          const page1 = this.dialogPage.addClickableWordsPage(
+            "Перед вами Дальномер – Leica Disto D510, с его параметрами можно ознакомиться в модуле «Оборудование». Принцип работы показан в видеоролике.  . Краткое описание функционала кнопок прибора показано на схеме  . Так же ознакомтесь со схемой   барьерного ограждения. Для использования навигации в планшете с подсказками нажмите кнопку вперед для продолжения. Или назад, для повторного ознакомления с предыдущей страницей.",
+            [
+                { word: "видеоролике", videoUrl: "../models/Rangefinder_Preview_1K.mp4", top: "30%", left: "53%", width: "35%" },
+                { word: "схеме", imageUrl: "../models/rangeStudy.png", top: "48%", left: "0.1%", width: "17%" },
+                { word: "схемой", imageUrl: "../models/barierStudy.png", top: "54%", left: "0.1%", width: "20%" }
+            ],
+            this.guiTexture,
+            this.camera // Передаем камеру для видео
           );
-          const pageZoomable = this.dialogPage.addZoomableImagePage(clickablImage, this.guiTexture);
-          const pageClickable = this.dialogPage.addClickableWordsPage(
-            "Установите дальномер в правильное положение. Схема барьерного ограждения изображена здесь. Ширина проезжей части измеряется по двум крайним точкам барьерного ограждения, как показано на схеме",
-            clickableWords,
-            this.guiTexture
-          );
-          const pageVideobl = this.dialogPage.addZoomableVideoPage(clickablVideo, this.guiTexture, this.camera);
 
-          this.guiManager.CreateDialogBox([page1, pageVideobl, pageZoomable, pageClickable]);
+          const pageZoomable = this.dialogPage.addZoomableImagePage(clickablImage, this.guiTexture, "На картинках изображены схема текущего барьерного ограждения и способ измерения ширины проезжей части, для ознакомления с конструкцией. Для правильного измерения ширины проезда необходимо расположить дальномер в самой выпирающей части барьерного ограждения, согласно схемы, это нижняя секция балки. Измерения необходимо производить до противоположной нижней секции балки барьерного ограждения под максимально прямым углом.");
+
+
+          this.guiManager.CreateDialogBox([page1, pageZoomable]);
 
           const targetPosition = firstTriggerZone.getInteractionZone().getAbsolutePosition();
           this.triggerManager.setCameraPositionAndTarget(
@@ -225,11 +229,23 @@ export class DistanceScene {
             this.triggerManager.setCameraPositionAndTarget(
               Math.PI / 2,
               -1,
-              -Math.PI / 12,
+              -0.05,
               -0.47,
-              new Vector3(-11, 8.8, -3.6)
+              new Vector3(-11, 8.8, -3.56)
             );
             this.triggerManager.enableCameraMovement();
+            this.triggerManager.activateLaserMode();
+            const page3 = this.dialogPage.createNumericInputPage("Для управления камерой используйте мышь. Зажмите левую кнопку мыши и двигайте в нужном направлении. Выберите максимально прямой угол для измерения. Полученный результат запишите в поле ниже и нажмите кнопку проверить. Чтобы приблизить или отдалить камеру нажмите Q/Й", "Штрина проезжей части", 11.10,11.15,() => {
+
+              this.triggerManager.disableCameraMovement();
+      
+              this.scene.render();
+            const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
+              window.location.href = '/ВыборИнструмента';
+            })
+            this.guiManager.CreateDialogBox([page4])
+          })
+          this.guiManager.CreateDialogBox([page3])
           });
         }
       },

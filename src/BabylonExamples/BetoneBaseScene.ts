@@ -25,7 +25,7 @@ import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import { ModelLoader } from "./BaseComponents/ModelLoader";
   
-  export class BetoneScene {
+  export class BetoneBaseScene {
     scene: Scene;
     engine: Engine;
     canvas: HTMLCanvasElement;
@@ -127,14 +127,12 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       this.camera = new FreeCamera("camera", new Vector3(17, 2, -13), this.scene);
       this.camera.attachControl(this.canvas, true);
   
-    // Общие настройки камеры
-    this.camera.applyGravity = true;        // Включаем гравитацию
-    this.camera.checkCollisions = true;       // Включаем столкновения (учитываются у мешей, у которых checkCollisions = true)
-    this.camera.ellipsoid = new Vector3(0.5, 0.8, 0.5); // Ellipsoid для камеры (важен для определения "ног")
-    this.camera.minZ = 0.45;
-    this.camera.speed = 0.55;                 // Базовая скорость
-    this.camera.angularSensibility = 4000;
-    this.camera.inertia = 0.82;
+      this.camera.applyGravity = true;
+      this.camera.checkCollisions = true;
+      this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+      this.camera.minZ = 0.45;
+      this.camera.speed = 0.55;
+      this.camera.angularSensibility = 4000;
       this.camera.rotation.y = -Math.PI/2
       this.camera.keysUp.push(87); // W
       this.camera.keysLeft.push(65); // A

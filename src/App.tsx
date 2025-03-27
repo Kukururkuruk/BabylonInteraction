@@ -20,6 +20,7 @@ import BabylonLabotaryPC from './components/BabylonLabotary/BabylonLabotaryPC';
 import BabylonDemo from './components/BabylonLabotary/BabylonDemo';
 import TermPage from './components/TermPage';
 import BabylonRuler from './components/BabylonRuler'; // Импортируйте FullExample
+import BabylonBaseBeton from './components/BabylonBaseBetone';
 
 const App: React.FC = () => {
   return (
@@ -33,10 +34,11 @@ const App: React.FC = () => {
         <Route path="/Штангенциркуль" element={<BabylonFull />} />
         <Route path="/УровеньПузырька" element={<BasicLevel />} /> {/* Используйте BasicLevel в маршруте */}
         <Route path='/терминология' element={<BabylonBook />} />
-        <Route path='/ДальнометрОбучение' element={<BabylonDistance />} />
-        <Route path='/Бетонометр' element={<BabylonBeton />} />
+        <Route path='/ДальномерОбучение' element={<BabylonDistance />} />
+        <Route path='/УльтразвукТест' element={<BabylonBeton />} />
+        <Route path='/УльтразвукОбучение' element={<BabylonBaseBeton />} />
         <Route path="/Тахеометр" element={<BabylonTotal />} />
-        <Route path='/ДальнометрТест' element={<BabylonNewDistanceScene />} />
+        <Route path='/ДальномерТест' element={<BabylonNewDistanceScene />} />
         <Route path='/ТахеометрЗадание' element={<BabylonTotalWork/>} />
         <Route path='/КрашТест' element={<BabylonBook2 />} />
         <Route path='/Производительность' element={<BabylonTest2 />} />

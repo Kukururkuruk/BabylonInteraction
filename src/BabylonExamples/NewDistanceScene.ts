@@ -13,6 +13,9 @@ import {
   Color3,
   Mesh,
   DynamicTexture,
+  KeyboardEventTypes,
+  Ray,
+  Observable,
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
@@ -20,12 +23,14 @@ import { AdvancedDynamicTexture, Control, TextBlock } from "@babylonjs/gui";
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import eventEmitter from "../../EventEmitter";
+import { CameraController } from "./BaseComponents/CameraController";
 
 export class NewDistanceScene {
   scene: Scene;
   engine: Engine;
   canvas: HTMLCanvasElement;
   camera: FreeCamera;
+  private cameraFPS: CameraController;
   private guiTexture: AdvancedDynamicTexture;
   private triggerManager: TriggerManager2;
   private guiManager: GUIManager;
@@ -35,6 +40,11 @@ export class NewDistanceScene {
   private beam2: AbstractMesh;
   private nonCollizionMesh: AbstractMesh[]
   private bob: AbstractMesh;
+
+    // Поля для бега (dash) и прыжка (jump)
+    private isDash: boolean = false;     // true, когда зажат Shift
+    private wantToJump: boolean = false;   // true, когда нажали пробел
+    private isJumping: boolean = false;    // true, когда камера не касается земли
 
 
   constructor(canvas: HTMLCanvasElement) {
@@ -49,6 +59,7 @@ export class NewDistanceScene {
     this.dialogPage = new DialogPage();
 
     this.CreateController();
+    // this.cameraFPS = new CameraController(this.scene, this.canvas, "complex")
 
     this.CreateEnvironment().then(() => {
       this.engine.hideLoadingUI();
@@ -85,21 +96,82 @@ export class NewDistanceScene {
 
   CreateController(): void {
     // Установка начальной позиции камеры для лучшей видимости
-    this.camera = new FreeCamera("camera", new Vector3(17, 2, 13), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(50, 2.5, 0), this.scene);
     this.camera.attachControl(this.canvas, true);
 
-    this.camera.applyGravity = true;
-    this.camera.checkCollisions = true;
-    this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
+    // Общие настройки камеры
+    this.camera.applyGravity = true;        // Включаем гравитацию
+    this.camera.checkCollisions = true;       // Включаем столкновения (учитываются у мешей, у которых checkCollisions = true)
+    this.camera.ellipsoid = new Vector3(0.5, 0.8, 0.5); // Ellipsoid для камеры (важен для определения "ног")
     this.camera.minZ = 0.45;
-    this.camera.speed = 0.55;
+    this.camera.speed = 0.55;                 // Базовая скорость
     this.camera.angularSensibility = 4000;
-    this.camera.rotation.y = -Math.PI/2
-    this.camera.keysUp.push(87); // W
-    this.camera.keysLeft.push(65); // A
-    this.camera.keysDown.push(83); // S
+    this.camera.rotation.y = -Math.PI / 2;
+    this.camera.inertia = 0.82;
+
+    // Настройка клавиш (WASD)
+    this.camera.keysUp.push(87);    // W
+    this.camera.keysLeft.push(65);  // A
+    this.camera.keysDown.push(83);  // S
     this.camera.keysRight.push(68); // D
+
+    // Фокусируемся на канвасе
+    this.canvas.focus();
+    this.setupMovementEvents()
   }
+
+    private setupMovementEvents(): void {
+      // Подписка на нажатие/отпускание клавиш
+      this.scene.onKeyboardObservable.add((kbInfo) => {
+        if (kbInfo.type === KeyboardEventTypes.KEYDOWN) {
+          if (kbInfo.event.code === "ShiftLeft") {
+            this.isDash = true;
+          }
+          if (kbInfo.event.code === "Space") {
+            this.wantToJump = true;
+          }
+        } else if (kbInfo.type === KeyboardEventTypes.KEYUP) {
+          if (kbInfo.event.code === "ShiftLeft") {
+            this.isDash = false;
+          }
+        }
+      });
+  
+      // Логика, выполняемая каждый кадр перед рендерингом
+      this.scene.onBeforeRenderObservable.add(() => {
+        // 1. Устанавливаем скорость камеры (учитывая бег)
+        this.camera.speed = this.isDash ? 1.1 : 0.55;
+  
+        // 2. Луч вниз для проверки, находится ли камера на земле
+        const rayDown = new Ray(this.camera.position, Vector3.Down(), 10);
+        const pickInfo = this.scene.pickWithRay(rayDown, (mesh) => true);
+        let onGround = false;
+        if (pickInfo?.hit && pickInfo.distance < 2.1) {
+          onGround = true;
+        }
+  
+        // 3. Определяем, на земле ли камера
+        this.isJumping = !onGround;
+  
+        // 4. Если хотим прыгнуть и камера на земле, задаём импульс прыжка
+        if (this.wantToJump && onGround) {
+          // Применяем вертикальный импульс для прыжка
+          this.camera.cameraDirection.y += 0.7;
+        }
+  
+        /* 
+           5. Если камера на земле, обнуляем вертикальную составляющую направления движения.
+           Это предотвращает накопление вертикального компонента при движении назад, если камера наклонена вниз.
+           При этом, если был инициирован прыжок, импульс уже добавлен.
+        */
+        if (onGround && !this.wantToJump) {
+          this.camera.cameraDirection.y = 0;
+        }
+  
+        // 6. Сбрасываем флаг желания прыгнуть, чтобы прыжок не повторялся каждый кадр
+        this.wantToJump = false;
+      });
+    }
 
     async CreateEnvironment(): Promise<void> {
         try {
@@ -113,14 +185,14 @@ export class NewDistanceScene {
                 mesh.isPickable = true;
             });
 
-            const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"];
-            nonCollizionMeshs.forEach((item) => {
-                const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
-                nonCollizionMesh.forEach((mesh) => {
-                    mesh.visibility = 0.5;
-                    mesh.checkCollisions = false;
-                });
-            });
+            // const nonCollizionMeshs = ["SM_ConcreteFence_LP.015", "SM_ConcreteFence_LP.030", "SM_0_FencePost_Road.087", "SM_0_FencePost_Road.088"];
+            // nonCollizionMeshs.forEach((item) => {
+            //     const nonCollizionMesh = map.filter((mesh) => mesh.name === item);
+            //     nonCollizionMesh.forEach((mesh) => {
+            //         mesh.visibility = 0.5;
+            //         mesh.checkCollisions = false;
+            //     });
+            // });
 
             const BrokenMeshes = map.filter((mesh) => mesh.name.toLowerCase().includes("broken"));
             BrokenMeshes.forEach((mesh) => {
@@ -152,6 +224,7 @@ export class NewDistanceScene {
                 // Установка позиции относительно камеры
                 const offset = new Vector3(-0.7, -0.5, 1.1); // Настройте значения по необходимости
                 mesh.position = offset;
+                mesh.isPickable = false
             });
 
             const thirdMesh = rangefinderMeshes[2];
@@ -250,6 +323,7 @@ export class NewDistanceScene {
             // Создание плоскости для текста
             const textPlane = MeshBuilder.CreatePlane("TextPlane", { width: planeWidth, height: planeHeight }, this.scene);
             textPlane.material = textMaterial;
+            textPlane.isPickable = false
 
             // Позиционируем плоскость относительно меша
             textPlane.parent = thirdMesh;
@@ -268,29 +342,71 @@ export class NewDistanceScene {
     }
 
     BetonTrigger(): void {
-        const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.")
-        this.guiManager.CreateDialogBox([page1])
 
-                const page2 = this.dialogPage.addText("Вам нужно измерить длину конструкций которые представлены на второй странице. Для того чтобы начать измерение нажмите на правую кнопку мыши в месте откуда хотите начать. В этом месте создается ось координат, которая поможет вам правильно определить угол. Второй раз кликните в том месте где нужно закончить измерение. Появившееся число введите на второй странице")
-                const page3 = this.dialogPage.addInputGrid("Конструкции", ["Дорога", "Опора", "Ограждение", "Что-то еще", "Эта рабочая неделя"])
+      const page1 = this.dialogPage.addText("Вам нужно измерить длину конструкций которые представлены на третьей странице. Для того чтобы начать измерение нажмите на правую кнопку мыши в месте откуда хотите начать. В этом месте создается ось координат, которая поможет вам правильно определить угол, отображаемый на экране дальномера. Второй раз кликните в том месте где нужно закончить измерение. Появившееся число на дисплее дальномера введите на второй странице. Измерения проводите на правом мосту. Для продолжение нажмите Вперед, для возврата на предыдущую страницу, Назад.");
+      const page2 = this.dialogPage.addText("На следующей странице вас ждет таблица из трех колонок. В первой название конструкции, во второй поле куда вводить показания, в третьей кнопка, нажав на которую появится схема этой конструкции. Когда введете все показания, нажмите на кнопку проверить. Зеленым подсветятся правильные измерения, красным неправильные. Как только все поля будут зелеными в планшете появится страничка где можно будет завершить тест");
+      
+      const ranges = [
+        { min: 5.4, max: 5.5 },
+        { min: 11.1, max: 11.2 },
+        { min: 0.5, max: 0.55 },
+        { min: 1.45, max: 1.55 },
+        { min: 2.45, max: 2.55 },
+        { min: 2.45, max: 2.55 },
+        { min: 0.95, max: 1.05 },
+        { min: 0.95, max: 1.05 },
+        { min: 10.95, max: 11.1 },
+        { min: 5.4, max: 5.6 },
+        { min: 15.4, max: 15.6 },
+      ];
+      
+      const checkResultObservable = new Observable<{ correctCount: number; total: number }>();
+      
+      const page3 = this.dialogPage.addInputGridDistance(
+        "Конструкции",
+        ["Подмостовой габарит", "Ширина проезда", "Высота ограждения", "Ширина ограждения", "Расстояние между стойками ограждения", "Ширина правой полосы безопасности", "Ширина левой полосы безопасности", "Размеры опоры", "Ширина укрепленной поверхности", "Расстояние от края проезда до опоры", "Ширина препятствия, пересекаемой дороги"],
+        ["../models/UnderBridge.png", "../models/PassageWidth.png", "../models/HWFence.png", "../models/HWFence.png", "../models/rangeStudy.png", "../models/rangeStudy.png", "../models/rangeStudy.png", "../models/SupportDimensions.png", "../models/WidthOfReinforcedSurface.png", "../models/ObstacleWidth.png", "../models/ObstacleWidth.png"],
+        ranges,
+        this.guiTexture,
+        13,
+        checkResultObservable
+      );
+      
+      const endPageResult = this.dialogPage.createConditionButton(
+        "Здесь появится кнопка позволяющая завершить тест, но только после всех правильных ответов. Нажмите на предыдущей странице 'Проверка' чтобы узнать результат",
+        "Завершить",
+        () => {
+          const routePage = this.dialogPage.createStartPage(
+            "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
+            "Перейти на основную карту",
+            () => {
+              window.location.href = "/ВыборИнструмента";
+            }
+          );
+          this.triggerManager.disableDistanceMeasurement();
+          this.triggerManager.exitDisLaserMode2();
+          this.guiManager.CreateDialogBox([routePage]);
+        },
+        false // Кнопка изначально невидима
+      );
+      
+      let isButtonShown = false;
+      checkResultObservable.add((result) => {
+        if (result.correctCount === result.total && !isButtonShown) {
+          endPageResult.messageText.text = "Все измерения верны! Нажмите 'Завершить' для продолжения."; // Меняем текст сообщения
+          endPageResult.actionButton.isVisible = true; // Показываем кнопку
+          isButtonShown = true;
+        }
+      });
+      
+      this.guiManager.CreateDialogBox([page1, page2, page3, endPageResult.rectangle]);
+
                 
 
                 // Активируем режим лазера для второй триггер-зоны
                 this.triggerManager.distanceMode();
                 this.triggerManager.enableDistanceMeasurement()
-                const endPage = this.dialogPage.createStartPage('Для заввершения измерений нажмите на кнопку', 'Завершить', () => {
-                    const routePage = this.dialogPage.createStartPage(
-                        "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
-                        "Перейти на основную карту",
-                        () => {
-                            window.location.href = '/ВыборИнструмента';
-                        }
-                    );
-                    this.triggerManager.disableDistanceMeasurement()
-                    this.triggerManager.exitDisLaserMode2();
-                    this.guiManager.CreateDialogBox([routePage])
-                })
-                this.guiManager.CreateDialogBox([page2, page3, endPage])
+                
 
     }
 

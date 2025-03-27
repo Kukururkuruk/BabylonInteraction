@@ -575,6 +575,7 @@ CreateDialogBox(pages: Rectangle[], target?: TextBlock | undefined): void {
           initializeSound();
           currentPageIndex = (currentPageIndex - 1 + pages.length) % pages.length;
           updatePageVisibility();
+          updateButtonVisibility(); // Добавляем обновление видимости
           this.clickSound.play();
           numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
           prevPageButton.isVisible = currentPageIndex > 0;  // Обновляем видимость кнопки "Назад"
@@ -590,10 +591,20 @@ CreateDialogBox(pages: Rectangle[], target?: TextBlock | undefined): void {
           initializeSound();
           currentPageIndex = (currentPageIndex + 1) % pages.length;
           updatePageVisibility();
+          updateButtonVisibility(); // Добавляем обновление видимости
           this.clickSound.play();
           numberPage.text = `Страница\n${currentPageIndex + 1}/${pages.length}`;
           prevPageButton.isVisible = currentPageIndex > 0;  // Обновляем видимость кнопки "Назад"
       });
+
+        // Функция для обновления видимости кнопок
+        function updateButtonVisibility() {
+          prevPageButton.isVisible = currentPageIndex !== 0;
+          nextPageButton.isVisible = currentPageIndex !== pages.length - 1;
+        }
+
+        // Вызываем при инициализации
+        updateButtonVisibility();
 
       // Добавляем кнопки в соответствующие колонки Grid
       navigationGrid.addControl(prevPageButton, 0, 0);
