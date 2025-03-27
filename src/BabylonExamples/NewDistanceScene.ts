@@ -372,7 +372,7 @@ export class NewDistanceScene {
         checkResultObservable
       );
       
-      const endPageResult = this.dialogPage.createStartPage(
+      const endPageResult = this.dialogPage.createConditionButton(
         "Здесь появится кнопка позволяющая завершить тест, но только после всех правильных ответов. Нажмите на предыдущей странице 'Проверка' чтобы узнать результат",
         "Завершить",
         () => {
@@ -385,7 +385,7 @@ export class NewDistanceScene {
           );
           this.triggerManager.disableDistanceMeasurement();
           this.triggerManager.exitDisLaserMode2();
-          this.guiManager.CreateDialogBox([routePage.rectangle]);
+          this.guiManager.CreateDialogBox([routePage]);
         },
         false // Кнопка изначально невидима
       );
@@ -396,10 +396,6 @@ export class NewDistanceScene {
           endPageResult.messageText.text = "Все измерения верны! Нажмите 'Завершить' для продолжения."; // Меняем текст сообщения
           endPageResult.actionButton.isVisible = true; // Показываем кнопку
           isButtonShown = true;
-        } else if (result.correctCount !== result.total && isButtonShown) {
-          endPageResult.messageText.text = "Для завершения измерений введите корректные значения и нажмите 'Проверка' на предыдущей странице"; // Возвращаем исходный текст
-          endPageResult.actionButton.isVisible = false; // Скрываем кнопку
-          isButtonShown = false;
         }
       });
       

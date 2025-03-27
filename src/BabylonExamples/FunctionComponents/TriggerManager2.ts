@@ -93,6 +93,8 @@ export class TriggerManager2 {
 
    measurementLine: LinesMesh | null = null;
 
+   private targetMeshesLaser2: Mesh[] = [];
+
   
   
     constructor(
@@ -818,124 +820,101 @@ exitLaserMode1(): void {
       camera.keysRight.push(68); // D
     }
 
-    public activateLaserMode2(targetMesh: Mesh): void {
-      this.targetMeshLaser2 = targetMesh; // Сохраняем целевой меш
-    
-      // Загружаем модель вместо создания куба
-      SceneLoader.ImportMesh(
-        "", // Импортируем все меши
-        "./models/", // Путь к папке с моделью
-        "UltrasonicTester_LP2.glb", // Имя файла модели
-        this.scene, // Сцена, в которую загружается модель
-        (meshes) => {
-          if (meshes.length === 0) {
-            console.error("Модель не содержит мешей.");
-            return;
-          }
-    
-          // Создаём родительский узел для модели
-          const parentNode = new TransformNode("centralCube2", this.scene);
-    
-          // Привязываем все загруженные меши к родительскому узлу
-          meshes.forEach((mesh) => {
-            mesh.parent = parentNode;
-            mesh.isPickable = false
-          });
-    
-          // Устанавливаем начальные настройки для родительского узла
-          parentNode.rotationQuaternion = Quaternion.Identity();
-          parentNode.scaling.x *= -1
-    
-          // Корректируем ориентацию модели
-          // Предположим, что модель должна быть повернута на 90 градусов вокруг оси Y
-          // Измените углы поворота в соответствии с вашей моделью
-          const correctionRotation = Quaternion.FromEulerAngles(0, -Math.PI / 2, 0); // 90 градусов по Y
-          parentNode.rotationQuaternion = correctionRotation.multiply(parentNode.rotationQuaternion || Quaternion.Identity());
-    
-          // Сохраняем родительский узел как centralCube2
-          this.centralCube2 = parentNode;
-          console.log(meshes);
-          
-    
-        },
-        null,
-        (scene, message, exception) => {
-          console.error("Ошибка загрузки модели:", message, exception);
-        }
-      );
-    
+
+
+    public activateLaserMode2(targetMeshes: Mesh[]): void {
+      this.targetMeshesLaser2 = targetMeshes; // Сохраняем массив целевых мешей
+  
+      // Загружаем модель один раз, если она ещё не загружена
+      if (!this.centralCube2) {
+          SceneLoader.ImportMesh(
+              "",
+              "./models/",
+              "UltrasonicTester_LP2.glb",
+              this.scene,
+              (meshes) => {
+                  if (meshes.length === 0) {
+                      console.error("Модель не содержит мешей.");
+                      return;
+                  }
+  
+                  const parentNode = new TransformNode("centralCube2", this.scene);
+                  meshes.forEach((mesh) => {
+                      mesh.parent = parentNode;
+                      mesh.isPickable = false;
+                  });
+  
+                  parentNode.rotationQuaternion = Quaternion.Identity();
+                  parentNode.scaling.x *= -1;
+  
+                  const correctionRotation = Quaternion.FromEulerAngles(0, -Math.PI / 2, 0);
+                  parentNode.rotationQuaternion = correctionRotation.multiply(parentNode.rotationQuaternion || Quaternion.Identity());
+  
+                  this.centralCube2 = parentNode;
+                  console.log("Модель UltrasonicTester_LP2.glb загружена:", meshes);
+              },
+              null,
+              (scene, message, exception) => {
+                  console.error("Ошибка загрузки модели:", message, exception);
+              }
+          );
+      }
+  
       // Добавляем обработчик движения указателя
       this.pointerMoveHandler = (pointerInfo: PointerInfo) => {
-        if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
-          this.onPointerMove(pointerInfo);
-        }
+          if (pointerInfo.type === PointerEventTypes.POINTERMOVE) {
+              this.onPointerMove(pointerInfo);
+          }
       };
       this.scene.onPointerObservable.add(this.pointerMoveHandler);
-    
+  
       // Добавляем обработчики клавиатуры
       this.keyDownHandler = (evt: KeyboardEvent) => this.onKeyDown(evt);
       this.keyUpHandler = (evt: KeyboardEvent) => this.onKeyUp(evt);
       window.addEventListener("keydown", this.keyDownHandler);
       window.addEventListener("keyup", this.keyUpHandler);
-    
+  
       // Добавляем функцию в цикл рендера
       this.scene.registerBeforeRender(this.beforeRenderHandler);
-    }
-
-
-
-
-    
-    
-    private onPointerMove(pointerInfo: PointerInfo): void {
+  }
+  
+  private onPointerMove(pointerInfo: PointerInfo): void {
       const pickResult = pointerInfo.pickInfo;
-    
+  
       if (
-        pickResult?.hit &&
-        pickResult.pickedMesh === this.targetMeshLaser2 &&
-        this.centralCube2
+          pickResult?.hit &&
+          this.targetMeshesLaser2.includes(pickResult.pickedMesh) &&
+          this.centralCube2
       ) {
-        // Делаем модель видимой
-        this.centralCube2.isVisible = true;
-    
-        // Обновляем целевую позицию модели
-        this.targetPosition.copyFrom(pickResult.pickedPoint);
-    
-        // Получаем нормаль поверхности в точке пересечения
-        const normal = pickResult.getNormal(true);
-        if (normal) {
-          // Смещаем модель вдоль нормали на половину её размера (или другое значение)
-          const offsetDistance = 0; // Измените значение по необходимости
-          const offset = normal.scale(offsetDistance);
-          this.targetPosition.addInPlace(offset);
-    
-          // Используем ваш метод расчёта вращения
-          const axis1 = normal;
-          const axis2 = Vector3.Up();
-          const axis3 = Vector3.Zero();
-          const start = new Vector3(Math.PI / 2, Math.PI / 2, 0);
-    
-          Vector3.CrossToRef(start, axis1, axis2);
-          Vector3.CrossToRef(axis2, axis1, axis3);
-          const tmpVec = Vector3.RotationFromAxis(
-            axis3.negate(),
-            axis1,
-            axis2
-          );
-          const quat = Quaternion.RotationYawPitchRoll(
-            tmpVec.y,
-            tmpVec.x,
-            tmpVec.z
-          );
-    
-          // Применяем накопленную ротацию
-          this.targetRotationQuaternion = quat;
-        }
+          this.centralCube2.isVisible = true;
+          this.targetPosition.copyFrom(pickResult.pickedPoint);
+  
+          const normal = pickResult.getNormal(true);
+          if (normal) {
+              const offsetDistance = 0;
+              const offset = normal.scale(offsetDistance);
+              this.targetPosition.addInPlace(offset);
+  
+              const axis1 = normal;
+              const axis2 = Vector3.Up();
+              const axis3 = Vector3.Zero();
+              const start = new Vector3(Math.PI / 2, Math.PI / 2, 0);
+  
+              Vector3.CrossToRef(start, axis1, axis2);
+              Vector3.CrossToRef(axis2, axis1, axis3);
+              const tmpVec = Vector3.RotationFromAxis(axis3.negate(), axis1, axis2);
+              const quat = Quaternion.RotationYawPitchRoll(tmpVec.y, tmpVec.x, tmpVec.z);
+  
+              this.targetRotationQuaternion = quat;
+          }
       } else if (this.centralCube2) {
-        // Скрываем модель, если указатель не над `this.targetMeshLaser2`
-        this.centralCube2.isVisible = false;
+          this.centralCube2.isVisible = false;
       }
-    }
+  }
+  
+
+
+  // Остальные методы (onBeforeRender, onKeyDown, onKeyUp, exitLaserMode2) остаются без изменений
     
     private onBeforeRender(): void {
       if (this.centralCube2 && this.centralCube2.isVisible) {

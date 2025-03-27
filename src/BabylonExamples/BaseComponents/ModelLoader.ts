@@ -116,6 +116,10 @@ export class ModelLoader {
           // "SM_0_SpanStructureBeam_2_Cable_L"
   ];
 
+  public textBlock1: TextBlock | null = null; // Добавляем в класс
+  public textBlock2: TextBlock | null = null; // Добавляем в класс
+  public textBlock3: TextBlock | null = null; // Добавляем в класс
+
   constructor(scene: Scene) {
     this.scene = scene;
   }
@@ -613,71 +617,128 @@ public async loadTapeMeasureModel(): Promise<void> {
 }
   
 
-  addGUIToTool(mesh, texts): void {
-      if (!mesh) {
-          console.error("Меш не существует. GUI не может быть добавлен.");
-          return;
-      }
-
-      try {
-          const guiPlane = mesh.clone("guiPlane");
-          guiPlane.scaling.x = -0.04;
-
-          // Создаём AdvancedDynamicTexture для меша
-          const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
-          guiTexture.rootContainer.rotation = Math.PI; // поворот на 180 градусов
-          mesh.position.z -= 0.001; // Смещаем меш вперед на 1 единицу
-
-          // Создаём Grid для размещения 4 прямоугольников
-          const grid = new Grid();
-          grid.width = "40%";
-          grid.height = "25px";
-          grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-          grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-          grid.top = "-40px";
-          grid.left = "-85px";
-
-          // Одна строка и четыре колонки
-          grid.addRowDefinition(1);
-          grid.addColumnDefinition(0.25);
-          grid.addColumnDefinition(0.25);
-          grid.addColumnDefinition(0.25);
-          grid.addColumnDefinition(0.25);
-
-          guiTexture.addControl(grid);
-
-          this.textBlocks = []; // Очищаем/инициализируем массив
-
-          for (let i = 0; i < 4; i++) {
-              const rect = new Rectangle();
-              rect.width = "100%";
-              rect.height = "100%";
-              rect.color = "white";
-              rect.background = "rgba(0, 0, 0, 0.5)";
-              rect.thickness = 0;
-              rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-              rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-              const textBlock = new TextBlock();
-              textBlock.text = texts[i] || ``;
-              textBlock.fontFamily = 'MyCustomFont';
-              textBlock.color = "white";
-              textBlock.fontSize = 18;
-              textBlock.textWrapping = true;
-              textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-              textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-
-              rect.addControl(textBlock);
-              grid.addControl(rect, 0, i);
-
-              // Сохраняем ссылки на textBlock
-              this.textBlocks.push(textBlock);
-          }
-
-      } catch (error) {
-          console.error("Ошибка при добавлении GUI к мешу:", error);
-      }
+addGUIToTool(mesh, texts): void {
+  if (!mesh) {
+      console.error("Меш не существует. GUI не может быть добавлен.");
+      return;
   }
+
+  try {
+      const guiPlane = mesh.clone("guiPlane");
+      guiPlane.scaling.x = -0.04;
+
+      const guiTexture = AdvancedDynamicTexture.CreateForMesh(mesh, 512, 512, true);
+      guiTexture.rootContainer.rotation = Math.PI;
+      mesh.position.z -= 0.001;
+
+      const rect1 = new Rectangle();
+      rect1.width = "41%";
+      rect1.height = "18%";
+      rect1.color = "white";
+      rect1.background = "rgba(0, 0, 0, 0)";
+      rect1.thickness = 0;
+      rect1.top = "-20%";
+      rect1.left = "-17%";
+      guiTexture.addControl(rect1);
+
+      const textBlock1 = new TextBlock();
+      textBlock1.text = "39,5_MPa";
+      textBlock1.fontFamily = 'MyCustomFont';
+      textBlock1.color = "white";
+      textBlock1.fontSize = 45;
+      textBlock1.textWrapping = true;
+      textBlock1.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      textBlock1.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      textBlock1.isVisible = false; // Изначально невидим
+      rect1.addControl(textBlock1);
+      this.textBlock1 = textBlock1;
+
+      const rect2 = new Rectangle();
+      rect2.width = "18%";
+      rect2.height = "17%";
+      rect2.color = "white";
+      rect2.background = "rgba(0, 0, 0, 0)";
+      rect2.thickness = 0;
+      rect2.top = "10.5%";
+      rect2.left = "-2%";
+      guiTexture.addControl(rect2);
+
+      const textBlock2 = new TextBlock();
+      textBlock2.text = "\n\n\n"; // Изначально 4 пустые строки (3 \n создают 4 строки)
+      textBlock2.fontFamily = 'MyCustomFont';
+      textBlock2.color = "white";
+      textBlock2.fontSize = 18;
+      textBlock2.lineSpacing = "-5%";
+      textBlock2.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+      textBlock2.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      rect2.addControl(textBlock2);
+      this.textBlock2 = textBlock2;
+
+      const rect3 = new Rectangle();
+      rect3.width = "12%";
+      rect3.height = "4%";
+      rect3.color = "white";
+      rect3.background = "rgba(0, 0, 0, 0.5)";
+      rect3.thickness = 0;
+      rect3.top = "-3%";
+      rect3.left = "1%";
+      guiTexture.addControl(rect3);
+
+      const textBlock3 = new TextBlock();
+      textBlock3.text = ""; // Изначально 4 пустые строки (3 \n создают 4 строки)
+      textBlock3.fontFamily = 'MyCustomFont';
+      textBlock3.color = "white";
+      textBlock3.fontSize = 18;
+      textBlock3.lineSpacing = "-5%";
+      textBlock3.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+      textBlock3.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      rect3.addControl(textBlock3);
+      this.textBlock3 = textBlock3;
+
+      const grid = new Grid();
+      grid.width = "40%";
+      grid.height = "25px";
+      grid.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+      grid.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+      grid.top = "-40px";
+      grid.left = "-85px";
+      grid.addRowDefinition(1);
+      grid.addColumnDefinition(0.25);
+      grid.addColumnDefinition(0.25);
+      grid.addColumnDefinition(0.25);
+      grid.addColumnDefinition(0.25);
+      guiTexture.addControl(grid);
+
+      this.textBlocks = [];
+
+      for (let i = 0; i < 4; i++) {
+          const rect = new Rectangle();
+          rect.width = "100%";
+          rect.height = "100%";
+          rect.color = "white";
+          rect.background = "rgba(0, 0, 0, 0.5)";
+          rect.thickness = 0;
+          rect.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          rect.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+          const textBlock = new TextBlock();
+          textBlock.text = texts[i] || ``;
+          textBlock.fontFamily = 'MyCustomFont';
+          textBlock.color = "white";
+          textBlock.fontSize = 18;
+          textBlock.textWrapping = true;
+          textBlock.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+          textBlock.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+
+          rect.addControl(textBlock);
+          grid.addControl(rect, 0, i);
+          this.textBlocks.push(textBlock);
+      }
+  } catch (error) {
+      console.error("Ошибка при добавлении GUI к мешу:", error);
+  }
+}
+
 // Метод для обновления текста в нужной ячейке (0 - первая ячейка, 1 - вторая и т.д.)
   public updateCellText(index: number, newValue: string): void {
       if (this.textBlocks[index]) {
