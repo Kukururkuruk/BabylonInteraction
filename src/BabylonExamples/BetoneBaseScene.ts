@@ -17,6 +17,7 @@ import {
     Viewport,
     PBRMaterial,
     Observable,
+    Mesh,
   } from "@babylonjs/core";
   import "@babylonjs/loaders";
 import { TriggerManager2 } from "./FunctionComponents/TriggerManager2";
@@ -24,6 +25,7 @@ import { AdvancedDynamicTexture, Button, Control, TextBlock } from "@babylonjs/g
 import { GUIManager } from "./FunctionComponents/GUIManager";
 import { DialogPage } from "./FunctionComponents/DialogPage";
 import { ModelLoader } from "./BaseComponents/ModelLoader";
+import { BabylonUtilities } from "./FunctionComponents/BabylonUtilities";
   
   export class BetoneBaseScene {
     scene: Scene;
@@ -35,6 +37,7 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
     private guiManager: GUIManager;
     private dialogPage: DialogPage;
     private modelLoader: ModelLoader;
+    private utils: BabylonUtilities
     private zoneTriggered: boolean = false;
     private targetMeshes2: AbstractMesh[];
     private beam2: AbstractMesh;
@@ -56,18 +59,20 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       this.guiTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI");
       this.triggerManager = new TriggerManager2(this.scene, this.canvas, this.guiTexture, this.camera);
       this.dialogPage = new DialogPage()
+      this.utils = new BabylonUtilities(this.scene, this.engine, this.guiTexture)
 
       // Инициализация загрузчика моделей
         this.modelLoader = new ModelLoader(this.scene);
   
       this.CreateEnvironment().then(() => {
+        this.BetonTrigger();
         this.engine.hideLoadingUI();
         
     });
     
       this.CreateController();
 
-      this.BetonTrigger();
+      
 
         this.engine.runRenderLoop(() => {
             this.scene.render();
@@ -92,39 +97,10 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
   
       return scene;
     }
-
-      //   CreateController(): void {
-  //     // Установка начальной позиции основной камеры для лучшей видимости
-  //     this.camera = new FreeCamera("MainCamera", new Vector3(17, 2, 13), this.scene);
-  //     this.camera.attachControl(this.canvas, true);
-  
-  //     this.camera.applyGravity = false;
-  //     this.camera.checkCollisions = true;
-  //     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
-  //     this.camera.minZ = 0.45;
-  //     this.camera.speed = 0.55;
-  //     this.camera.angularSensibility = 4000;
-  //     this.camera.rotation.y = -Math.PI / 2;
-  //     this.camera.keysUp.push(87); // W
-  //     this.camera.keysLeft.push(65); // A
-  //     this.camera.keysDown.push(83); // S
-  //     this.camera.keysRight.push(68); // D
-  
-  //     // Создание второй камеры для обзора с фиксированного положения
-  //     const secondaryCamera = new FreeCamera("SecondaryCamera", new Vector3(20, 2, 13), this.scene);
-  //     secondaryCamera.setTarget(Vector3.Zero()); // Устанавливаем направление на центр сцены
-  //     // secondaryCamera.mode = Camera.ORTHOGRAPHIC_CAMERA; // Для более статичной перспективы можно использовать ортографический режим
-  
-  //     // Настройка viewport для второй камеры (маленькое окно в левом верхнем углу)
-  //     secondaryCamera.viewport = new Viewport(0, 0.75, 0.25, 0.25); // Позиция и размеры: (x, y, width, height)
-  
-  //     // Добавление основной и вторичной камер в массив активных камер сцены
-  //     this.scene.activeCameras = [this.camera, secondaryCamera];
-  // }
   
     CreateController(): void {
       // Установка начальной позиции камеры для лучшей видимости
-      this.camera = new FreeCamera("camera", new Vector3(17, 2, -13), this.scene);
+      this.camera = new FreeCamera("camera", new Vector3(17.68, 1.92, -13.45), this.scene);
       this.camera.attachControl(this.canvas, true);
   
       this.camera.applyGravity = true;
@@ -132,12 +108,9 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
       this.camera.minZ = 0.45;
       this.camera.speed = 0.55;
+      this.camera.inertia = 0.5
       this.camera.angularSensibility = 4000;
-      this.camera.rotation.y = -Math.PI/2
-      this.camera.keysUp.push(87); // W
-      this.camera.keysLeft.push(65); // A
-      this.camera.keysDown.push(83); // S
-      this.camera.keysRight.push(68); // D
+      this.camera.rotation = new Vector3(0.00175, -3.1723155844980004, 0)
     }
 
 
@@ -159,23 +132,21 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
     
             // Фильтруем все меши, которые нам нужны
             this.targetMeshes2 = map.filter((mesh) => 
-                mesh.name === "SM_0_MonolithicRack_L_Rostverc" ||
-                mesh.name === "SM_0_MonolithicRack_L_Column" ||
-                mesh.name === "SM_0_MonolithicRack_L" ||
-                mesh.name === "SM_0_TransitionPlate8M_LP_L_primitive0" ||
                 mesh.name === "SM_0_Retaining_wall_Block_LP_L" ||
-                mesh.name.match(/^SM_0_BlockBevel_LP_L_5_1_primitive\d$/) ||
-                mesh.name === "SM_0_Stand_L" ||
-                mesh.name === "SM_0_MonolithicRack_L_Support" ||
-                mesh.name.match(/^SM_0_SpanStructureBeam_[RL]_\d$/)
+                mesh.name.match(/^SM_0_BlockBevel_LP_L_5_1_primitive\d$/)
             );
-            console.log(this.targetMeshes2);
+
             
     
+            await this.modelLoader.loadUltraCentrModel()
+            const mod = this.modelLoader.getMeshes("ultraC") || []
+            mod[1].isVisible = false
+            this.beam2 = mod[3]
+            this.beam2.scaling = new Vector3(2,2,2)
+
             await this.modelLoader.loadUltraModel();
             await this.modelLoader.loadUltranModel(this.camera);
             const rangefinderMeshes = this.modelLoader.getMeshes('ultra') || [];
-            console.log("Рейки загружены:", rangefinderMeshes);
     
             console.log("Модели успешно загружены.");
         } catch (error) {
@@ -185,358 +156,182 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
         }
     }
 
-  // Функция для обновления текста с переносом
-  updateDynamicText(newText: string) {
-      this.ctx.clearRect(0, 0, this.dynamicTexture.getSize().width, this.dynamicTexture.getSize().height);
-      this.ctx.font = "bold 80px Arial";
-
-      // Разбиваем текст на строки с учетом ширины
-      const lines = this.wrapText(this.ctx, newText, this.dynamicTexture.getSize().width + 100);
-      const lineHeight = 90;
-
-      lines.forEach((line, index) => {
-          this.ctx.fillStyle = "white";
-          this.ctx.fillText(line, 200, 100 + index * lineHeight);
-      });
-
-      this.dynamicTexture.update();
-  }
-
-  // Функция для разбиения текста на строки с учетом ширины
-  wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
-      const lines = [];
-      const paragraphs = text.split('\n');
-
-      paragraphs.forEach(paragraph => {
-          const words = paragraph.split(' ');
-          let currentLine = '';
-
-          words.forEach(word => {
-              const testLine = currentLine + word + ' ';
-              const metrics = context.measureText(testLine);
-              const testWidth = metrics.width;
-
-              if (testWidth > maxWidth && currentLine !== '') {
-                  lines.push(currentLine.trim());
-                  currentLine = word + ' ';
-              } else {
-                  currentLine = testLine;
-              }
-          });
-
-          lines.push(currentLine.trim());
-      });
-
-      return lines;
-  }
-
-//   BetonTrigger(): void {
-//       const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
-//       this.guiManager.CreateDialogBox([page1]);
-
-//       const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-//       let clickCount = 0;
-//       let clickCountText: TextBlock | null = null;
-
-//       const targetMeshForLaser2 = this.beam2;
-
-//       const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-//           clickZonePosition,
-//           () => {
-//               if (!this.zoneTriggered) {
-//                   this.zoneTriggered = true;
-//                   console.log("Вошли в зону кликов");
-//                   this.triggerManager.createStartButton('Начать', () => {
-//                       const page2 = this.dialogPage.addText("Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.");
-//                       this.guiManager.CreateDialogBox([page2]);
-
-//                       if (this.beam2) {
-//                           this.triggerManager.setupClickableMesh(this.beam2, () => {
-//                               clickCount++;
-//                               const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
-
-//                               // Обновляем текст на динамической текстуре
-//                               this.updateDynamicText(`\n${randomValue}`);
-//                           });
-
-//                           this.triggerManager.activateLaserMode2(this.beam2);
-//                           this.triggerManager.createStartButton('Завершить', () => {
-//                               const page3 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
-//                               this.guiManager.CreateDialogBox([page3]);
-
-//                               const totalClicksMessage = new TextBlock();
-//                               totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
-//                               totalClicksMessage.color = "white";
-//                               totalClicksMessage.fontSize = 24;
-//                               totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-//                               totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-//                               totalClicksMessage.top = "-10%";
-//                               this.guiTexture.addControl(totalClicksMessage);
-
-//                               setTimeout(() => {
-//                                   this.guiTexture.removeControl(totalClicksMessage);
-//                               }, 3000);
-
-//                               if (clickCountText) {
-//                                   this.guiTexture.removeControl(clickCountText);
-//                                   clickCountText = null;
-//                               }
-//                               clickCount = 0;
-
-//                               if (this.beam2) {
-//                                   this.triggerManager.removeMeshAction(this.beam2);
-//                               }
-
-//                               this.triggerManager.exitLaserMode2();
-//                               this.guiManager.createRouteButton('/test');
-//                           });
-//                       }
-//                   });
-//               }
-//           },
-//           undefined,
-//           20,
-//           true
-//       );
-//   }
-
-
-
-
-BetonTrigger(): void {
-    const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, -13.477405516648421);
-    let clickCountText: TextBlock | null = null;
-
-    const rotationXValues = [
-        2 * -Math.PI / 3, // 180 градусов
-        -Math.PI / 2,     // 60 градусов
-        -Math.PI / 3,     // -60 градусов
-        Math.PI,          // 0 градусов
-    ];
-
-    // Изначально массив из 4 пустых значений для randomValues
-    let randomValues: string[] = ["", "", "", ""];
-    // Новый массив для textBlock2
-    let textBlock2Values: string[] = ["", "", "", ""]; // Изначально 4 пустые строки
-
-    // Функция для определения параметров в зависимости от имени меша
-    const getMeshParams = (meshName: string): { randomMin: number; randomMax: number; textBlock1Value: string } => {
-        if (meshName === "SM_0_MonolithicRack_L_Rostverc" ||
-            meshName === "SM_0_MonolithicRack_L_Column" ||
-            meshName === "SM_0_MonolithicRack_L" ||
+    BetonTrigger(): void {
+        const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, -13.477405516648421);
+        let clickCountText: TextBlock | null = null;
+      
+        const rotationXValues = [
+          2 * -Math.PI / 3,
+          -Math.PI / 2,
+          -Math.PI / 3,
+          Math.PI,
+        ];
+      
+        let randomValues: string[] = ["", "", "", ""];
+        let textBlock2Values: string[] = ["", "", "", ""];
+      
+        // Определяем четыре промежутка ротации (в радианах)
+        const rotationIntervals = [
+            { min: -0.2638, max: 0.2638 }, // 90 градусов влево (~1.5208 до 1.6208)
+            { min: -1.0832, max: -0.4542 }, // 45 градусов влево (~0.7354 до 0.8354)
+            { min: -1.5728, max: -1.0832 },                            // Вверх (~-0.05 до 0.05)
+            { min: -1.1686, max: -0.3829 }, // 45 градусов вправо (~-0.8354 до -0.7354)
+          ];
+      
+        // Индекс текущего активного промежутка
+        let currentRotationIntervalIndex = 0;
+      
+        const getMeshParams = (meshName: string): { randomMin: number; randomMax: number; textBlock1Value: string } => {
+          if (
             meshName === "SM_0_Retaining_wall_Block_LP_L" ||
-            meshName === "SM_0_BlockBevel_LP_L_5_1" ||
-            meshName === "SM_0_Stand_L" ||
-            meshName === "SM_0_MonolithicRack_L_Support" ||
-            meshName.match(/^SM_0_SpanStructureBeam_[RL]_\d$/)
-        ) {
+            meshName === "SM_0_BlockBevel_LP_L_5_1" 
+          ) {
             return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35" };
-        } else if (meshName === "sm_0_transitionplate8m_lp_l_primitive0") {
+          } else if (meshName === "sm_0_transitionplate8m_lp_l_primitive0") {
             return { randomMin: 3650, randomMax: 3760, textBlock1Value: "32.11" };
-        }
-        return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35" };
-    };
-
-    const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-        clickZonePosition,
-        () => {
+          }
+          return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35" };
+        };
+      
+        const secondTriggerZone = this.triggerManager.setupZoneTrigger(
+          clickZonePosition,
+          () => {
             if (!this.zoneTriggered) {
-                this.zoneTriggered = true;
-                console.log("Вошли в зону кликов");
+              this.zoneTriggered = true;
+              this.triggerManager.disableCameraMovement()
+      
+              const imageMeshes = this.modelLoader.getMeshes("image") || [];
+              imageMeshes[1].isVisible = true;
 
-                const startPage = this.dialogPage.createStartPage(
-                    "Нажми на кнопку для начала измерения.",
-                    "Начать",
-                    () => {
-                        if (this.targetMeshes2 && this.targetMeshes2.length > 0) {
-                            const imageMeshes = this.modelLoader.getMeshes("image") || [];
-                            imageMeshes[1].isVisible = true;
+              const startPage = this.dialogPage.addClickableWordsPage(
+                "Перед вами Ультразвуковой тестер UK1401, с параметрами можно ознакомиться в модуле «Оборудование». Принцип работы показан в видеоролике.  . Краткое описание функционала кнопок прибора показано на схеме  . Для использования навигации в планшете с подсказками нажмите кнопку вперед для продолжения. Или назад, для повторного ознакомления с предыдущей страницей.",
+                [
+                    { word: "видеоролике", videoUrl: "../models/UltratronicTester_Preview_1K.mp4", top: "33%", left: "53%", width: "35%" },
+                    { word: "схеме", imageUrl: "../models/ultraStudy.jpg", top: "51%", left: "0.1%", width: "17%" },
+                ],
+                this.guiTexture,
+                this.camera // Передаем камеру для видео
+              );
+              const explanationPage = this.dialogPage.addText("На приборе, в левом нижнем углу, расположен индикатор ориентации. Выберите тот вариант положения прибора, что соответствует индикатору")
+              this.guiManager.CreateDialogBox([startPage, explanationPage])
+      
+              this.triggerManager.createRadioButtons(
+                () => {
+                  const measurementPage = this.dialogPage.createNumericInputPage("С помощью мыши наведитесь на место где хотите провести измерение. Используя кнопки Q/Й и E/У поверните прибор согласно индикатору. Для проведения измерения нажмите кнопку мыши. Для получения результата проведите измерение 4 раза и запишите их в поле ниже", "Плотность бетона", 38.35,38.35,() => {
+            
+                  const page4 = this.dialogPage.createStartPage("Хорошая работа, а теперь нажми на кнопку для перехода на основную карту", "Перейти", () => {
+                    window.location.href = '/ВыборИнструмента';
+                  })
+                  this.guiManager.CreateDialogBox([page4])
+                })
+          
+                  this.guiManager.CreateDialogBox([measurementPage])
 
-                            this.triggerManager.activateLaserMode2(this.targetMeshes2);
-
-                            this.targetMeshes2.forEach((targetMesh) => {
-                                this.triggerManager.setupClickableMesh(targetMesh, () => {
-                                    this.clickFour++;
-                                    this.clickCount++;
-
-                                    const meshName = targetMesh.name.toLowerCase();
-                                    console.log("Клик по мешу:", meshName);
-                                    const params = getMeshParams(meshName);
-                                    console.log("Параметры меша:", params);
-                                    const randomValue = Math.floor(Math.random() * (params.randomMax - params.randomMin + 1)) + params.randomMin;
-                                    const cellIndex = (this.clickCount - 1) % 5;
-
-                                    // Обновляем ячейки в grid
-                                    if (cellIndex < 4) {
-                                        this.modelLoader.updateCellText(cellIndex, randomValue.toString());
-                                    }
-
-                                    // Обновляем randomValues
-                                    randomValues.unshift(randomValue.toString());
-                                    if (randomValues.length > 4) {
-                                        randomValues.pop();
-                                    }
-
-                                    // Обновляем textBlock2Values только на cellIndex === 3
-                                    if (cellIndex === 3) {
-                                        textBlock2Values.unshift(params.textBlock1Value);
-                                        if (textBlock2Values.length > 4) {
-                                            textBlock2Values.pop();
-                                        }
-                                    }
-
-                                    // Обновляем textBlock2
-                                    if (this.modelLoader.textBlock2) {
-                                        this.modelLoader.textBlock2.text = textBlock2Values.join("\n");
-                                    }
-
-                                    // Логика вращения targetMesh
-                                    if (imageMeshes.length > 1 && cellIndex < 4) {
-                                        const targetMeshImg = imageMeshes[1];
-                                        const rotationIndex = cellIndex;
-                                        targetMeshImg.rotation.y = rotationXValues[rotationIndex];
-                                        console.log(`Установлен rotation.y: ${rotationXValues[rotationIndex]} для clickFour: ${this.clickFour}`);
-                                    }
-
-                                    // На 4-й клик (индекс 3): скрываем targetMesh, показываем textBlock1
-                                    if (cellIndex === 3) {
-                                        if (imageMeshes.length > 1) {
-                                            imageMeshes[1].isVisible = false;
-                                        }
-                                        if (this.modelLoader.textBlock1 && this.modelLoader.textBlock3) {
-                                            this.modelLoader.textBlock1.text = params.textBlock1Value;
-                                            this.modelLoader.textBlock1.isVisible = true;
-                                            this.modelLoader.textBlock3.text = Math.round(randomValues.reduce((acc, curr) => acc + Number(curr), 0) / randomValues.length).toString();
-                                            console.log(this.modelLoader.textBlock3.text);
-                                        }
-                                    }
-
-                                    // На 5-й клик (индекс 4): сброс
-                                    if (cellIndex === 4) {
-                                        this.modelLoader.resetAllCells();
-                                        if (this.modelLoader.textBlock1 && this.modelLoader.textBlock3) {
-                                            this.modelLoader.textBlock1.isVisible = false;
-                                            this.modelLoader.textBlock3.text = "";
-                                        }
-                                        if (imageMeshes.length > 1) {
-                                            imageMeshes[1].isVisible = true;
-                                            imageMeshes[1].rotation.y = Math.PI;
-                                        }
-                                        // Сбрасываем textBlock2Values
-                                        // textBlock2Values = ["", "", "", ""];
-                                        if (this.modelLoader.textBlock2) {
-                                            this.modelLoader.textBlock2.text = textBlock2Values.join("\n");
-                                        }
-                                        console.log("Сброс после 5 кликов");
-                                    }
-                                });
-                            });
-
-                            const checkResultObservable = new Observable<{ correctCount: number; total: number }>();
-
-                            const page1 = this.dialogPage.addText("Вам нужно измерить прочность конструкций которые представлены на третьей странице. Для того чтобы начать измерение наведитесь мышкой на конструкцию, прочность которой хотите измерить. В этом месте появляется прибор. Используя кнопки Q/Й и E/У поверните его в нужную позицию. Затем кликните мышкой для проведения измерения. После четвертого клика, появившееся число введите на третьей странице. Для продолжение нажмите Вперед, для возврата на предыдущую страницу, Назад.");
-                            const page2 = this.dialogPage.addText("На следующей странице вас ждет таблица из двух колонок. В первой название конструкции, во второй поле куда вводить показания. Когда введете все показания, нажмите на кнопку проверить. Галочкой подсветятся правильные измерения, крестиком неправильные. Как только все поля будут зелеными в планшете появится страничка где можно будет завершить тест");
-                            const page3 = this.dialogPage.addInputGrid2(
-                                "Конструкции",
-                                ["Ростверк фундамента ", "Сопряжение", "Стойка (опоры)", "Шкафная стенка", "Подферменник (опора балок)", "Ригель", "Балка"],
-                                [
-                                  { min: 38.35, max: 38.35 }, 
-                                  { min: 32.11, max: 32.11 },
-                                  { min: 38.35, max: 38.35 },
-                                  { min: 38.35, max: 38.35 }, 
-                                  { min: 38.35, max: 38.35 },
-                                  { min: 38.35, max: 38.35 },
-                                  { min: 38.35, max: 38.35 },
-                                ],
-                                "../models/UltraInfo.jpg",
-                                this.guiTexture,
-                                () => {
-                                  // Логика видимости мешей
-                                    console.log("Готово");
-                                },
-                                8,
-                                checkResultObservable
-                              );
-                            // const finishPage = this.dialogPage.createStartPage(
-                            //     "Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.",
-                            //     "Завершить",
-                            //     () => {
-                            //         const totalClicksMessage = new TextBlock();
-                            //         totalClicksMessage.text = `Вы произвели измерение ${this.clickCount} раз(а)`;
-                            //         totalClicksMessage.color = "white";
-                            //         totalClicksMessage.fontSize = 24;
-                            //         totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-                            //         totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-                            //         totalClicksMessage.top = "-10%";
-                            //         this.guiTexture.addControl(totalClicksMessage);
-
-                            //         setTimeout(() => {
-                            //             this.guiTexture.removeControl(totalClicksMessage);
-                            //         }, 3000);
-
-                            //         if (clickCountText) {
-                            //             this.guiTexture.removeControl(clickCountText);
-                            //             clickCountText = null;
-                            //         }
-                            //         this.clickCount = 0;
-                            //         this.clickFour = 0;
-
-                            //         this.targetMeshes2.forEach((targetMesh) => {
-                            //             this.triggerManager.removeMeshAction(targetMesh);
-                            //         });
-
-                            //         this.triggerManager.exitLaserMode2();
-
-                            //         const routePage = this.dialogPage.createStartPage(
-                            //             "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
-                            //             "Перейти на основную карту",
-                            //             () => {
-                            //                 window.location.href = '/ВыборИнструмента';
-                            //             }
-                            //         );
-
-                            //         this.guiManager.CreateDialogBox([routePage]);
-                            //     }
-                            // );
-                            const endPageResult = this.dialogPage.createConditionButton(
-                                "Здесь появится кнопка позволяющая завершить тест, но только после всех правильных ответов. Нажмите на предыдущей странице 'Проверка' чтобы узнать результат",
-                                "Завершить",
-                                () => {
-                                    const routePage = this.dialogPage.createStartPage(
-                                        "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
-                                        "Перейти на основную карту",
-                                        () => {
-                                            window.location.href = "/ВыборИнструмента";
-                                        }
-                                    );
-                                    this.guiManager.CreateDialogBox([routePage]);
-                                },
-                                false // Кнопка изначально невидима
-                            );
-                            
-                            // Подписка на результат проверки
-                            let isButtonShown = false;
-                            checkResultObservable.add((result) => {
-                                if (result.correctCount === result.total && !isButtonShown) {
-                                    endPageResult.messageText.text = "Все измерения верны! Нажмите 'Завершить' для продолжения.";
-                                    endPageResult.actionButton.isVisible = true; // Показываем кнопку
-                                    isButtonShown = true;
-                                }
-                            });
-
-                            this.guiManager.CreateDialogBox([page1, page2, page3, endPageResult.rectangle]);
+                  this.triggerManager.activateLaserMode2(this.targetMeshes2);
+      
+                  this.targetMeshes2.forEach((targetMesh) => {
+                    this.triggerManager.setupClickableMesh(targetMesh, () => {
+                      // Получаем текущий угол поворота прибора
+                      const currentRotationY = this.triggerManager.getCentralCubeRotationY();
+                      const meshName = targetMesh.name.toLowerCase();
+                      const params = getMeshParams(meshName);
+      
+                      // Проверяем, попадает ли текущий угол в активный промежуток
+                      const currentInterval = rotationIntervals[currentRotationIntervalIndex];
+                      const isCorrectRotation =
+                        currentRotationY !== null &&
+                        currentRotationY >= currentInterval.min &&
+                        currentRotationY <= currentInterval.max;
+      
+                      if (isCorrectRotation) {
+                        this.clickFour++;
+                        this.clickCount++;
+      
+                        console.log("Клик по мешу:", meshName);
+                        console.log("Параметры меша:", params);
+                        console.log("Правильный угол в промежутке:", currentInterval);
+                        const randomValue = Math.floor(Math.random() * (params.randomMax - params.randomMin + 1)) + params.randomMin;
+                        const cellIndex = (this.clickCount - 1) % 5;
+      
+                        if (cellIndex < 4) {
+                          this.modelLoader.updateCellText(cellIndex, randomValue.toString());
                         }
-                    }
-                );
+      
+                        randomValues.unshift(randomValue.toString());
+                        if (randomValues.length > 4) {
+                          randomValues.pop();
+                        }
+      
+                        if (cellIndex === 3) {
+                          textBlock2Values.unshift(params.textBlock1Value);
+                          if (textBlock2Values.length > 4) {
+                            textBlock2Values.pop();
+                          }
+                        }
+      
+                        if (this.modelLoader.textBlock2) {
+                          this.modelLoader.textBlock2.text = textBlock2Values.join("\n");
+                        }
+      
+                        if (imageMeshes.length > 1 && cellIndex < 4) {
+                          const targetMeshImg = imageMeshes[1];
+                          const rotationIndex = cellIndex;
+                          targetMeshImg.rotation.y = rotationXValues[rotationIndex];
+                          console.log(`Установлен rotation.y: ${rotationXValues[rotationIndex]} для clickFour: ${this.clickFour}`);
+                        }
+      
+                        if (cellIndex === 3) {
+                          if (imageMeshes.length > 1) {
+                            imageMeshes[1].isVisible = false;
 
-                this.guiManager.CreateDialogBox([startPage]);
+                          }
+                          if (this.modelLoader.textBlock1 && this.modelLoader.textBlock3) {
+                            this.modelLoader.textBlock1.text = params.textBlock1Value;
+                            this.modelLoader.textBlock1.isVisible = true;
+                            this.modelLoader.textBlock3.text = Math.round(randomValues.reduce((acc, curr) => acc + Number(curr), 0) / randomValues.length).toString();
+                            console.log(this.modelLoader.textBlock3.text);
+                          }
+                          this.triggerManager.exitLaserMode2()
+                          targetMesh.actionManager?.dispose()
+                        }
+      
+                        // Переход к следующему промежутку после правильного клика
+                        if (cellIndex < 4) { // Переключаем только для первых 4 кликов
+                          currentRotationIntervalIndex = (currentRotationIntervalIndex + 1) % 4;
+                          console.log("Переход к следующему промежутку:", rotationIntervals[currentRotationIntervalIndex]);
+                        }
+                      } else {
+                        console.log("Неправильный угол поворота прибора:", currentRotationY, "Ожидаемый промежуток:", currentInterval);
+                        this.triggerManager.showMessage("Поверните прибор в правильное положение!");
+                      }
+                    });
+                  });
+      
+                },
+                this.beam2,
+                undefined,
+                [
+                  { x: -18.51, y: 2.23, z: -16.38 },
+                  { x: -17.04, y: 2.23, z: -16.38 },
+                  { x: -17.04, y: 1.62, z: -16.38 },
+                  { x: -18.51, y: 1.62, z: -16.38 },
+                ],
+                [
+                  new Vector3(0, 0, 1),
+                  new Vector3(0, 0, Math.PI / 2),
+                  new Vector3(0, 0, -1),
+                  new Vector3(0, 0, 0),
+                ],
+                new Vector3(2, 2, 2),
+                1
+              );
             }
-        },
-        undefined,
-        20,
-        true
-    );
-}
+          },
+          undefined,
+          20,
+          true
+        );
+      }
 
 
 

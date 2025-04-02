@@ -214,61 +214,68 @@ export class TriggerManager2 {
       camera.attachControl(this.canvas, true);
     }
 
-    async createRadioButtons(onHide: () => void): Promise<void> {
-      // Загрузка модели дальномера
-      await this.modelLoader.loadRangeModel();
-      const rangefinderMeshes = this.modelLoader.getMeshes('range') || [];
-      console.log(rangefinderMeshes);
-      
-      
-      // Если не нашли меши, завершаем
-      if (rangefinderMeshes.length === 0) {
-        console.error("Не удалось найти меши дальномера");
-        return;
-      }
-    
-      // Исходный меш (или корневой меш)
-      const baseMesh = rangefinderMeshes[1];
-      console.log(baseMesh);
-      
-      baseMesh.scaling = new Vector3(1, 1, -1)
-      
-      // Задаем список позиций, где мы хотим разместить модели
-      // Замените данные координаты на нужные
-      const positions = [
+    async createRadioButtons(
+      onHide: () => void, // Callback при правильном выборе
+      baseMeshOrLoader: AbstractMesh | (() => Promise<void>) = () => this.modelLoader.loadRangeModel(), // Меш или функция загрузки
+      meshesGetter?: () => AbstractMesh[] | undefined, // Опциональная функция получения мешей (нужна только если используется loader)
+      positions: { x: number; y: number; z: number }[] = [
         { x: 12.32, y: 8.81, z: -3.60 },
         { x: 12.37, y: 8.24, z: -3.60 },
         { x: 12.12, y: 7.88, z: -3.60 },
-        { x: 12.37, y: 7.43, z: -3.60 }
-      ];
+        { x: 12.37, y: 7.43, z: -3.60 },
+      ], // Позиции по умолчанию
+      rotations: Vector3[] = [
+        new Vector3(0, 0, Math.PI / 2),
+        new Vector3(0, 0, Math.PI / 2),
+        new Vector3(0, 0, Math.PI / 2),
+        new Vector3(0, 0, 1.2),
+      ], // Повороты по умолчанию
+      scaling: Vector3 = new Vector3(1, 1, -1), // Масштабирование по умолчанию
+      correctIndex: number = 2 // Индекс правильного ответа по умолчанию
+    ): Promise<void> {
+      let baseMesh: AbstractMesh;
     
-      // Предположим, что третья позиция (индекс 2) – правильная
-      const correctIndex = 2;
+      // Проверяем, что передали: меш или функцию загрузки
+      if (typeof baseMeshOrLoader === 'function') {
+        // Если передана функция загрузки
+        await baseMeshOrLoader();
+        const meshes = (meshesGetter || (() => this.modelLoader.getMeshes('range')))() || [];
+        console.log(meshes);
     
-      // Массив для хранение копий мешей
+        // Если не нашли меши, завершаем
+        if (meshes.length === 0) {
+          console.error("Не удалось найти меши модели");
+          return;
+        }
+    
+        // Берем второй меш как в исходном коде
+        baseMesh = meshes[1];
+      } else {
+        // Если передан готовый меш
+        baseMesh = baseMeshOrLoader;
+      }
+    
+      console.log(baseMesh);
+    
+      // Устанавливаем масштабирование
+      baseMesh.scaling = scaling;
+    
+      // Массив для хранения копий мешей
       const placedMeshes: AbstractMesh[] = [];
     
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
     
         // Клонируем исходный меш
-        const meshClone = baseMesh.clone(`rangefinder_clone_${i}`, null);
+        const meshClone = baseMesh.clone(`model_clone_${i}`, null);
         if (!meshClone) continue;
     
         // Устанавливаем позицию
         meshClone.position.set(pos.x, pos.y, pos.z);
-        
-        if(i === 0) {
-          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
-        }
-        if(i === 1) {
-          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
-        }
-        if(i === 2) {
-          meshClone.rotation = new Vector3 (0, 0, Math.PI / 2)
-        }
-        if(i === 3) {
-          meshClone.rotation = new Vector3 (0, 0, 1.2)
+    
+        // Устанавливаем поворот из переданного массива
+        if (i < rotations.length) {
+          meshClone.rotation = rotations[i];
         }
     
         // Изначально полупрозрачный
@@ -278,38 +285,32 @@ export class TriggerManager2 {
         meshClone.actionManager = new ActionManager(this.scene);
     
         // При наведении курсора – сделать полностью видимым
-        meshClone.actionManager.registerAction(new ExecuteCodeAction(
-          ActionManager.OnPointerOverTrigger, 
-          () => {
+        meshClone.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPointerOverTrigger, () => {
             meshClone.visibility = 1;
-          }
-        ));
+          })
+        );
     
         // При отводе курсора – сделать полупрозрачным
-        meshClone.actionManager.registerAction(new ExecuteCodeAction(
-          ActionManager.OnPointerOutTrigger, 
-          () => {
+        meshClone.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPointerOutTrigger, () => {
             meshClone.visibility = 0.5;
-          }
-        ));
+          })
+        );
     
         // При клике по модели
-        meshClone.actionManager.registerAction(new ExecuteCodeAction(
-          ActionManager.OnPickTrigger,
-          () => {
+        meshClone.actionManager.registerAction(
+          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
             if (i === correctIndex) {
               // Правильный выбор
-              // Скрываем все модели
-              placedMeshes.forEach(m => m.setEnabled(false));
-              // Вызываем onHide()
+              placedMeshes.forEach((m) => m.setEnabled(false));
               onHide();
-
             } else {
               // Неправильная позиция
               this.showMessage("Неправильная позиция");
             }
-          }
-        ));
+          })
+        );
     
         placedMeshes.push(meshClone);
       }
@@ -640,7 +641,7 @@ activateLaserMode1(): void {
     }
 
 // Метод для отображения сообщений
-    private showMessage(message: string): void {
+    public showMessage(message: string): void {
         if (!this.messageText) {
             this.messageText = new TextBlock();
             this.messageText.text = "";
@@ -821,6 +822,14 @@ exitLaserMode1(): void {
     }
 
 
+    public getCentralCubeRotationY(): number | null {
+      if (!this.centralCube2 || !this.centralCube2.rotationQuaternion) return null;
+      const eulerAngles = this.centralCube2.rotationQuaternion.toEulerAngles();
+      //Для отладки кликов
+      // console.log("UGOL", eulerAngles.x);
+      
+      return eulerAngles.x; // Возвращаем угол поворота по оси Y
+    }
 
     public activateLaserMode2(targetMeshes: Mesh[]): void {
       this.targetMeshesLaser2 = targetMeshes; // Сохраняем массив целевых мешей
@@ -943,6 +952,10 @@ exitLaserMode1(): void {
           combinedRotation,
           0.2 // Скорость интерполяции
         );
+
+        // Для отладки
+        // const euler = this.centralCube2.rotationQuaternion.toEulerAngles();
+        // console.log("Текущий угол x:", euler.x);
       }
     }
 

@@ -61,13 +61,13 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
         this.modelLoader = new ModelLoader(this.scene);
   
       this.CreateEnvironment().then(() => {
+        this.BetonTrigger();
         this.engine.hideLoadingUI();
-        
     });
     
       this.CreateController();
 
-      this.BetonTrigger();
+      
 
         this.engine.runRenderLoop(() => {
             this.scene.render();
@@ -93,34 +93,6 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       return scene;
     }
 
-      //   CreateController(): void {
-  //     // Установка начальной позиции основной камеры для лучшей видимости
-  //     this.camera = new FreeCamera("MainCamera", new Vector3(17, 2, 13), this.scene);
-  //     this.camera.attachControl(this.canvas, true);
-  
-  //     this.camera.applyGravity = false;
-  //     this.camera.checkCollisions = true;
-  //     this.camera.ellipsoid = new Vector3(0.5, 1, 0.5);
-  //     this.camera.minZ = 0.45;
-  //     this.camera.speed = 0.55;
-  //     this.camera.angularSensibility = 4000;
-  //     this.camera.rotation.y = -Math.PI / 2;
-  //     this.camera.keysUp.push(87); // W
-  //     this.camera.keysLeft.push(65); // A
-  //     this.camera.keysDown.push(83); // S
-  //     this.camera.keysRight.push(68); // D
-  
-  //     // Создание второй камеры для обзора с фиксированного положения
-  //     const secondaryCamera = new FreeCamera("SecondaryCamera", new Vector3(20, 2, 13), this.scene);
-  //     secondaryCamera.setTarget(Vector3.Zero()); // Устанавливаем направление на центр сцены
-  //     // secondaryCamera.mode = Camera.ORTHOGRAPHIC_CAMERA; // Для более статичной перспективы можно использовать ортографический режим
-  
-  //     // Настройка viewport для второй камеры (маленькое окно в левом верхнем углу)
-  //     secondaryCamera.viewport = new Viewport(0, 0.75, 0.25, 0.25); // Позиция и размеры: (x, y, width, height)
-  
-  //     // Добавление основной и вторичной камер в массив активных камер сцены
-  //     this.scene.activeCameras = [this.camera, secondaryCamera];
-  // }
   
     CreateController(): void {
       // Установка начальной позиции камеры для лучшей видимости
@@ -232,76 +204,6 @@ import { ModelLoader } from "./BaseComponents/ModelLoader";
       return lines;
   }
 
-//   BetonTrigger(): void {
-//       const page1 = this.dialogPage.addText("Нажми на кнопку для начала измерения.");
-//       this.guiManager.CreateDialogBox([page1]);
-
-//       const clickZonePosition = new Vector3(13.057004227460391, 2.0282419080806964, 13.477405516648421);
-//       let clickCount = 0;
-//       let clickCountText: TextBlock | null = null;
-
-//       const targetMeshForLaser2 = this.beam2;
-
-//       const secondTriggerZone = this.triggerManager.setupZoneTrigger(
-//           clickZonePosition,
-//           () => {
-//               if (!this.zoneTriggered) {
-//                   this.zoneTriggered = true;
-//                   console.log("Вошли в зону кликов");
-//                   this.triggerManager.createStartButton('Начать', () => {
-//                       const page2 = this.dialogPage.addText("Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.");
-//                       this.guiManager.CreateDialogBox([page2]);
-
-//                       if (this.beam2) {
-//                           this.triggerManager.setupClickableMesh(this.beam2, () => {
-//                               clickCount++;
-//                               const randomValue = Math.floor(Math.random() * (5000 - 4000 + 1)) + 4000;
-
-//                               // Обновляем текст на динамической текстуре
-//                               this.updateDynamicText(`\n${randomValue}`);
-//                           });
-
-//                           this.triggerManager.activateLaserMode2(this.beam2);
-//                           this.triggerManager.createStartButton('Завершить', () => {
-//                               const page3 = this.dialogPage.addText("Отлично, а теперь нажмите на кнопку для перемещения на основную карту");
-//                               this.guiManager.CreateDialogBox([page3]);
-
-//                               const totalClicksMessage = new TextBlock();
-//                               totalClicksMessage.text = `Вы произвели измерение ${clickCount} раз(а)`;
-//                               totalClicksMessage.color = "white";
-//                               totalClicksMessage.fontSize = 24;
-//                               totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-//                               totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-//                               totalClicksMessage.top = "-10%";
-//                               this.guiTexture.addControl(totalClicksMessage);
-
-//                               setTimeout(() => {
-//                                   this.guiTexture.removeControl(totalClicksMessage);
-//                               }, 3000);
-
-//                               if (clickCountText) {
-//                                   this.guiTexture.removeControl(clickCountText);
-//                                   clickCountText = null;
-//                               }
-//                               clickCount = 0;
-
-//                               if (this.beam2) {
-//                                   this.triggerManager.removeMeshAction(this.beam2);
-//                               }
-
-//                               this.triggerManager.exitLaserMode2();
-//                               this.guiManager.createRouteButton('/test');
-//                           });
-//                       }
-//                   });
-//               }
-//           },
-//           undefined,
-//           20,
-//           true
-//       );
-//   }
-
 
 
 
@@ -332,25 +234,23 @@ BetonTrigger(): void {
             meshName === "SM_0_MonolithicRack_L_Support" ||
             meshName.match(/^SM_0_SpanStructureBeam_[RL]_\d$/)
         ) {
-            return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35" };
+            return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35a" };
         } else if (meshName === "sm_0_transitionplate8m_lp_l_primitive0") {
             return { randomMin: 3650, randomMax: 3760, textBlock1Value: "32.11" };
         }
         return { randomMin: 4090, randomMax: 4170, textBlock1Value: "38.35" };
     };
 
-    const secondTriggerZone = this.triggerManager.setupZoneTrigger(
+    this.triggerManager.setupZoneTrigger(
         clickZonePosition,
         () => {
             if (!this.zoneTriggered) {
                 this.zoneTriggered = true;
                 console.log("Вошли в зону кликов");
 
-                const startPage = this.dialogPage.createStartPage(
-                    "Нажми на кнопку для начала измерения.",
-                    "Начать",
-                    () => {
                         if (this.targetMeshes2 && this.targetMeshes2.length > 0) {
+
+
                             const imageMeshes = this.modelLoader.getMeshes("image") || [];
                             imageMeshes[1].isVisible = true;
 
@@ -459,47 +359,7 @@ BetonTrigger(): void {
                                 8,
                                 checkResultObservable
                               );
-                            // const finishPage = this.dialogPage.createStartPage(
-                            //     "Переместите мышку в то место, где хотите произвести измерение. На кнопки Q и E вы можете повернуть бетонометр. После нажмите на кнопку для завершения измерения.",
-                            //     "Завершить",
-                            //     () => {
-                            //         const totalClicksMessage = new TextBlock();
-                            //         totalClicksMessage.text = `Вы произвели измерение ${this.clickCount} раз(а)`;
-                            //         totalClicksMessage.color = "white";
-                            //         totalClicksMessage.fontSize = 24;
-                            //         totalClicksMessage.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-                            //         totalClicksMessage.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-                            //         totalClicksMessage.top = "-10%";
-                            //         this.guiTexture.addControl(totalClicksMessage);
 
-                            //         setTimeout(() => {
-                            //             this.guiTexture.removeControl(totalClicksMessage);
-                            //         }, 3000);
-
-                            //         if (clickCountText) {
-                            //             this.guiTexture.removeControl(clickCountText);
-                            //             clickCountText = null;
-                            //         }
-                            //         this.clickCount = 0;
-                            //         this.clickFour = 0;
-
-                            //         this.targetMeshes2.forEach((targetMesh) => {
-                            //             this.triggerManager.removeMeshAction(targetMesh);
-                            //         });
-
-                            //         this.triggerManager.exitLaserMode2();
-
-                            //         const routePage = this.dialogPage.createStartPage(
-                            //             "Отлично, а теперь нажмите на кнопку для перемещения на основную карту",
-                            //             "Перейти на основную карту",
-                            //             () => {
-                            //                 window.location.href = '/ВыборИнструмента';
-                            //             }
-                            //         );
-
-                            //         this.guiManager.CreateDialogBox([routePage]);
-                            //     }
-                            // );
                             const endPageResult = this.dialogPage.createConditionButton(
                                 "Здесь появится кнопка позволяющая завершить тест, но только после всех правильных ответов. Нажмите на предыдущей странице 'Проверка' чтобы узнать результат",
                                 "Завершить",
@@ -528,10 +388,7 @@ BetonTrigger(): void {
 
                             this.guiManager.CreateDialogBox([page1, page2, page3, endPageResult.rectangle]);
                         }
-                    }
-                );
 
-                this.guiManager.CreateDialogBox([startPage]);
             }
         },
         undefined,
