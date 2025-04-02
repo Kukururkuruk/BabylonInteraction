@@ -92,7 +92,7 @@ private initialRotation: number; // Переменная для хранения
     scene.collisionsEnabled = true;
 
     const hdrTexture = new HDRCubeTexture(
-      "/models/cape_hill_4k.hdr",
+      "/models/NEW_HDRI_Town_8.HDR",
       scene,
       512
     );

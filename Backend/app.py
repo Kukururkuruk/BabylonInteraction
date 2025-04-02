@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from uuid import uuid4
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
@@ -22,6 +23,7 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    access_token = db.Column(db.String(36), unique=True, default=lambda: str(uuid4()))
 
 class Topic(db.Model):
     __tablename__ = 'topics'
@@ -58,6 +60,20 @@ class UserProgress(db.Model):
     topic = db.relationship('Topic', backref=db.backref('progress', lazy=True))
 
 # API маршруты
+@app.route('/api/access_course/<string:token>', methods=['GET'])
+def access_course(token):
+    user = User.query.filter_by(access_token=token).first()
+    if not user:
+        return jsonify({"error": "Access denied"}), 403
+    return jsonify({"message": "Welcome to your course!"}), 200
+
+
+@app.route('/api/get_course_link/<int:user_id>', methods=['GET'])
+def get_course_link(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({"course_link": f"http://my-lms.com/course/{user.access_token}"}), 200
 
 @app.route('/')
 def home():
@@ -67,16 +83,17 @@ def home():
 def receive_points():
     try:
         data = request.get_json()
+        user_id = data.get('user_id')
+        topic_id = data.get('topic_id')
         pointsPressedCount = data.get('pointsPressedCount')
-        
-        if pointsPressedCount is None:
-            return jsonify({"status": "error", "message": "pointsPressedCount is required"}), 400
 
-        # Создание нового результата с количеством нажатых точек (здесь используем значение из pointsPressedCount)
-        new_result = Result(status=bool(pointsPressedCount), user_id=1, topic_id=1)  # Пример: пользователь 1, тема 1
+        if not all([user_id, topic_id, pointsPressedCount is not None]):
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+        new_result = Result(status=bool(pointsPressedCount), user_id=user_id, topic_id=topic_id)
         db.session.add(new_result)
         db.session.commit()
-        
+
         return jsonify({"status": "success", "pointsPressedCount": pointsPressedCount}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -92,6 +109,6 @@ def get_points():
             return jsonify({"status": "error", "message": "No data found"}), 404
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
+   
 if __name__ == '__main__':
     app.run(debug=True)

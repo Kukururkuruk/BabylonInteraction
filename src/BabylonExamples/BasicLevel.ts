@@ -13,6 +13,8 @@ import {
   Color3,
   AbstractMesh,
   Animation,
+  StandardMaterial,
+  Material
 } from "@babylonjs/core";
 import "@babylonjs/loaders";
 import { AdvancedDynamicTexture, Image as GuiImage, Button, Ellipse, StackPanel, TextBlock, Control } from "@babylonjs/gui";
@@ -123,7 +125,7 @@ export class Level {
   }
 
   CreateController(): void {
-    this.camera = new FreeCamera("camera", new Vector3(0, 3, 0), this.scene);
+    this.camera = new FreeCamera("camera", new Vector3(0, 0.47, 0), this.scene);
     this.camera.attachControl(this.canvas, false); // Отключаем управление вращением мышью
 
     this.camera.applyGravity = true;
@@ -148,75 +150,72 @@ export class Level {
 }
 
   
-  async CreateEnvironment(): Promise<void> {
-    try {
-      //const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-      //map.forEach((mesh) => {
-        //mesh.checkCollisions = true;
-      //});
+async CreateEnvironment(): Promise<void> {
+  try {
+      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "BubbleLevel_Yellow.gltf", this.scene);
 
-      
-      // Запрос на backend для получения пути к карте
-  /*async CreateEnvironment(): Promise<void> {
-    try {
-      const response = await fetch('http://127.0.0.1:5000/api/data');
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        console.log(data);
-      const { meshes: map } = await SceneLoader.ImportMeshAsync("", "./models/", "Map_1.gltf", this.scene);
-      map.forEach((mesh) => {
-        mesh.checkCollisions = true;
-      });
-      console.log("Модели карты успешно загружены:", map);*/
+      // Список настроек для каждого меша
+      const meshSettings: Record<string, { position?: Vector3; isVisible?: boolean; isPickable?: boolean }> = {
+          "__root__": { isVisible: false },
+          "Roll_Y": { position: new Vector3(0.00025, -0.01105, -0.098), isVisible: true, isPickable: true },
+          "Arrow_Y_L": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Bubble_Level_": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Roll_YX": { position: new Vector3(-0.085, -0.01105, 0.04878), isVisible: true, isPickable: true },
+          "Roll_XY": { position: new Vector3(0.08474, -0.01105, 0.04921), isVisible: true, isPickable: true },
+          "Arrow_YX_L": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Arrow_XY_R": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Arrow_Y_R": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Arrow_XY_L": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Arrow_YX_R": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Glass_": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true },
+          "Bubble": { position: new Vector3(0, 0, 0), isVisible: true, isPickable: true }
+      };
 
+      meshes.forEach(mesh => {
+          const settings = meshSettings[mesh.name];
+          if (settings) {
+              if (settings.position) mesh.position = settings.position;
+              if (settings.isVisible !== undefined) mesh.isVisible = settings.isVisible;
+              if (settings.isPickable !== undefined) mesh.isPickable = settings.isPickable;
+          }
 
+          // Настраиваем прозрачность для "Bubble"
+         // Настраиваем прозрачность для "Bubble"
+if (mesh.name === "Bubble") {
+  if (mesh.material) {
+      mesh.material.transparencyMode = Material.MATERIAL_ALPHABLEND; // Включаем режим альфа-блендинга
+      mesh.material.alpha = 0.5; // Устанавливаем 50% прозрачности
+  } else {
+      const bubbleMaterial = new StandardMaterial("bubbleMaterial", this.scene);
+      bubbleMaterial.transparencyMode = Material.MATERIAL_ALPHABLEND; // Включаем режим альфа-блендинга
+      bubbleMaterial.alpha = 0.5; // Устанавливаем 50% прозрачности
 
-      //const rotationPercent = 25; // Угол в процентах (например, 25%)
-      //const rotationDegrees = rotationPercent * -15; // Переводим проценты в градусы
-      //const rotationRadians = rotationDegrees * (Math.PI / 180); // Переводим градусы в радианы
-
-      // Загрузка меша Glass.glb
-      const { meshes: glassMeshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Glass.glb", this.scene);
-      glassMeshes.forEach((mesh) => {
-        const glassMesh = mesh as Mesh;
-        this.glassMesh = glassMesh;
-        glassMesh.isPickable = false;
-        glassMesh.position = new Vector3(0, 0.7, 0);
-        glassMesh.scaling = new Vector3(0.7, 0.7, 0.7);
-        // Поворот меша на `rotationPercent` процентов по оси X
-        //glassMesh.rotation = new Vector3(rotationRadians, 0, 0);
-      });
-
-      console.log("Меш Glass.glb загружен и установлен.");
-
-      // Загрузка меша Bubble.glb
-      const { meshes } = await SceneLoader.ImportMeshAsync("", "./models/", "Bubble.glb", this.scene);
-      meshes.forEach((mesh) => {
-        mesh.parent = this.glassMesh; // Устанавливаем Glass.glb в качестве родителя для Bubble.glb
-        mesh.rotation = new Vector3(0, Math.PI, 0); // Поворот по оси Y
-        mesh.isPickable = true;
-        mesh.position = new Vector3(0, 0.1, 0);
-        mesh.scaling = new Vector3(0.7, 0.7, 0.7);
-        mesh.actionManager = new ActionManager(this.scene);
-        mesh.actionManager.registerAction(
-          new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
-            console.log("Часть меша Bubble.glb была кликнута!");
-            this.CreateBubbleMesh(mesh);
-            
-            
-            
-          })
-        );
-      });
-
-      console.log("Меш Bubble.glb загружен и обработан.");
-
-    } catch (error) {
-      console.error("Ошибка при загрузке моделей:", error);
-    }
+      // Назначаем новый материал мешу
+      mesh.material = bubbleMaterial;
   }
+}
+
+          // Добавляем обработчик клика
+          if (mesh.isPickable) {
+              mesh.actionManager = new ActionManager(this.scene);
+              mesh.actionManager.registerAction(
+                  new ExecuteCodeAction(ActionManager.OnPickTrigger, () => {
+                      console.log(`Клик по мешу: ${mesh.name}`);
+                      this.CreateBubbleMesh(mesh);
+                  })
+              );
+          }
+
+          console.log(`Загружен меш: ${mesh.name}, Позиция: ${mesh.position}, Видимый: ${mesh.isVisible}`);
+      });
+
+      console.log("Меши загружены и обработаны.");
+  } catch (error) {
+      console.error("Ошибка при загрузке моделей:", error);
+  }
+}
+
+
   CreateArrowImage(): void {
     if (!this.arrowImage) {
         this.arrowImage = new GuiImage("arrow", "/models/mouse_scroll_4310.png");
@@ -263,17 +262,30 @@ applyPressedImage(): void {
       console.error("Ошибка: невозможно привести AbstractMesh к Mesh");
       return;
     }
+
+    
     
     this.bubbleMesh = bubbleMesh;
 
+
+
+
+
+//ГЕНЕРАЦИЯ СЛУЧАЙНОЙ ПОЗИЦИИ 
     // Генерация случайной позиции с уменьшенным диапазоном ещё в 2 раза
-    const randomX = Math.random() * (0.1125 * 10) - (0.05625 * 10); // Диапазон от -0.45 до 0.45
-    const randomZ = Math.random() * (0.1125 * 10) - (0.05625 * 10); // Диапазон от -0.45 до 0.45
+    //const randomX = Math.random() * (0.1125 * 10) - (0.05625 * 10); // Диапазон от -0.45 до 0.45
+    //const randomZ = Math.random() * (0.1125 * 10) - (0.05625 * 10); // Диапазон от -0.45 до 0.45
 //const randomX = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
 //const randomZ = Math.random() * 0.075 - 0.0375; // Диапазон от -0.0375 до 0.0375
-    this.bubbleMesh.position = new Vector3(randomX, 0.5, randomZ);
+    //this.bubbleMesh.position = new Vector3(randomX, 0.5, randomZ);
+
+
+
+
+
 
     this.isBubbleCreated = true;
+
     console.log("Меш Bubble.glb создан в позиции:", this.bubbleMesh.position);
 }
 

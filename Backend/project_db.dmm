@@ -1,0 +1,32 @@
+{
+	"tables": {},
+	"relations": {},
+	"notes": {},
+	"lines": {},
+	"model": {
+		"zoom": 100,
+		"def_freezeTableName": true,
+		"def_timestamps": true,
+		"def_paranoid": true,
+		"def_type": "na",
+		"def_collation": "",
+		"def_charset": "",
+		"isDirty": true,
+		"background": "transparent",
+		"lineColor": "transparent",
+		"writeFileParam": true,
+		"sideSelections": true,
+		"activeDiagram": null,
+		"laststoredin": {
+			"major": 10,
+			"minor": 0,
+			"extra": 1
+		}
+	},
+	"otherObjects": {},
+	"diagrams": {},
+	"diagramsOrder": [],
+	"order": {},
+	"collapsedTreeItems": [],
+	"reverseStats": {}
+}
